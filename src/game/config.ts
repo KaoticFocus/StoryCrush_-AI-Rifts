@@ -18,4 +18,19 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
+  render: {
+    pixelArt: false,
+    roundPixels: false,
+    antialias: true,
+  },
+  callbacks: {
+    postBoot: () => {
+      if (useE2eCanvasRenderer) {
+        const canvas = document.querySelector('canvas');
+        if (canvas instanceof window.HTMLCanvasElement) {
+          canvas.style.imageRendering = 'auto';
+        }
+      }
+    },
+  },
 };

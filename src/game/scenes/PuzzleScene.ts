@@ -44,8 +44,19 @@ import {
   BrowserTestStatusBridge,
   getBoardHash,
   markBrowserTestScene,
+  syncBrowserTestSceneFromGame,
   type BrowserPlaybackState,
 } from '../presentation/testing/BrowserTestStatusBridge';
+import {
+  AnimationFrameMeasurement,
+  createPerformanceSample,
+  type PerformanceResourceSnapshot,
+  type PerformanceSample,
+} from '../presentation/testing/performanceMeasurement';
+import {
+  AriaStatusAnnouncer,
+  createAriaStatusMessage,
+} from '../presentation/accessibility/ariaStatus';
 import { MainMenuScene } from './MainMenuScene';
 
 export class PuzzleScene extends Phaser.Scene {
@@ -88,6 +99,10 @@ export class PuzzleScene extends Phaser.Scene {
   private lastErrorCode = 'none';
   private playbackStateTrace: BrowserPlaybackState[] = [];
   private commandTrace: string[] = [];
+  private readonly ariaAnnouncer = new AriaStatusAnnouncer();
+  private performanceMeasurement: AnimationFrameMeasurement | null = null;
+  private performanceResourcesBefore: PerformanceResourceSnapshot | null = null;
+  private performanceSample: PerformanceSample | null = null;
   private static readonly hintDuration = 2500;
 
   public constructor() {
@@ -177,10 +192,19 @@ export class PuzzleScene extends Phaser.Scene {
         this.hudView = null;
         this.statusBridge?.destroy();
         this.statusBridge = null;
+        this.ariaAnnouncer.clear();
       });
 
       this.renderScene();
       this.publishBrowserStatus('idle');
+      const statusElement = document.getElementById('storycrush-test-status');
+      if (statusElement) {
+        statusElement.addEventListener('click', () => {
+          if (statusElement.getAttribute('data-scene') === 'puzzle') {
+            this.returnToMenu();
+          }
+        });
+      }
     } catch (error) {
       console.error('Failed to initialize puzzle scene', error);
       this.hasError = true;
@@ -318,6 +342,7 @@ export class PuzzleScene extends Phaser.Scene {
     this.cancelSummaryTimer();
 
     try {
+      this.startPerformanceMeasurement();
       const moveResult = this.controller.requestSwap(from, to);
       this.selectedCoordinate = null;
 
@@ -345,6 +370,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.rejectedCoordinates = [];
       this.summaryMessage = 'A puzzle presentation error occurred. Restart or return to the menu.';
       this.renderErrorState(this.summaryMessage);
+      this.stopPerformanceMeasurement();
     }
   }
 
@@ -472,6 +498,7 @@ export class PuzzleScene extends Phaser.Scene {
         this.rejectedCoordinates = [];
         this.hasError = false;
         this.summaryMessage = 'Rejected move.';
+        this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'move-rejected' }));
         this.renderScene();
       },
       executeCommand: (command: PlaybackCommand) => this.executePlaybackCommand(command),
@@ -490,7 +517,17 @@ export class PuzzleScene extends Phaser.Scene {
         this.selectedCoordinate = null;
         this.rejectedCoordinates = [];
         this.summaryMessage = formatMoveSummary(result);
+        this.ariaAnnouncer.announce(
+          result.nextState.status === 'won'
+            ? createAriaStatusMessage({ kind: 'level-complete' })
+            : createAriaStatusMessage({
+                kind: 'move-accepted',
+                score: result.scoreAfter,
+                movesRemaining: result.movesAfter,
+              }),
+        );
         this.renderScene();
+        this.stopPerformanceMeasurement();
         this.publishBrowserStatus('completed');
         this.scheduleSummaryClear();
       },
@@ -504,6 +541,7 @@ export class PuzzleScene extends Phaser.Scene {
         this.rejectedCoordinates = [];
         this.summaryMessage = formatMoveSummary(result);
         this.renderScene();
+        this.stopPerformanceMeasurement();
       },
       cancelActiveVisuals: () => {
         this.boardView?.cancelActiveVisuals();
@@ -525,6 +563,7 @@ export class PuzzleScene extends Phaser.Scene {
         this.rejectedCoordinates = [];
         this.hasError = false;
         this.renderScene();
+        this.stopPerformanceMeasurement();
         this.publishBrowserStatus('synchronizing');
       },
       reportPlaybackError: (error: unknown) => {
@@ -826,10 +865,18 @@ export class PuzzleScene extends Phaser.Scene {
     this.cancelSummaryTimer();
     this.playbackController?.cancel({ restoreInput: false });
     this.cancelHudPlaybackEffects();
-    this.time.delayedCall(0, () => {
-      console.debug('Starting main menu after playback cancellation');
-      this.scene.start(MainMenuScene.key);
-    });
+    this.selectedCoordinate = null;
+    this.rejectedCoordinates = [];
+    this.presentationState.playbackActive = false;
+    this.presentationState.paused = false;
+    this.setInputLocked(false);
+    this.hasError = false;
+    this.summaryMessage = 'Returning to the menu.';
+    this.stopPerformanceMeasurement();
+    this.scene.start(MainMenuScene.key);
+    window.setTimeout(() => {
+      syncBrowserTestSceneFromGame();
+    }, 0);
   }
 
   private publishBrowserStatus(playbackState: BrowserPlaybackState): void {
@@ -862,6 +909,7 @@ export class PuzzleScene extends Phaser.Scene {
       .toGridSnapshot()
       .flat()
       .filter((piece) => piece.kind !== 'standard').length;
+    const resources = this.getPerformanceResources();
     this.statusBridge.update({
       sceneGeneration: this.sceneGeneration,
       fixtureId: this.browserFixture?.id ?? 'prototype',
@@ -913,7 +961,82 @@ export class PuzzleScene extends Phaser.Scene {
       cellSize: layout.cellSize,
       boardRows: dimensions.rows,
       boardColumns: dimensions.columns,
+      displayObjects: resources.displayObjects,
+      boardPieceCount: resources.boardPieces,
+      temporaryObjectCount: resources.temporaryObjects,
+      activeTweenCount: resources.activeTweens,
+      activeTimerCount: resources.activeTimers,
+      listenerCount: resources.listeners,
+      performanceSample: this.performanceSample ? JSON.stringify(this.performanceSample) : '',
     });
+  }
+
+  private isPerformanceDiagnosticsEnabled(): boolean {
+    const query = new window.URLSearchParams(window.location.search);
+    return query.get('e2e') === '1' && query.get('debugPerformance') === '1';
+  }
+
+  private getPerformanceResources(): PerformanceResourceSnapshot {
+    const board = this.boardView?.getResourceSnapshot() ?? {
+      displayObjects: 0,
+      boardPieces: 0,
+      temporaryObjects: 0,
+      activeTweens: 0,
+      activeTimers: 0,
+    };
+    const hud = this.hudView?.getResourceSnapshot() ?? {
+      displayObjects: 0,
+      temporaryObjects: 0,
+      activeTweens: 0,
+      activeTimers: 0,
+    };
+    return {
+      displayObjects: board.displayObjects + hud.displayObjects,
+      boardPieces: board.boardPieces,
+      temporaryObjects: board.temporaryObjects + hud.temporaryObjects,
+      activeTweens: board.activeTweens + hud.activeTweens + this.hudTweens.size,
+      activeTimers: board.activeTimers + hud.activeTimers + this.hudTimers.size,
+      listeners:
+        Number(this.resizeHandler !== null) +
+        Number(this.visibilityHandler !== null) +
+        Number(this.escapeKeyHandler !== null) +
+        Number(this.hintKeyHandler !== null),
+    };
+  }
+
+  private startPerformanceMeasurement(): void {
+    if (!this.isPerformanceDiagnosticsEnabled()) return;
+    this.performanceResourcesBefore = this.getPerformanceResources();
+    this.performanceMeasurement = new AnimationFrameMeasurement(true);
+    this.performanceMeasurement.start();
+  }
+
+  private stopPerformanceMeasurement(): void {
+    if (!this.performanceMeasurement || !this.performanceResourcesBefore || !this.controller) return;
+    const measurement = this.performanceMeasurement.stop();
+    const deviceMemory = performance as Performance & { memory?: { usedJSHeapSize?: number } };
+    const state = this.controller.getState();
+    this.performanceSample = createPerformanceSample({
+      scenarioId: this.browserFixture?.id ?? 'prototype',
+      buildKind: import.meta.env.DEV ? 'development' : 'preview',
+      viewport: {
+        width: this.scale.width,
+        height: this.scale.height,
+        devicePixelRatio: window.devicePixelRatio,
+      },
+      playbackMode: this.playbackMode,
+      reducedMotion: this.reducedMotion,
+      frameDurations: measurement.frameDurations,
+      playbackDurationMs: measurement.durationMs,
+      resourcesBefore: this.performanceResourcesBefore,
+      resourcesAfter: this.getPerformanceResources(),
+      ...(deviceMemory.memory?.usedJSHeapSize === undefined
+        ? {}
+        : { heapAfterBytes: deviceMemory.memory.usedJSHeapSize }),
+    });
+    this.performanceMeasurement = null;
+    this.performanceResourcesBefore = null;
+    this.publishBrowserStatus(state.status === 'active' ? 'completed' : 'idle');
   }
 
   private getBrowserFixtureFromUrl(): BrowserFixture | null {
@@ -949,6 +1072,9 @@ export class PuzzleScene extends Phaser.Scene {
         reducedMotion: this.reducedMotion,
       });
       this.summaryMessage = 'Hint: swap the highlighted pieces.';
+      this.ariaAnnouncer.announce(
+        createAriaStatusMessage({ kind: 'hint', from: result.move.from, to: result.move.to }),
+      );
     } else if (result.reason === 'no-playable-move') {
       console.error('Active puzzle board has no playable move; presentation did not alter state.');
       this.summaryMessage = 'No playable move was found. Board view synchronized.';
@@ -995,6 +1121,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.presentationState.paused = false;
       this.setInputLocked(this.controller?.getState().status !== 'active');
       this.summaryMessage = 'Resumed.';
+      this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'resumed' }));
       this.renderScene();
       this.publishBrowserStatus('idle');
       return;
@@ -1012,6 +1139,7 @@ export class PuzzleScene extends Phaser.Scene {
     this.presentationState.paused = true;
     this.setInputLocked(true);
     this.summaryMessage = 'Paused.';
+    this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'paused' }));
     this.renderScene();
     this.publishBrowserStatus('idle');
   }
@@ -1025,6 +1153,9 @@ export class PuzzleScene extends Phaser.Scene {
     document.addEventListener('visibilitychange', this.visibilityHandler);
     this.escapeKeyHandler = () => this.togglePause();
     this.hintKeyHandler = () => this.requestHint();
+    this.input.keyboard?.on('keydown-M', () => {
+      this.returnToMenu();
+    });
     this.input.keyboard?.on('keydown-ESC', this.escapeKeyHandler);
     this.input.keyboard?.on('keydown-H', this.hintKeyHandler);
   }

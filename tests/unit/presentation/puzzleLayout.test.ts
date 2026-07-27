@@ -6,6 +6,27 @@ import {
 } from '../../../src/game/presentation/puzzleLayout';
 
 describe('puzzleLayout', () => {
+  it.each([
+    [320, 568],
+    [360, 800],
+    [390, 844],
+    [412, 915],
+    [844, 390],
+    [1280, 720],
+    [1440, 900],
+  ])('keeps the board, HUD, and footer inside %ix%i', (width, height) => {
+    const layout = calculatePuzzleLayout({ width, height, rows: 8, columns: 8 });
+
+    expect(layout.cellSize).toBeGreaterThanOrEqual(24);
+    expect(layout.boardRect.x).toBeGreaterThanOrEqual(0);
+    expect(layout.boardRect.y).toBeGreaterThanOrEqual(0);
+    expect(layout.boardRect.x + layout.boardRect.width).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(layout.boardRect.y + layout.boardRect.height).toBeLessThanOrEqual(layout.viewportHeight);
+    expect(layout.footerRect.y + layout.footerRect.height).toBeLessThanOrEqual(
+      layout.viewportHeight,
+    );
+  });
+
   it('creates a centered portrait layout with non-overlapping HUD and board', () => {
     const layout = calculatePuzzleLayout({ width: 390, height: 844, rows: 8, columns: 8 });
 

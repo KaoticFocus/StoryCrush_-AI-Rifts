@@ -11,6 +11,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:browser": "playwright test",
+    "test:browser:preview": "PLAYWRIGHT_PREVIEW=1 playwright test",
     "test:browser:headed": "playwright test --headed",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",

@@ -1,13 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const preview = process.env.PLAYWRIGHT_PREVIEW === '1';
+const port = preview ? 4174 : 4173;
+
 export default defineConfig({
   testDir: './tests/browser',
   timeout: 30_000,
   retries: 0,
+  workers: 1,
+  fullyParallel: false,
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: `http://127.0.0.1:${port}`,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
+    video: 'retain-on-failure',
   },
   projects: [
     {
@@ -17,8 +23,10 @@ export default defineConfig({
     { name: 'chromium-mobile', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
   ],
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4173',
-    url: 'http://127.0.0.1:4173',
+    command: preview
+      ? 'npm run build && npm run preview -- --host 127.0.0.1 --port 4174'
+      : 'npm run dev -- --host 127.0.0.1 --port 4173',
+    url: `http://127.0.0.1:${port}`,
     reuseExistingServer: true,
   },
 });

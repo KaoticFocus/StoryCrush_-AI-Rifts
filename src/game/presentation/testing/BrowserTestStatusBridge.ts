@@ -45,6 +45,13 @@ export interface BrowserTestStatus {
   cellSize: number;
   boardRows: number;
   boardColumns: number;
+  displayObjects: number;
+  boardPieceCount: number;
+  temporaryObjectCount: number;
+  activeTweenCount: number;
+  activeTimerCount: number;
+  listenerCount: number;
+  performanceSample: string;
 }
 
 export function getBoardPieceHash(piece: BoardPiece): string {
@@ -62,7 +69,50 @@ export function getBoardHash(board: Board): string {
 
 export function markBrowserTestScene(scene: string): void {
   if (new window.URLSearchParams(window.location.search).get('e2e') !== '1') return;
-  document.getElementById('storycrush-test-status')?.setAttribute('data-scene', scene);
+  const element = document.getElementById('storycrush-test-status');
+  if (!element) return;
+  element.setAttribute('data-scene', scene);
+  element.setAttribute(
+    'data-scene-generation',
+    String(Number(element.getAttribute('data-scene-generation') ?? '0') + 1),
+  );
+}
+
+export function syncBrowserTestSceneFromGame(): void {
+  if (new window.URLSearchParams(window.location.search).get('e2e') !== '1') return;
+  const element = document.getElementById('storycrush-test-status');
+  const game =
+    typeof window !== 'undefined'
+      ? (window as typeof window & { __storyCrushGame?: unknown }).__storyCrushGame
+      : undefined;
+  if (!element || !game || typeof game !== 'object') return;
+  const sceneManager = (
+    game as {
+      scene?: {
+        getScenes?: () => unknown[];
+        getScene?: (key: string) => {
+          sys?: { isActive?: () => boolean; scene?: { key?: string } };
+          scene?: { key?: string };
+        };
+      };
+    }
+  ).scene;
+  const scenes = sceneManager?.getScenes?.() ?? [];
+  const activeScene = scenes.find((candidate) => {
+    const scene = candidate as
+      { sys?: { isActive?: () => boolean; scene?: { key?: string } } } | undefined;
+    return scene?.sys?.isActive?.() ?? false;
+  }) as { sys?: { scene?: { key?: string } } } | undefined;
+  const sceneKey =
+    activeScene?.sys?.scene?.key ??
+    sceneManager?.getScene?.('MainMenuScene')?.scene?.key ??
+    'unknown';
+  if (sceneKey) {
+    element.setAttribute(
+      'data-scene',
+      sceneKey === 'MainMenuScene' ? 'main-menu' : sceneKey === 'PuzzleScene' ? 'puzzle' : sceneKey,
+    );
+  }
 }
 
 export class BrowserTestStatusBridge {

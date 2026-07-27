@@ -10,6 +10,9 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   public create(): void {
+    this.events.on(Phaser.Scenes.Events.WAKE, () => {
+      markBrowserTestScene('main-menu');
+    });
     markBrowserTestScene('main-menu');
     const { width, height } = this.scale;
 

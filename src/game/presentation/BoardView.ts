@@ -188,6 +188,22 @@ export class BoardView {
     return `${rows}x${columns}|${cells.join(',')}`;
   }
 
+  public getResourceSnapshot(): {
+    displayObjects: number;
+    boardPieces: number;
+    temporaryObjects: number;
+    activeTweens: number;
+    activeTimers: number;
+  } {
+    return {
+      displayObjects: this.root.getAll().length,
+      boardPieces: this.pieceDisplays.size,
+      temporaryObjects: this.transientObjects.size + this.hintObjects.size,
+      activeTweens: this.activeTweens.size,
+      activeTimers: this.activeTimers.size + (this.hintTimer ? 1 : 0),
+    };
+  }
+
   public render(input: {
     layout: PuzzleLayout;
     boardViewModel: BoardViewModel;

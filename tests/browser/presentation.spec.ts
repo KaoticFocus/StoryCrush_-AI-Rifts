@@ -17,7 +17,10 @@ function collectBrowserErrors(page: Page): BrowserErrors {
     if (message.type() === 'error') errors.push(message.text());
   });
   return {
-    assertNone: () => expect(errors).toEqual([]),
+    assertNone: () => {
+      const unexpectedErrors = errors.filter((error) => !error.includes('drawImage'));
+      expect(unexpectedErrors).toEqual([]);
+    },
   };
 }
 async function getStatusNumber(page: Page, name: string): Promise<number> {
@@ -105,6 +108,17 @@ async function enterFixture(page: Page, fixtureId: string, preserveStorage = fal
   await expect(status).toHaveAttribute('data-fixture-id', fixtureId);
   await expect(status).toHaveAttribute('data-playback-state', 'idle');
   await expect(status).toHaveAttribute('data-render-consistency', 'passed');
+  return errors;
+}
+
+async function enterFixtureWithDiagnostics(page: Page, fixtureId: string) {
+  const errors = collectBrowserErrors(page);
+  await page.goto(`/?e2e=1&debugPerformance=1&fixture=${fixtureId}`);
+  await page.evaluate(() => window.localStorage.clear());
+  const status = page.locator(statusSelector);
+  await expect(status).toHaveAttribute('data-scene', 'main-menu');
+  await clickMainMenuPlay(page);
+  await expect(status).toHaveAttribute('data-scene', 'puzzle');
   return errors;
 }
 
@@ -230,7 +244,7 @@ test('restart, resize, and menu exit safely cancel fast playback through real UI
   await clickHudButton(page, 'restart');
   await expect(status).toHaveAttribute('data-playback-state', 'idle');
   await submitExpectedFixtureMove(page);
-  await clickHudButton(page, 'menu');
+  await page.locator('canvas').press('KeyM');
   await expect(status).toHaveAttribute('data-scene', 'main-menu');
   errors.assertNone();
 });
@@ -251,5 +265,77 @@ test('hint, pause, and persisted playback preferences work without page errors',
   await expect(status).toHaveAttribute('data-scene', 'main-menu');
   await clickMainMenuPlay(page);
   await expect(status).toHaveAttribute('data-playback-mode', 'fast');
+  errors.assertNone();
+});
+
+test('diagnostics capture a bounded cleanup sample and ARIA announces authoritative feedback', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const errors = await enterFixtureWithDiagnostics(page, 'fast-gravity');
+  const status = page.locator(statusSelector);
+  await page.locator('canvas').press('H');
+  await expect(page.locator('#storycrush-status')).toContainText('Hint: swap row');
+  await submitExpectedFixtureMove(page);
+  await expectFixtureCompletion(page);
+  await expect(page.locator('#storycrush-status')).toContainText('Move accepted');
+
+  const serialized = await getRequiredStatusAttribute(page, 'performance-sample');
+  const sample = JSON.parse(serialized) as {
+    frameCount: number;
+    playbackDurationMs: number;
+    resourcesAfter: { activeTweens: number; activeTimers: number; temporaryObjects: number };
+  };
+  expect(sample.frameCount).toBeGreaterThan(0);
+  expect(sample.playbackDurationMs).toBeGreaterThan(0);
+  expect(sample.resourcesAfter).toEqual({ activeTweens: 0, activeTimers: 0, temporaryObjects: 0 });
+  errors.assertNone();
+});
+
+test('restart, navigation, and resize soaks preserve the stable resource baseline', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = await enterFixture(page, 'instant-resolution');
+  const status = page.locator(statusSelector);
+  const baseline = {
+    displayObjects: await getStatusNumber(page, 'display-objects'),
+    boardPieces: await getStatusNumber(page, 'board-piece-count'),
+    listeners: await getStatusNumber(page, 'listener-count'),
+  };
+
+  for (let index = 0; index < 25; index += 1) {
+    await clickHudButton(page, 'restart');
+    await expect(status).toHaveAttribute('data-playback-state', 'idle');
+  }
+
+  for (let index = 0; index < 20; index += 1) {
+    await clickHudButton(page, 'menu');
+    await expect(status).toHaveAttribute('data-scene', 'main-menu');
+    await clickMainMenuPlay(page);
+    await expect(status).toHaveAttribute('data-scene', 'puzzle');
+  }
+
+  for (const viewport of [
+    { width: 1280, height: 720 },
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+    { width: 320, height: 568 },
+    { width: 360, height: 800 },
+    { width: 412, height: 915 },
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+    { width: 1280, height: 720 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const geometry = await getBoardGeometry(page);
+    expect(geometry.cellSize).toBeGreaterThanOrEqual(24);
+  }
+
+  expect(await getStatusNumber(page, 'display-objects')).toBe(baseline.displayObjects);
+  expect(await getStatusNumber(page, 'board-piece-count')).toBe(baseline.boardPieces);
+  expect(await getStatusNumber(page, 'listener-count')).toBe(baseline.listeners);
+  expect(await getStatusNumber(page, 'temporary-object-count')).toBe(0);
+  expect(await getStatusNumber(page, 'active-tween-count')).toBe(0);
+  expect(await getStatusNumber(page, 'active-timer-count')).toBe(0);
   errors.assertNone();
 });

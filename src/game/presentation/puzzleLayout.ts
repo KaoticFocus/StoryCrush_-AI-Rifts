@@ -33,7 +33,7 @@ function calculatePortraitLayout(
 ): PuzzleLayout {
   const padding = Math.max(18, Math.floor(Math.min(width, height) * 0.035));
   const gutter = Math.max(14, Math.floor(padding * 0.7));
-  const footerHeight = Math.max(68, Math.floor(height * 0.1));
+  const footerHeight = Math.max(124, Math.floor(height * 0.17));
   const hudHeight = Math.max(136, Math.min(210, Math.floor(height * 0.24)));
 
   const boardAreaHeight = height - padding * 2 - hudHeight - footerHeight - gutter * 2;
@@ -82,12 +82,12 @@ export function calculatePuzzleLayout(input: {
 
   const padding = Math.max(20, Math.floor(Math.min(width, height) * 0.035));
   const gutter = Math.max(16, Math.floor(padding * 0.8));
-  const footerHeight = Math.max(70, Math.floor(height * 0.1));
+  const footerHeight = Math.max(124, Math.floor(height * 0.17));
   const preferredHudWidth = Math.max(250, Math.min(360, Math.floor(width * 0.28)));
   const maxBoardWidth = width - padding * 2 - preferredHudWidth - gutter;
   const maxBoardHeight = height - padding * 2 - footerHeight - gutter;
   const landscapeCellSize = Math.floor(Math.min(maxBoardWidth / columns, maxBoardHeight / rows));
-  const usePortrait = width < height * 1.05 || landscapeCellSize < 28;
+  const usePortrait = width < height * 1.05;
 
   if (usePortrait) {
     return calculatePortraitLayout(width, height, rows, columns);

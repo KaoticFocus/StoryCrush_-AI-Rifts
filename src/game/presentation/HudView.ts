@@ -75,6 +75,7 @@ export class HudView {
       this.feedbackLayer,
       this.pauseOverlay,
     ]);
+    this.root.setDepth(200);
 
     this.buttons.push(this.createButton('restart', 'Restart'));
     this.buttons.push(this.createButton('menu', 'Back to Menu'));
@@ -213,8 +214,8 @@ export class HudView {
 
     this.summaryText.setText(summary);
     this.summaryText.setColor(input.hasError ? '#fca5a5' : '#cbd5e1');
-    this.summaryText.setPosition(layout.footerRect.x + horizontalPadding, layout.footerRect.y + 10);
-    this.summaryText.setWordWrapWidth(layout.footerRect.width - horizontalPadding * 2 - 340);
+    this.summaryText.setPosition(layout.footerRect.x + horizontalPadding, layout.footerRect.y + 8);
+    this.summaryText.setWordWrapWidth(layout.footerRect.width - horizontalPadding * 2);
 
     const buttonGap = 8;
     const buttonHeight = 36;
@@ -229,7 +230,7 @@ export class HudView {
       const column = index % columns;
       const row = Math.floor(index / columns);
       const x = layout.footerRect.x + horizontalPadding + column * (buttonWidth + buttonGap);
-      const y = layout.footerRect.y + 8 + row * (buttonHeight + 8);
+      const y = layout.footerRect.y + 42 + row * (buttonHeight + 8);
       button.background.setPosition(x + buttonWidth / 2, y + buttonHeight / 2);
       button.background.setSize(buttonWidth, buttonHeight);
       button.text.setPosition(x + buttonWidth / 2, y + buttonHeight / 2);
@@ -253,6 +254,20 @@ export class HudView {
       button.background.removeAllListeners();
     }
     this.root.destroy(true);
+  }
+
+  public getResourceSnapshot(): {
+    displayObjects: number;
+    temporaryObjects: number;
+    activeTweens: number;
+    activeTimers: number;
+  } {
+    return {
+      displayObjects: this.root.getAll().length,
+      temporaryObjects: this.transientObjects.size,
+      activeTweens: this.activeTweens.size,
+      activeTimers: this.activeTimers.size,
+    };
   }
 
   public cancelTransientEffects(): void {
@@ -407,7 +422,7 @@ export class HudView {
     background.on('pointerout', () => {
       background.setFillStyle(0x1d4ed8);
     });
-    background.on('pointerdown', () => {
+    const handleButtonActivation = () => {
       if (key === 'restart') {
         this.onRestart?.();
         return;
@@ -434,7 +449,9 @@ export class HudView {
       }
 
       this.onBackToMenu?.();
-    });
+    };
+
+    background.on('pointerup', handleButtonActivation);
 
     this.root.add([background, text]);
     return { key, label, background, text };

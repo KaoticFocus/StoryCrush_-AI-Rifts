@@ -2,5 +2,6 @@ node_modules/
 dist/
 coverage/
 .vite/
+test-results/
 .DS_Store
 *.log
