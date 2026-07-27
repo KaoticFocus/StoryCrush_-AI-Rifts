@@ -2,7 +2,7 @@
 
 StoryCrush is a narrative-driven match-3 concept where player choices and cross-universe rifts reshape gameplay outcomes.
 
-This repository is currently in Phase 1G (deterministic scoring, objectives, move consumption, and level outcomes).
+This repository is currently in Phase 1H-B2 (special-effect presentation, reshuffle movement, and incremental HUD feedback).
 
 ## Current Milestone Status
 
@@ -15,17 +15,20 @@ This repository is currently in Phase 1G (deterministic scoring, objectives, mov
 - Phase 1E discriminated board-piece modeling and special-piece placement are implemented.
 - Phase 1F activation-aware swap validation, special activation effects, and deterministic activation chains are implemented.
 - Phase 1G level-domain scoring, objective progress, move consumption, win/failure evaluation, and dead-board recovery orchestration are implemented.
+- Phase 1H-A Phaser presentation is complete with a playable prototype puzzle scene, placeholder piece rendering, pointer/touch input, responsive layout, and HUD synchronization.
+- Phase 1H-B1 presentation playback is complete with deterministic playback planning, accepted/rejected swap animation, match highlighting, generic special feedback, removal, special creation, gravity, refill, cascade sequencing, reshuffle fade fallback, and final-state synchronization.
+- Phase 1H-B2 presentation polish is implemented with distinct special effects, deterministic reshuffle movement, incremental score feedback, incremental objective feedback, and refined playback timings.
 - Tooling is configured: Vitest, ESLint, Prettier, type-check, and production build.
-- A minimal Phaser boot flow is still live: BootScene -> MainMenuScene.
+- The main playable flow is BootScene -> MainMenuScene -> PuzzleScene.
 
-Gameplay presentation systems are not implemented yet.
+Prototype gameplay polish and QA remain deferred to Phase 1I.
 
 ## Project Description
 
 This foundation build currently validates:
 
 - Browser boot and Phaser initialization
-- Minimal scene registration and transition
+- Playable Phaser menu-to-puzzle scene flow
 - Deterministic board-domain rules outside Phaser runtime
 - Discriminated board-piece storage with defensive cloning and validation
 - Deterministic swap-resolution pipeline with activation-aware cascade history
@@ -38,11 +41,15 @@ This foundation build currently validates:
 - Deterministic score and piece-collection objectives
 - Deterministic level win/failure evaluation
 - Deterministic level-session dead-board recovery via reshuffle orchestration
+- Responsive Phaser board layout with pointer and touch selection
+- Deterministic presentation playback driven only by accepted level-domain history
+- Accepted swap animation, rejected adjacent swap-and-return animation, match highlighting, special-effect presentation, removal, gravity, refill, cascades, and deterministic reshuffle movement
+- Prototype HUD with incremental score counting, incremental objective progress, completion feedback, status, restart, menu navigation, playback-speed controls, and reduced-motion toggle
+- Safe playback cancellation on restart, menu exit, resize, shutdown, and playback failure hard-sync
 - Non-interactive verification pipeline for CI-style checks
 
-It intentionally does not include rendered puzzle gameplay. Resolution and level outcomes exist only in deterministic domain layers and are currently test-driven.
-These systems are still domain-only and are not player-visible in Phaser scenes.
-It does not yet include Phaser board rendering, gameplay input, animations, sound, narrative branching systems, rift mechanics, saves, universe content, or AI features.
+It intentionally keeps board and level rules outside Phaser. Phaser reads immutable move history, animates display objects, and hard-synchronizes to the authoritative controller state after playback.
+It does not yet include final art, sound, narrative branching systems, rift mechanics, saves, universe content, or AI features.
 
 ## Prerequisites
 
@@ -70,6 +77,53 @@ npm run format:check
 npm run verify
 ```
 
+## Play The Prototype
+
+Run the app locally:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open the app and follow this temporary flow:
+
+- Main menu
+- Select `Play Prototype`
+- Tap or click one board cell
+- Tap or click an orthogonally adjacent cell to submit a move
+
+Input behavior:
+
+- Selecting the same cell deselects it.
+- Selecting a non-adjacent cell changes the current selection.
+- Rejected adjacent swaps animate out and back, show brief feedback, and consume no moves.
+- Accepted swaps animate through swap, match highlight, distinct line-clear/area-clear/wildcard effects, removal, special creation, gravity, refill, cascades, deterministic reshuffle movement when needed, and final authoritative synchronization.
+- Restart restores the same deterministic prototype level.
+
+Playback controls:
+
+- `Mode: normal` uses standard timing.
+- `Mode: fast` uses approximately half-duration playback.
+- `Mode: instant` applies the same logical display updates without visible tween delays.
+- `Motion: reduced` shortens or removes scaling and pause-heavy transitions while preserving required position changes.
+
+Current effect behavior:
+
+- Horizontal and vertical line clears use directional beam travel in normal mode and simultaneous lane highlighting in reduced motion.
+- Area clear uses a compact radial shockwave in normal mode and simultaneous affected-cell flashing in reduced motion.
+- Wildcard targeting marks domain-provided targets and uses full-board wave presentation for entire-board activation.
+- Chain reactions preserve domain activation order and emphasize newly triggered specials without activating them early.
+- Reshuffles animate deterministic per-piece movement derived from exact piece identity, with reduced-motion fade/reposition behavior.
+- Score and objective progress advance incrementally during playback and hard-synchronize at the end.
+
+Cancellation behavior:
+
+- Restart, menu exit, resize, shutdown, and playback failure cancel active tweens and rebuild from the authoritative controller state.
+- Terminal states remain input-locked after playback completes.
+
+The prototype level uses an 8 x 8 board, 15 moves, a score target, and a Ruby collection target.
+
 ## Verification Command
 
 Use this before considering a change complete:
@@ -87,27 +141,56 @@ src/
 	main.ts
 	game/
 		config.ts
+		content/
+			prototypeLevel.ts
 		board/
 			Board.ts
 			applyGravity.ts
+			applyMatchPlanning.ts
 			deadBoard.ts
+			errors.ts
 			boardTypes.ts
 			boardValidation.ts
 			generateBoard.ts
 			index.ts
 			matchDetection.ts
+			matchGroups.ts
 			pieceInventory.ts
+			playableSwapValidation.ts
 			refillBoard.ts
 			removeMatches.ts
 			reshuffleBoard.ts
 			resolveCascade.ts
 			resolutionGrid.ts
 			seededRandom.ts
+			specialActivation.ts
+			specialPiecePlanning.ts
 			swapValidation.ts
 			validMoves.ts
+			wildcardTargeting.ts
+		presentation/
+			BoardView.ts
+			HudView.ts
+			PuzzleSessionController.ts
+			boardViewModel.ts
+			levelViewModel.ts
+			pieceAppearance.ts
+			playback/
+				ResolutionPlaybackController.ts
+				buildMovePlaybackPlan.ts
+				gravityMovementPlanning.ts
+				objectivePresentationPlanning.ts
+				playbackTimings.ts
+				playbackTypes.ts
+				refillPresentationPlanning.ts
+				reshuffleMovementPlanning.ts
+				scorePresentationPlanning.ts
+				specialEffectPlanning.ts
+			puzzleLayout.ts
 		scenes/
 			BootScene.ts
 			MainMenuScene.ts
+			PuzzleScene.ts
 		level/
 			applyLevelMove.ts
 			collectionEvents.ts
@@ -134,14 +217,20 @@ tests/
 			deadBoard.test.ts
 			generateBoard.test.ts
 			matchDetection.test.ts
+			matchGroups.test.ts
 			pieceInventory.test.ts
+			playableSwapValidation.test.ts
 			refillBoard.test.ts
 			removeMatches.test.ts
 			reshuffleBoard.test.ts
 			resolveCascade.test.ts
 			seededRandom.test.ts
+			specialActivation.test.ts
+			specialActivationResolution.test.ts
+			specialPiecePlanning.test.ts
 			swapValidation.test.ts
 			validMoves.test.ts
+			wildcardTargeting.test.ts
 		level/
 			applyLevelMove.test.ts
 			collectionEvents.test.ts
@@ -150,6 +239,20 @@ tests/
 			objectives.test.ts
 			scoring.test.ts
 			seedDerivation.test.ts
+		presentation/
+			PuzzleSessionController.test.ts
+			ResolutionPlaybackController.test.ts
+			boardViewModel.test.ts
+			buildMovePlaybackPlan.test.ts
+			gravityMovementPlanning.test.ts
+			levelViewModel.test.ts
+			objectivePresentationPlanning.test.ts
+			playbackTimings.test.ts
+			puzzleLayout.test.ts
+			refillPresentationPlanning.test.ts
+			reshuffleMovementPlanning.test.ts
+			scorePresentationPlanning.test.ts
+			specialEffectPlanning.test.ts
 
 docs/
 	product-scope.md
@@ -169,7 +272,7 @@ docs/
 
 ## Current Milestone Notes
 
-Phase 1G behavior is fully domain-only and serialization-friendly:
+Phase 1H-A uses the existing domain layer as the sole gameplay authority and adds a presentation adapter plus Phaser views:
 
 - Playable swaps include ordinary matches, wildcard swaps, and special-to-special swaps.
 - Special activations use deterministic FIFO chain processing with one activation per coordinate per step.
@@ -177,12 +280,17 @@ Phase 1G behavior is fully domain-only and serialization-friendly:
 - Cascade step history now includes activation triggers, activation events, and total affected coordinates.
 - Level sessions track immutable score, moves, objectives, and terminal status (`active`, `won`, `failed`).
 - Accepted playable moves consume exactly one move; rejected and terminal move requests consume zero.
-- Score derives from structured cascade history:
-  - Piece-clear points from actual removed coordinates.
-  - Special activation bonuses from activation events.
-  - Integer cascade multiplier by step index.
+- Score derives from structured cascade history.
+- Piece-clear points come from actual removed coordinates.
+- Special activation bonuses come from activation events.
+- Integer cascade multipliers scale by cascade-step index.
 - Supported objective types are score and piece collection only.
 - Active dead boards are automatically reshuffled via deterministic seed derivation and existing reshuffle rules.
+- PuzzleScene does not calculate any board or level rules; it only requests moves and renders returned state.
+- Board rendering uses placeholder vector graphics for all standard and special piece kinds.
+- HUD text is synchronized from immutable level-session state after every accepted move or restart.
+- Resize recalculates layout without restarting the level.
+- Detailed swap, removal, gravity, refill, special, and reshuffle playback remains reserved for Phase 1H-B.
 
 Default scoring rules:
 
@@ -192,7 +300,7 @@ Default scoring rules:
 - `wildcardActivationBonus`: 60
 - `cascadeMultiplierIncrement`: 1
 
-These behaviors are covered by tests under `tests/unit/board` and `tests/unit/level`, including:
+These behaviors are covered by tests under `tests/unit/board`, `tests/unit/level`, and `tests/unit/presentation`, including:
 
 - `specialActivation.test.ts`
 - `wildcardTargeting.test.ts`
@@ -202,5 +310,9 @@ These behaviors are covered by tests under `tests/unit/board` and `tests/unit/le
 - `collectionEvents.test.ts`
 - `createLevelSession.test.ts`
 - `applyLevelMove.test.ts`
+- `PuzzleSessionController.test.ts`
+- `puzzleLayout.test.ts`
+- `boardViewModel.test.ts`
+- `levelViewModel.test.ts`
 
-This milestone remains non-visual and domain-only. Phaser scenes are unchanged and do not render puzzle gameplay yet.
+Current limitation: the prototype redraws immediately to the post-resolution board state. It does not yet animate swaps, removals, activations, gravity, refill, cascades, or reshuffles.

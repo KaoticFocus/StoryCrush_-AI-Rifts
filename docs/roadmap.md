@@ -10,7 +10,10 @@
 - Phase 1D is complete: match-shape classification and special-piece planning.
 - Phase 1E is complete: discriminated board-piece modeling and special-piece placement.
 - Phase 1F is complete: activation-aware playable swap validation, deterministic special activation effects, chain reactions, and activation-aware dead-board/reshuffle analysis.
-- Phase 1G is current and implemented: deterministic level-domain scoring, move consumption, score and collection objectives, win/failure evaluation, and session-level dead-board recovery orchestration.
+- Phase 1G is complete: deterministic level-domain scoring, move consumption, score and collection objectives, win/failure evaluation, and session-level dead-board recovery orchestration.
+- Phase 1H-A is complete: first playable Phaser puzzle scene, responsive board rendering, pointer/touch input, HUD synchronization, deterministic prototype level, and restart/menu flow.
+- Phase 1H-B1 is complete: deterministic playback planning, accepted/rejected swap animation, match highlighting, generic special feedback, removal, special creation, gravity, refill, cascade sequencing, reshuffle fade fallback, playback controls, reduced motion, and final-state synchronization.
+- Phase 1H-B2 is current and implemented: distinct special-effect presentation, deterministic reshuffle movement, incremental score feedback, incremental objective feedback, refined timing, and reduced-motion equivalents.
 
 ## Phase 0B - Foundation Scaffold
 
@@ -165,24 +168,89 @@ Status: complete.
 - Phaser rendering and animation integration
 - Narrative integration changes
 
-## Phase 1H - Phaser Puzzle Scene Integration (Next)
+## Phase 1H-A - Phaser Puzzle Scene, Rendering, Input, and HUD (Complete)
 
-### Reserved Scope
+### Implemented Scope
 
-- Phaser puzzle-scene shell
-- Board rendering with placeholder shapes
-- Pointer/touch swap selection
-- Swap-request dispatch to level domain
-- Animation driven from deterministic board + level histories
-- HUD display for moves, score, objectives, and status
+- Phaser puzzle scene
+- Responsive placeholder board rendering
+- Pointer and touch selection
+- Adjacent swap submission to level domain
+- Immediate accepted-move synchronization to authoritative level state
+- HUD display for score, moves, objectives, and level status
+- Prototype-level restart and menu navigation
 
-### Explicitly Out of Scope for Phase 1H Start
+### Explicitly Deferred to Phase 1H-B
+
+- Swap animation
+- Rejected swap return animation
+- Match-removal animation
+- Special activation animation
+- Gravity animation
+- Refill animation
+- Cascade sequencing and playback
+- Reshuffle animation
+- Playback controls driven from deterministic resolution history
+
+### Still Out of Scope
 
 - Narrative systems and story progression
 - Final art and audio polish
 - AI integrations
 
-Phase 1G now completes the deterministic non-visual core match-3 loop. Phase 1H should focus on presentation and interaction only.
+Phase 1H-A establishes the first playable prototype while keeping board and level rules fully outside Phaser.
+
+## Phase 1H-B1 - Resolution Playback Engine and Core Board Animations (Complete)
+
+### Implemented Scope
+
+- Pure serializable playback plan built from `AcceptedLevelMoveResult`
+- Accepted swap animation
+- Rejected adjacent swap-and-return animation
+- Match highlighting
+- Generic line-clear, area-clear, and wildcard activation feedback
+- Matched-piece removal animation
+- Special-piece creation appearance animation
+- Gravity movement planning and animation
+- Refill entry planning and animation
+- Sequential cascade playback with cascade labels and pauses
+- Reshuffle fade-out / rebuild / fade-in fallback
+- Final authoritative-state synchronization
+- Playback speed controls: normal, fast, instant
+- Reduced-motion toggle
+- Safe cancellation on restart, menu exit, resize, shutdown, and playback failure
+
+### Architectural Constraint
+
+- All timing and visuals remain outside the board and level domains.
+
+## Phase 1H-B2 - Presentation Effects and Polishing (Complete)
+
+### Implemented Scope
+
+- Traveling horizontal and vertical line-clear beam animations
+- Area-clear explosion presentation
+- Wildcard target presentation and choreography
+- Improved activation-chain choreography
+- Individual reshuffle movement
+- Incremental score and objective feedback
+- Animation timing polish and accessibility review
+
+### Architectural Constraint
+
+- All timing and visuals remain outside the board and level domains.
+
+## Phase 1I - Prototype Gameplay Polish and QA (Next)
+
+### Reserved Scope
+
+- Hint presentation using existing playable-move APIs
+- Pause and resume
+- Lightweight settings persistence
+- Gameplay accessibility review
+- Performance profiling
+- Playback and layout polish
+- Formal QA pass for the prototype gameplay loop
 
 ## Smallest Safe Implementation Sequence
 

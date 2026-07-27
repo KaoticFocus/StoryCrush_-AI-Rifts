@@ -34,9 +34,9 @@
 
 ## Current Confirmed Limitations (Post-Phase 0B)
 
-1. Foundation-only application
+1. Placeholder visual style remains
 
-- Impact: no rendered playable puzzle loop yet; board-domain logic is currently test-driven only.
+- Impact: effects are readable and distinct, but they still use prototype vector styling rather than final art direction.
 - Severity: expected for current milestone.
 
 2. Production bundle warning from Phaser size
@@ -54,14 +54,14 @@
 - Impact: generated boards avoid initial matches but are not yet guaranteed to contain at least one valid scoring move.
 - Severity: medium. Planned for dead-board detection/reshuffle milestone.
 
-5. Core puzzle progression systems remain deferred
+5. Prototype scope remains intentionally narrow
 
-- Impact: scoring, objectives, special pieces, and broader gameplay progression remain unavailable.
+- Impact: the playable prototype exposes one deterministic level with score and piece-collection objectives only.
 - Severity: expected for current milestone.
 
-6. Resolution is domain-only and not player-visible
+6. Placeholder visuals only
 
-- Impact: match resolution pipeline exists in board-domain modules and tests but is not rendered in Phaser scenes.
+- Impact: board pieces, cells, and HUD use temporary vector graphics and prototype text styling.
 - Severity: expected for current milestone.
 
 7. Enhanced special combinations are not implemented
@@ -79,10 +79,10 @@
 - Impact: only score and piece-collection objectives are available in domain logic.
 - Severity: expected for current milestone.
 
-10. Resolution remains domain-only and not player-visible
+10. Browser-manual validation coverage still depends on available automation
 
-- Impact: activation-capable cascade logic is fully implemented in board-domain modules and tests, but is not rendered in Phaser scenes.
-- Severity: expected for current milestone.
+- Impact: dev and preview startup can be validated headlessly, but full in-browser interaction depends on available browser tooling in the environment.
+- Severity: medium.
 
 11. Session-level dead-board recovery is now implemented, but initial generation still does not guarantee moves
 
@@ -115,20 +115,56 @@
 
 - Scope: deterministic initial and post-move dead-board reshuffle orchestration.
 
+## Recently Resolved in Phase 1H-A / 1H-B2
+
+1. Board is now rendered in Phaser
+
+- Scope: complete 8 x 8 prototype board with placeholder standard and special piece visuals.
+
+2. Pointer and touch input now exist
+
+- Scope: selection, deselection, non-adjacent reselection, adjacent swap submission, and rejected-move feedback.
+
+3. HUD now exists
+
+- Scope: score, moves, objective progress, status, restart, and menu navigation.
+
+4. A playable prototype loop now exists
+
+- Scope: main menu entry, puzzle scene, deterministic restart, and terminal-state input lock.
+
+5. Core board playback now exists
+
+- Scope: accepted swap, rejected adjacent swap-and-return, match highlight, generic special feedback, removal, special creation, gravity, refill, cascade sequencing, and authoritative final sync.
+
+6. Playback controls now exist
+
+- Scope: normal, fast, instant, and reduced-motion behavior inside the prototype HUD.
+
+7. Distinct special-effect presentation exists
+
+- Scope: directional line-clear beams, area-clear shockwave, wildcard target marking, and full-board wildcard wave.
+
+8. Individual reshuffle animation exists
+
+- Scope: deterministic per-piece reshuffle movement preserving exact piece appearance.
+
+9. Incremental score and objective feedback exists
+
+- Scope: ordered score counting, collection progress updates, and short completion feedback.
+
 ## Remaining Confirmed Limitations
 
 - Only score and collection objectives are implemented.
 - No blockers or hazards are implemented.
 - No timed levels are implemented.
 - Enhanced special combinations are still deferred.
-- No Phaser board rendering is implemented.
-- No player input system is implemented.
-- No puzzle animation system is implemented.
+- Placeholder visuals only.
 - No sound integration is implemented.
 - No narrative integration is implemented.
 - No save persistence layer is implemented.
 - Phaser production bundle-size warning remains non-blocking.
-- Full interactive browser validation remains pending.
+- Browser-specific edge cases may still exist until broader manual device coverage is expanded.
 
 ## Process Risks
 

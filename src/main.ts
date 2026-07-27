@@ -25,8 +25,10 @@ function initializeGame(): Phaser.Game {
 try {
   initializeGame();
 } catch (error) {
-  console.error('Failed to initialize StoryCrush foundation build', error);
-  showStartupFallback('StoryCrush failed to initialize. Check the browser console for details.');
+  console.error('Failed to initialize StoryCrush prototype puzzle', error);
+  showStartupFallback(
+    'StoryCrush prototype failed to initialize. Check the browser console for details.',
+  );
 }
 
 if (import.meta.hot) {

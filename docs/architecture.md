@@ -258,6 +258,150 @@ Successful reshuffles preserve all of the following:
 - At least one valid scoring swap
 - Deterministic results for identical inputs and seed/source
 
+## Phase 1H-A / 1H-B1 Presentation Boundary (Implemented)
+
+### Core Rule
+
+- Board and level domains remain the only gameplay authorities.
+- Phaser scenes render immutable state, collect pointer input, submit move requests, and display results.
+- Phaser does not calculate swap validity, matches, cascades, score, objectives, move consumption, win/failure, or reshuffles.
+
+### Presentation Modules
+
+- `src/game/content/prototypeLevel.ts`
+  - Fixed deterministic prototype level definition and initial board.
+- `src/game/presentation/PuzzleSessionController.ts`
+  - Holds the current immutable `LevelSessionState`.
+  - Delegates swap requests to `applyLevelMove`.
+  - Replaces state only after accepted results.
+  - Preserves state after rejected or terminal results.
+  - Recreates the initial deterministic session on restart.
+- `src/game/presentation/puzzleLayout.ts`
+  - Centralizes responsive HUD/board/footer geometry.
+  - Converts board coordinates to screen positions and pointer positions back to board coordinates.
+- `src/game/presentation/boardViewModel.ts`
+  - Converts immutable `Board` state into presentation-friendly cell data.
+- `src/game/presentation/levelViewModel.ts`
+  - Formats score, moves, objectives, status, and move-summary text for HUD display.
+- `src/game/presentation/pieceAppearance.ts`
+  - Maps every standard and special `BoardPiece` kind to distinct placeholder styling.
+- `src/game/presentation/BoardView.ts`
+  - Tracks one piece display object per occupied coordinate.
+  - Renders selection, hover, disabled state, and playback effects.
+  - Executes swap, highlight, activation, removal, creation, gravity, refill, cascade-label, reshuffle-fallback, and synchronization commands.
+- `src/game/presentation/HudView.ts`
+  - Renders score, moves, objectives, status, summary text, restart, menu actions, playback mode, and reduced-motion controls.
+- `src/game/presentation/playback/playbackTypes.ts`
+  - Defines serializable playback command contracts and summary metadata.
+- `src/game/presentation/playback/buildMovePlaybackPlan.ts`
+  - Converts immutable accepted-move history into deterministic presentation commands.
+- `src/game/presentation/playback/gravityMovementPlanning.ts`
+  - Derives gravity movements from transient grids without piece IDs.
+- `src/game/presentation/playback/refillPresentationPlanning.ts`
+  - Derives deterministic refill entry ordering and off-board start rows.
+- `src/game/presentation/playback/specialEffectPlanning.ts`
+  - Converts `SpecialActivationEvent` data into serializable line-clear, area-clear, wildcard-target, and full-board effect plans.
+- `src/game/presentation/playback/reshuffleMovementPlanning.ts`
+  - Maps exact piece identity from original board to reshuffled board using row-major pairing per identity key.
+- `src/game/presentation/playback/scorePresentationPlanning.ts`
+  - Converts ordered score events into cumulative score presentation entries.
+- `src/game/presentation/playback/objectivePresentationPlanning.ts`
+  - Converts collection events and objective updates into incremental objective feedback plans.
+- `src/game/presentation/playback/playbackTimings.ts`
+  - Centralizes mode-dependent, reduced-motion, and effect-intensity timing rules.
+- `src/game/presentation/playback/ResolutionPlaybackController.ts`
+  - Executes playback plans sequentially, coordinates cancellation, and hard-syncs on failure.
+
+### Scene Responsibilities
+
+- `PuzzleScene` owns scene lifecycle, controller creation, authoritative-state overrides for playback, HUD synchronization timing, resize cancellation, restart/menu cancellation, and presentation-only input locking.
+- `MainMenuScene` exposes the prototype entry point and no longer acts only as a diagnostic screen.
+
+### Coordinate Conversion
+
+- Domain-facing APIs use zero-based `{ row, column }` only.
+- Screen-space math is isolated in `puzzleLayout.ts`.
+- Pointer positions outside the board return `null` and never produce domain move requests.
+
+### Responsive Layout
+
+- Portrait layout places HUD above the board and controls below it.
+- Landscape layout places the HUD beside the board when space allows.
+- Cell size remains square and is derived from the current viewport.
+- Resize preserves the current session state and recomputes layout without consuming moves.
+
+### Authoritative State Versus Display State
+
+- `PuzzleSessionController` adopts accepted `nextState` immediately after the domain move succeeds.
+- During accepted playback, BoardView renders from `previousState.board` and transient step snapshots.
+- Display-state animation never becomes gameplay authority.
+- Final HUD values come from the authoritative controller state after playback completes.
+
+### Playback Plan Sequencing
+
+- Accepted playback begins with the swap command.
+- Each cascade step plays in this order:
+  - match highlight
+  - special activation feedback in domain event order
+  - linked score feedback for special activations
+  - piece removal
+  - linked piece-clear score feedback
+  - linked collection-objective feedback
+  - protected special creation appearance
+  - gravity
+  - refill
+  - cascade pause before the next step
+- Reshuffle, when present, plays after cascades as deterministic per-piece movement.
+- The last command always hard-synchronizes the rendered board to authoritative state.
+
+### Special-Effect Presentation
+
+- Horizontal line clear uses a directional beam from the source toward both row edges.
+- Vertical line clear mirrors that behavior toward column edges.
+- Area clear uses a compact radial shockwave and ring-based affected-cell flashing.
+- Wildcard target effects mark domain-provided targets and optionally draw lightweight connection lines.
+- Wildcard full-board activation uses a controlled board-wide wave instead of an intense full-screen flash.
+- Newly triggered specials receive a short emphasis pulse but do not activate early.
+
+### Incremental HUD Feedback
+
+- Score changes follow domain `ScoreEvent` ordering and animate toward each cumulative score target.
+- Collection-objective feedback follows actual `PieceCollectionEvent` records.
+- Score-objective feedback follows the same cumulative score transitions used by the score counter.
+- Final score and objective values are hard-synchronized from authoritative state after playback.
+
+### Gravity and Refill Planning
+
+- Gravity movement is derived column-by-column from `gridAfterRemovalAndCreation` and `gridAfterGravity`.
+- Movement pairing uses preserved bottom-to-top survivor order rather than object identity.
+- Refill entry planning uses domain `RefillPlacement[]` ordering and deterministic off-board start rows per column.
+
+### Input Locking
+
+- Input locking lives only in `PuzzleScene`.
+- Input is locked during accepted playback, rejected adjacent playback, and whenever the level state is terminal.
+- The controller and domains remain stateless about view locks.
+
+### Cancellation and Resize Behavior
+
+- Restart, menu exit, resize, shutdown, and playback failure cancel active tweens and delayed callbacks.
+- The same cancellation path now also stops score counters, objective counters, collection feedback, and reshuffle movement.
+- Cancellation clears temporary highlights, labels, and stale selection.
+- Resize does not preserve partial tween progress; it cancels playback and rebuilds from authoritative state.
+- Playback failure never rolls back an accepted move; it logs the error and hard-syncs view state.
+
+### Development Consistency Checks
+
+- BoardView keeps a coordinate-keyed display-object map.
+- Development assertions verify one rendered piece per occupied coordinate, no pieces for transient null cells, and piece-kind/piece-type agreement with the expected snapshot.
+
+### Phase 1I Deferrals
+
+- Hint presentation remains deferred.
+- Pause/resume remains deferred.
+- Settings persistence remains deferred.
+- Performance profiling and formal QA remain deferred.
+
 ### Reshuffle Strategy
 
 Stage A - Seeded permutation attempts:
