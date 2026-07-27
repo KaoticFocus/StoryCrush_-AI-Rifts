@@ -32,6 +32,8 @@ import {
 } from './playback/playbackTypes';
 import { type PlaybackSettings } from './playback/ResolutionPlaybackController';
 import { type SpecialEffectPresentationPlan } from './playback/specialEffectPlanning';
+import { planTwoPhaseCoordinateRekey } from './playback/twoPhaseCoordinateRekey';
+import { getBoardPieceHash } from './testing/BrowserTestStatusBridge';
 
 interface BoardViewState {
   selectedCoordinate: BoardCoordinate | null;
@@ -85,6 +87,8 @@ export class BoardView {
   private readonly activeTweens = new Set<Phaser.Tweens.Tween>();
   private readonly activeTimers = new Set<Phaser.Time.TimerEvent>();
   private readonly pendingResolvers = new Set<() => void>();
+  private readonly hintObjects = new Set<Phaser.GameObjects.GameObject>();
+  private hintTimer: Phaser.Time.TimerEvent | null = null;
   private layout: PuzzleLayout | null = null;
   private boardViewModel: BoardViewModel | null = null;
   private state: BoardViewState = {
@@ -166,6 +170,22 @@ export class BoardView {
 
   public setCellSelectedHandler(handler: (coordinate: BoardCoordinate) => void): void {
     this.onCellSelected = handler;
+  }
+
+  public getRenderedBoardHash(): string | null {
+    if (!this.boardViewModel) {
+      return null;
+    }
+
+    const { rows, columns } = this.boardViewModel;
+    const cells: string[] = [];
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        const display = this.pieceDisplays.get(coordinateKey({ row, column }));
+        cells.push(display ? getBoardPieceHash(display.piece) : 'empty');
+      }
+    }
+    return `${rows}x${columns}|${cells.join(',')}`;
   }
 
   public render(input: {
@@ -308,7 +328,75 @@ export class BoardView {
     this.pendingResolvers.clear();
   }
 
+  public showHint(input: {
+    from: BoardCoordinate;
+    to: BoardCoordinate;
+    duration: number;
+    reducedMotion: boolean;
+  }): void {
+    this.clearHint();
+    if (!this.layout) {
+      return;
+    }
+
+    const outlines = this.createHighlights([input.from, input.to], 0x38bdf8, 0.22);
+    for (const outline of outlines) {
+      this.hintObjects.add(outline);
+    }
+
+    const from = this.getCellCenter(input.from);
+    const to = this.getCellCenter(input.to);
+    const connector = this.scene.add.graphics();
+    connector.lineStyle(Math.max(3, this.layout.cellSize * 0.08), 0xfef08a, 0.95);
+    connector.beginPath();
+    connector.moveTo(from.x, from.y);
+    connector.lineTo(to.x, to.y);
+    connector.strokePath();
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    const arrowSize = Math.max(7, this.layout.cellSize * 0.18);
+    connector.fillStyle(0xfef08a, 0.95);
+    connector.fillTriangle(
+      to.x,
+      to.y,
+      to.x - Math.cos(angle - Math.PI / 2) * arrowSize - Math.cos(angle) * arrowSize,
+      to.y - Math.sin(angle - Math.PI / 2) * arrowSize - Math.sin(angle) * arrowSize,
+      to.x - Math.cos(angle + Math.PI / 2) * arrowSize - Math.cos(angle) * arrowSize,
+      to.y - Math.sin(angle + Math.PI / 2) * arrowSize - Math.sin(angle) * arrowSize,
+    );
+    this.effectLayer.add(connector);
+    this.hintObjects.add(connector);
+
+    if (!input.reducedMotion) {
+      this.trackTween(
+        this.scene.tweens.add({
+          targets: [...outlines, connector],
+          alpha: 0.45,
+          duration: 420,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        }),
+      );
+    }
+
+    this.hintTimer = this.scene.time.delayedCall(input.duration, () => {
+      this.hintTimer = null;
+      this.clearHint();
+    });
+  }
+
+  public clearHint(): void {
+    this.hintTimer?.remove(false);
+    this.hintTimer = null;
+    for (const object of this.hintObjects) {
+      this.transientObjects.delete(object);
+      object.destroy();
+    }
+    this.hintObjects.clear();
+  }
+
   public clearTransientState(): void {
+    this.clearHint();
     for (const object of this.transientObjects) {
       object.destroy();
     }
@@ -532,8 +620,8 @@ export class BoardView {
         this.pieceDisplays.delete(secondKey);
         first.coordinate = cloneCoordinate(command.to);
         second.coordinate = cloneCoordinate(command.from);
-        this.pieceDisplays.set(secondKey, second);
-        this.pieceDisplays.set(firstKey, first);
+        this.pieceDisplays.set(firstKey, second);
+        this.pieceDisplays.set(secondKey, first);
       },
     );
   }
@@ -746,12 +834,17 @@ export class BoardView {
         }
       },
       () => {
-        for (const movement of movements) {
-          this.pieceDisplays.delete(movement.fromKey);
+        const rekeyPlan = planTwoPhaseCoordinateRekey(movements);
+        // Vacate every moving source before publishing any destination. A lower
+        // piece can fall into the source coordinate of another concurrent fall.
+        for (const sourceKey of rekeyPlan.sourceKeysToRemove) {
+          this.pieceDisplays.delete(sourceKey);
         }
-        for (const movement of movements) {
+        for (const assignment of rekeyPlan.destinationAssignments) {
+          const movement = movements[assignment.movementIndex];
+          movement.display.container.setPosition(movement.target.x, movement.target.y);
           movement.display.coordinate = cloneCoordinate(movement.coordinate);
-          this.pieceDisplays.set(movement.toKey, movement.display);
+          this.pieceDisplays.set(assignment.toKey, movement.display);
         }
         this.assertDisplayMatchesGrid(command.gridAfter);
       },
@@ -1722,7 +1815,9 @@ export class BoardView {
         }
 
         if (display.piece.kind !== cell.kind || display.piece.pieceType !== cell.pieceType) {
-          throw new Error(`rendered piece mismatch at ${key}`);
+          throw new Error(
+            `rendered piece mismatch at ${key}: expected ${cell.kind}:${cell.pieceType}, received ${display.piece.kind}:${display.piece.pieceType}`,
+          );
         }
       }
     }

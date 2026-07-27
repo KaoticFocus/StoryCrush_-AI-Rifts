@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PuzzleScene } from './PuzzleScene';
+import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusBridge';
 
 export class MainMenuScene extends Phaser.Scene {
   public static readonly key = 'MainMenuScene';
@@ -9,6 +10,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   public create(): void {
+    markBrowserTestScene('main-menu');
     const { width, height } = this.scale;
 
     this.cameras.main.setBackgroundColor('#020617');

@@ -5,7 +5,7 @@ import { type PlaybackSettings } from './playback/ResolutionPlaybackController';
 import { type PlaybackMode } from './playback/playbackTypes';
 import { type PuzzleLayout } from './puzzleLayout';
 
-type ButtonKey = 'restart' | 'menu' | 'mode' | 'motion';
+type ButtonKey = 'restart' | 'menu' | 'mode' | 'motion' | 'hint' | 'pause';
 
 interface ButtonEntry {
   key: ButtonKey;
@@ -24,6 +24,14 @@ export class HudView {
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly summaryText: Phaser.GameObjects.Text;
   private readonly feedbackLayer: Phaser.GameObjects.Container;
+  private readonly pauseOverlay: Phaser.GameObjects.Container;
+  private readonly pauseOverlayBackground: Phaser.GameObjects.Graphics;
+  private readonly pauseOverlayTitle: Phaser.GameObjects.Text;
+  private readonly pauseOverlayButtons: Array<{
+    key: 'resume' | 'restart' | 'menu' | 'hints' | 'reset';
+    background: Phaser.GameObjects.Rectangle;
+    text: Phaser.GameObjects.Text;
+  }> = [];
   private readonly objectiveTexts: Phaser.GameObjects.Text[] = [];
   private readonly objectiveTextById = new Map<string, Phaser.GameObjects.Text>();
   private readonly buttons: ButtonEntry[] = [];
@@ -36,6 +44,10 @@ export class HudView {
   private onBackToMenu: (() => void) | null = null;
   private onCyclePlaybackMode: (() => void) | null = null;
   private onToggleReducedMotion: (() => void) | null = null;
+  private onRequestHint: (() => void) | null = null;
+  private onTogglePause: (() => void) | null = null;
+  private onToggleHints: (() => void) | null = null;
+  private onResetSettings: (() => void) | null = null;
 
   public constructor(private readonly scene: Phaser.Scene) {
     this.root = scene.add.container(0, 0);
@@ -47,6 +59,10 @@ export class HudView {
     this.statusText = scene.add.text(0, 0, '', this.bodyStyle('#fcd34d', 22));
     this.summaryText = scene.add.text(0, 0, '', this.bodyStyle('#cbd5e1', 18));
     this.feedbackLayer = scene.add.container(0, 0);
+    this.pauseOverlay = scene.add.container(0, 0).setVisible(false);
+    this.pauseOverlayBackground = scene.add.graphics();
+    this.pauseOverlayTitle = scene.add.text(0, 0, 'Paused', this.headerStyle('#f8fafc', 28));
+    this.pauseOverlay.add([this.pauseOverlayBackground, this.pauseOverlayTitle]);
 
     this.root.add([
       this.hudBackground,
@@ -57,12 +73,22 @@ export class HudView {
       this.statusText,
       this.summaryText,
       this.feedbackLayer,
+      this.pauseOverlay,
     ]);
 
     this.buttons.push(this.createButton('restart', 'Restart'));
     this.buttons.push(this.createButton('menu', 'Back to Menu'));
     this.buttons.push(this.createButton('mode', 'Mode'));
     this.buttons.push(this.createButton('motion', 'Motion'));
+    this.buttons.push(this.createButton('hint', 'Hint'));
+    this.buttons.push(this.createButton('pause', 'Pause'));
+    this.pauseOverlayButtons.push(
+      this.createPauseOverlayButton('resume', 'Resume'),
+      this.createPauseOverlayButton('restart', 'Restart'),
+      this.createPauseOverlayButton('menu', 'Back to Menu'),
+      this.createPauseOverlayButton('hints', 'Hints'),
+      this.createPauseOverlayButton('reset', 'Reset Settings'),
+    );
   }
 
   public setCallbacks(callbacks: {
@@ -70,11 +96,19 @@ export class HudView {
     onBackToMenu: () => void;
     onCyclePlaybackMode: () => void;
     onToggleReducedMotion: () => void;
+    onRequestHint: () => void;
+    onTogglePause: () => void;
+    onToggleHints: () => void;
+    onResetSettings: () => void;
   }): void {
     this.onRestart = callbacks.onRestart;
     this.onBackToMenu = callbacks.onBackToMenu;
     this.onCyclePlaybackMode = callbacks.onCyclePlaybackMode;
     this.onToggleReducedMotion = callbacks.onToggleReducedMotion;
+    this.onRequestHint = callbacks.onRequestHint;
+    this.onTogglePause = callbacks.onTogglePause;
+    this.onToggleHints = callbacks.onToggleHints;
+    this.onResetSettings = callbacks.onResetSettings;
   }
 
   public render(input: {
@@ -83,6 +117,8 @@ export class HudView {
     summary: string;
     playbackMode: PlaybackMode;
     reducedMotion: boolean;
+    hintsEnabled: boolean;
+    paused: boolean;
     hasError?: boolean;
   }): void {
     const { layout, viewModel, summary } = input;
@@ -180,36 +216,35 @@ export class HudView {
     this.summaryText.setPosition(layout.footerRect.x + horizontalPadding, layout.footerRect.y + 10);
     this.summaryText.setWordWrapWidth(layout.footerRect.width - horizontalPadding * 2 - 340);
 
-    const rightButtonWidth = layout.orientation === 'portrait' ? 128 : 148;
-    const leftButtonWidth = layout.orientation === 'portrait' ? 150 : 170;
-    const buttonHeight = 38;
-    const buttonGap = 12;
-    const buttonLeft = layout.footerRect.x + horizontalPadding;
-    const buttonRight = layout.footerRect.x + layout.footerRect.width - horizontalPadding;
-
-    const buttonY = layout.footerRect.y + layout.footerRect.height / 2 - buttonHeight / 2;
-    const rightButtons = this.buttons.filter(
-      (button) => button.key === 'restart' || button.key === 'menu',
+    const buttonGap = 8;
+    const buttonHeight = 36;
+    const columns = 3;
+    const buttonWidth = Math.max(
+      92,
+      Math.floor(
+        (layout.footerRect.width - horizontalPadding * 2 - buttonGap * (columns - 1)) / columns,
+      ),
     );
-    const leftButtons = this.buttons.filter(
-      (button) => button.key === 'mode' || button.key === 'motion',
-    );
-
-    leftButtons.forEach((button, index) => {
-      const x = buttonLeft + index * (leftButtonWidth + buttonGap);
-      button.background.setPosition(x + leftButtonWidth / 2, buttonY + buttonHeight / 2);
-      button.background.setSize(leftButtonWidth, buttonHeight);
-      button.text.setPosition(x + leftButtonWidth / 2, buttonY + buttonHeight / 2);
-      button.text.setText(this.getButtonLabel(button.key, input.playbackMode, input.reducedMotion));
+    this.buttons.forEach((button, index) => {
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const x = layout.footerRect.x + horizontalPadding + column * (buttonWidth + buttonGap);
+      const y = layout.footerRect.y + 8 + row * (buttonHeight + 8);
+      button.background.setPosition(x + buttonWidth / 2, y + buttonHeight / 2);
+      button.background.setSize(buttonWidth, buttonHeight);
+      button.text.setPosition(x + buttonWidth / 2, y + buttonHeight / 2);
+      button.text.setFontSize(buttonWidth < 110 ? 12 : 14);
+      button.text.setText(
+        this.getButtonLabel(
+          button.key,
+          input.playbackMode,
+          input.reducedMotion,
+          input.hintsEnabled,
+        ),
+      );
     });
 
-    rightButtons.forEach((button, index) => {
-      const x = buttonRight - rightButtonWidth - index * (rightButtonWidth + buttonGap);
-      button.background.setPosition(x + rightButtonWidth / 2, buttonY + buttonHeight / 2);
-      button.background.setSize(rightButtonWidth, buttonHeight);
-      button.text.setPosition(x + rightButtonWidth / 2, buttonY + buttonHeight / 2);
-      button.text.setText(this.getButtonLabel(button.key, input.playbackMode, input.reducedMotion));
-    });
+    this.renderPauseOverlay(layout, input.hintsEnabled, input.paused);
   }
 
   public destroy(): void {
@@ -388,6 +423,16 @@ export class HudView {
         return;
       }
 
+      if (key === 'hint') {
+        this.onRequestHint?.();
+        return;
+      }
+
+      if (key === 'pause') {
+        this.onTogglePause?.();
+        return;
+      }
+
       this.onBackToMenu?.();
     });
 
@@ -415,6 +460,7 @@ export class HudView {
     key: ButtonKey,
     playbackMode: PlaybackMode,
     reducedMotion: boolean,
+    hintsEnabled: boolean,
   ): string {
     switch (key) {
       case 'restart':
@@ -425,7 +471,79 @@ export class HudView {
         return `Mode: ${playbackMode}`;
       case 'motion':
         return reducedMotion ? 'Motion: Reduced' : 'Motion: Full';
+      case 'hint':
+        return hintsEnabled ? 'Hint' : 'Hints: Off';
+      case 'pause':
+        return 'Pause';
     }
+  }
+
+  private createPauseOverlayButton(
+    key: 'resume' | 'restart' | 'menu' | 'hints' | 'reset',
+    label: string,
+  ) {
+    const background = this.scene.add
+      .rectangle(0, 0, 150, 38, 0x1d4ed8)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0xbfdbfe)
+      .setInteractive({ useHandCursor: true });
+    const text = this.scene.add.text(0, 0, label, this.bodyStyle('#eff6ff', 15)).setOrigin(0.5);
+    background.on('pointerdown', () => {
+      if (key === 'resume') {
+        this.onTogglePause?.();
+      } else if (key === 'restart') {
+        this.onRestart?.();
+      } else if (key === 'menu') {
+        this.onBackToMenu?.();
+      } else if (key === 'hints') {
+        this.onToggleHints?.();
+      } else {
+        this.onResetSettings?.();
+      }
+    });
+    this.pauseOverlay.add([background, text]);
+    return { key, background, text };
+  }
+
+  private renderPauseOverlay(layout: PuzzleLayout, hintsEnabled: boolean, paused: boolean): void {
+    this.pauseOverlay.setVisible(paused);
+    if (!paused) {
+      return;
+    }
+
+    this.root.bringToTop(this.pauseOverlay);
+
+    const panelWidth = Math.min(
+      layout.viewportWidth - 32,
+      Math.max(260, layout.viewportWidth * 0.72),
+    );
+    const panelHeight = Math.min(layout.viewportHeight - 32, 310);
+    const x = (layout.viewportWidth - panelWidth) / 2;
+    const y = (layout.viewportHeight - panelHeight) / 2;
+    this.pauseOverlayBackground.clear();
+    this.pauseOverlayBackground.fillStyle(0x020617, 0.96);
+    this.pauseOverlayBackground.fillRoundedRect(x, y, panelWidth, panelHeight, 14);
+    this.pauseOverlayBackground.lineStyle(2, 0x7dd3fc, 1);
+    this.pauseOverlayBackground.strokeRoundedRect(x, y, panelWidth, panelHeight, 14);
+    this.pauseOverlayTitle.setPosition(layout.viewportWidth / 2, y + 24).setOrigin(0.5, 0);
+
+    this.pauseOverlayButtons.forEach((button, index) => {
+      const buttonY = y + 86 + index * 40;
+      button.background.setPosition(layout.viewportWidth / 2, buttonY);
+      button.background.setSize(Math.min(210, panelWidth - 40), 32);
+      button.text.setPosition(layout.viewportWidth / 2, buttonY);
+      button.text.setText(
+        button.key === 'hints'
+          ? `Hints: ${hintsEnabled ? 'On' : 'Off'}`
+          : button.key === 'reset'
+            ? 'Reset Settings'
+            : button.key === 'menu'
+              ? 'Back to Menu'
+              : button.key === 'resume'
+                ? 'Resume'
+                : 'Restart',
+      );
+    });
   }
 
   private async runFeedbackTransition(

@@ -1,8 +1,14 @@
 import Phaser from 'phaser';
 import { type Board, type BoardCoordinate } from '../board';
+import {
+  createBrowserFixtureSession,
+  getBrowserFixture,
+  type BrowserFixture,
+} from '../content/testing/browserFixtures';
 import { createPrototypeLevelSession, prototypeLevelDefinition } from '../content/prototypeLevel';
 import { BoardView } from '../presentation/BoardView';
 import { createBoardViewModel } from '../presentation/boardViewModel';
+import { selectHint } from '../presentation/hints/selectHint';
 import { HudView } from '../presentation/HudView';
 import { createLevelViewModel, formatMoveSummary } from '../presentation/levelViewModel';
 import { PuzzleSessionController } from '../presentation/PuzzleSessionController';
@@ -23,6 +29,23 @@ import {
 } from '../presentation/puzzleLayout';
 import { type AcceptedLevelMoveResult, type LevelSessionState } from '../level';
 import { type RejectedLevelMoveResult } from '../level/levelTypes';
+import { PrototypeSettingsController } from '../presentation/settings/PrototypeSettingsController';
+import {
+  PrototypeSettingsRepository,
+  type StorageLike,
+} from '../presentation/settings/PrototypeSettingsRepository';
+import {
+  canAcceptBoardInput,
+  canPause,
+  createPuzzlePresentationState,
+  type PuzzlePresentationState,
+} from '../presentation/state/presentationPermissions';
+import {
+  BrowserTestStatusBridge,
+  getBoardHash,
+  markBrowserTestScene,
+  type BrowserPlaybackState,
+} from '../presentation/testing/BrowserTestStatusBridge';
 import { MainMenuScene } from './MainMenuScene';
 
 export class PuzzleScene extends Phaser.Scene {
@@ -37,6 +60,8 @@ export class PuzzleScene extends Phaser.Scene {
   private displayBoardOverride: Board | null = null;
   private hudStateOverride: LevelSessionState | null = null;
   private inputLocked = false;
+  private presentationState: PuzzlePresentationState = createPuzzlePresentationState();
+  private settingsController: PrototypeSettingsController | null = null;
   private playbackMode: PlaybackMode = 'normal';
   private reducedMotion = false;
   private summaryMessage =
@@ -47,6 +72,23 @@ export class PuzzleScene extends Phaser.Scene {
   private readonly hudTweens = new Set<Phaser.Tweens.Tween>();
   private readonly hudTimers = new Set<Phaser.Time.TimerEvent>();
   private readonly hudResolvers = new Set<() => void>();
+  private visibilityHandler: (() => void) | null = null;
+  private escapeKeyHandler: (() => void) | null = null;
+  private hintKeyHandler: (() => void) | null = null;
+  private statusBridge: BrowserTestStatusBridge | null = null;
+  private sceneGeneration = 0;
+  private playbackSequence = 0;
+  private lastCommandIndex = -1;
+  private lastCommandKind = 'none';
+  private hardSyncRecoveryCount = 0;
+  private browserFixture: BrowserFixture | null = null;
+  private lastMoveAccepted = false;
+  private lastMoveKind = 'none';
+  private lastActivationIndex = -1;
+  private lastErrorCode = 'none';
+  private playbackStateTrace: BrowserPlaybackState[] = [];
+  private commandTrace: string[] = [];
+  private static readonly hintDuration = 2500;
 
   public constructor() {
     super(PuzzleScene.key);
@@ -54,12 +96,20 @@ export class PuzzleScene extends Phaser.Scene {
 
   public create(): void {
     this.cameras.main.setBackgroundColor('#020617');
-    this.initializePlaybackPreferences();
+    this.initializePresentationSettings();
+    this.sceneGeneration += 1;
+    this.statusBridge = new BrowserTestStatusBridge();
+    markBrowserTestScene('puzzle');
+    this.browserFixture = this.getBrowserFixtureFromUrl();
 
     try {
       this.controller = new PuzzleSessionController(
-        prototypeLevelDefinition,
-        () => createPrototypeLevelSession().state,
+        this.browserFixture?.definition ?? prototypeLevelDefinition,
+        () =>
+          (this.browserFixture
+            ? createBrowserFixtureSession(this.browserFixture)
+            : createPrototypeLevelSession()
+          ).state,
       );
       this.boardView = new BoardView(this);
       this.hudView = new HudView(this);
@@ -84,9 +134,22 @@ export class PuzzleScene extends Phaser.Scene {
         onToggleReducedMotion: () => {
           this.toggleReducedMotion();
         },
+        onRequestHint: () => {
+          this.requestHint();
+        },
+        onTogglePause: () => {
+          this.togglePause();
+        },
+        onToggleHints: () => {
+          this.toggleHints();
+        },
+        onResetSettings: () => {
+          this.resetSettings();
+        },
       });
 
       this.resizeHandler = () => {
+        this.clearHint();
         if (this.playbackController?.isPlaying()) {
           this.playbackController.cancel();
           return;
@@ -95,7 +158,10 @@ export class PuzzleScene extends Phaser.Scene {
         this.renderScene();
       };
       this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler);
+      this.registerLifecycleHandlers();
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.presentationState.shuttingDown = true;
+        this.clearHint();
         this.cancelSummaryTimer();
         this.playbackController?.cancel({ restoreInput: false });
         this.cancelHudPlaybackEffects();
@@ -103,14 +169,18 @@ export class PuzzleScene extends Phaser.Scene {
           this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler);
           this.resizeHandler = null;
         }
+        this.unregisterLifecycleHandlers();
 
         this.boardView?.destroy();
         this.hudView?.destroy();
         this.boardView = null;
         this.hudView = null;
+        this.statusBridge?.destroy();
+        this.statusBridge = null;
       });
 
       this.renderScene();
+      this.publishBrowserStatus('idle');
     } catch (error) {
       console.error('Failed to initialize puzzle scene', error);
       this.hasError = true;
@@ -144,7 +214,11 @@ export class PuzzleScene extends Phaser.Scene {
       boardViewModel: createBoardViewModel(displayBoard),
       selectedCoordinate: this.selectedCoordinate,
       rejectedCoordinates: this.rejectedCoordinates,
-      disabled: this.inputLocked || hudState.status !== 'active' || this.hasError,
+      disabled:
+        !canAcceptBoardInput({
+          state: this.presentationState,
+          levelIsActive: hudState.status === 'active',
+        }) || this.hasError,
     });
   }
 
@@ -170,14 +244,25 @@ export class PuzzleScene extends Phaser.Scene {
       summary: this.summaryMessage,
       playbackMode: this.playbackMode,
       reducedMotion: this.reducedMotion,
+      hintsEnabled: this.settingsController?.getSnapshot().hintsEnabled ?? true,
+      paused: this.presentationState.paused,
       hasError: this.hasError,
     });
   }
 
   private handleCellSelection(coordinate: BoardCoordinate): void {
-    if (!this.controller || this.inputLocked || this.hasError) {
+    if (
+      !this.controller ||
+      !canAcceptBoardInput({
+        state: this.presentationState,
+        levelIsActive: this.controller.getState().status === 'active',
+      }) ||
+      this.hasError
+    ) {
       return;
     }
+
+    this.clearHint();
 
     const state = this.controller.getState();
     if (state.status !== 'active') {
@@ -195,6 +280,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.rejectedCoordinates = [];
       this.summaryMessage = 'Selection cleared.';
       this.renderScene();
+      this.publishBrowserStatus('idle');
       return;
     }
 
@@ -203,6 +289,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.rejectedCoordinates = [];
       this.summaryMessage = 'Select an adjacent cell to submit a move.';
       this.renderScene();
+      this.publishBrowserStatus('idle');
       return;
     }
 
@@ -213,6 +300,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.rejectedCoordinates = [];
       this.summaryMessage = 'Selection moved. Choose an adjacent cell to submit a swap.';
       this.renderScene();
+      this.publishBrowserStatus('idle');
       return;
     }
 
@@ -224,8 +312,9 @@ export class PuzzleScene extends Phaser.Scene {
       return;
     }
 
-    this.inputLocked = true;
+    this.setInputLocked(true);
     this.rejectedCoordinates = [];
+    this.clearHint();
     this.cancelSummaryTimer();
 
     try {
@@ -240,7 +329,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.summaryMessage = formatMoveSummary(moveResult);
 
       if (moveResult.kind === 'terminal') {
-        this.inputLocked = true;
+        this.setInputLocked(true);
         this.displayBoardOverride = null;
         this.hudStateOverride = null;
         this.renderScene();
@@ -251,7 +340,7 @@ export class PuzzleScene extends Phaser.Scene {
     } catch (error) {
       console.error('Unexpected error while applying puzzle move', error);
       this.hasError = true;
-      this.inputLocked = false;
+      this.setInputLocked(false);
       this.selectedCoordinate = null;
       this.rejectedCoordinates = [];
       this.summaryMessage = 'A puzzle presentation error occurred. Restart or return to the menu.';
@@ -273,10 +362,11 @@ export class PuzzleScene extends Phaser.Scene {
       this.hudStateOverride = null;
       this.selectedCoordinate = null;
       this.rejectedCoordinates = [];
-      this.inputLocked = false;
+      this.setInputLocked(false);
       this.hasError = false;
       this.summaryMessage = 'Prototype level restarted with the same deterministic seed.';
       this.renderScene();
+      this.publishBrowserStatus('idle');
     } catch (error) {
       console.error('Failed to restart puzzle session', error);
       this.hasError = true;
@@ -317,25 +407,48 @@ export class PuzzleScene extends Phaser.Scene {
     this.renderScene();
   }
 
-  private initializePlaybackPreferences(): void {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
+  private initializePresentationSettings(): void {
+    const defaultReducedMotion = () =>
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        : false;
+    let storage: StorageLike | null = null;
+    try {
+      storage = typeof window === 'undefined' ? null : window.localStorage;
+    } catch {
+      storage = null;
     }
-
-    this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.settingsController = new PrototypeSettingsController(
+      new PrototypeSettingsRepository(storage, defaultReducedMotion),
+    );
+    const settings = this.settingsController.getSnapshot();
+    this.playbackMode = settings.playbackMode;
+    this.reducedMotion = settings.reducedMotion;
   }
 
   private createPlaybackAdapter() {
     return {
       applyInputLock: (locked: boolean) => {
-        this.inputLocked = locked;
+        this.setInputLocked(locked);
+        this.presentationState.playbackActive = this.playbackController?.isPlaying() ?? false;
         if (!this.playbackController?.isPlaying()) {
           this.renderScene();
         }
+        this.publishBrowserStatus(locked ? 'playing' : 'idle');
       },
       isAuthoritativeTerminal: () => this.controller?.getState().status !== 'active',
       getObjectiveDefinitions: () => this.controller?.getDefinition().objectives ?? [],
       prepareAcceptedMove: (result: AcceptedLevelMoveResult) => {
+        this.playbackSequence += 1;
+        this.lastCommandIndex = -1;
+        this.lastCommandKind = 'starting';
+        this.lastActivationIndex = -1;
+        this.lastMoveAccepted = true;
+        this.lastMoveKind = result.moveKind;
+        this.lastErrorCode = 'none';
+        this.playbackStateTrace = [];
+        this.commandTrace = [];
+        this.clearHint();
         this.cancelHudPlaybackEffects();
         this.hudView?.cancelTransientEffects();
         this.displayBoardOverride = result.previousState.board;
@@ -345,8 +458,12 @@ export class PuzzleScene extends Phaser.Scene {
         this.hasError = false;
         this.summaryMessage = 'Resolving move...';
         this.renderScene();
+        this.publishBrowserStatus('starting');
       },
       prepareRejectedMove: (result: RejectedLevelMoveResult) => {
+        this.lastMoveAccepted = false;
+        this.lastMoveKind = result.kind;
+        this.clearHint();
         this.cancelHudPlaybackEffects();
         this.hudView?.cancelTransientEffects();
         this.displayBoardOverride = result.state.board;
@@ -365,6 +482,7 @@ export class PuzzleScene extends Phaser.Scene {
           this.playbackController!.getSettings(),
         ),
       finishAcceptedMove: (result: AcceptedLevelMoveResult) => {
+        this.presentationState.playbackActive = false;
         this.cancelHudPlaybackEffects();
         this.hudView?.cancelTransientEffects();
         this.displayBoardOverride = null;
@@ -373,9 +491,11 @@ export class PuzzleScene extends Phaser.Scene {
         this.rejectedCoordinates = [];
         this.summaryMessage = formatMoveSummary(result);
         this.renderScene();
+        this.publishBrowserStatus('completed');
         this.scheduleSummaryClear();
       },
       finishRejectedMove: (result: RejectedLevelMoveResult) => {
+        this.presentationState.playbackActive = false;
         this.cancelHudPlaybackEffects();
         this.hudView?.cancelTransientEffects();
         this.displayBoardOverride = null;
@@ -391,24 +511,30 @@ export class PuzzleScene extends Phaser.Scene {
         this.hudView?.cancelTransientEffects();
       },
       clearTransientState: () => {
+        this.clearHint();
         this.selectedCoordinate = null;
         this.rejectedCoordinates = [];
         this.boardView?.clearTransientState();
         this.hudView?.cancelTransientEffects();
       },
       synchronizeAuthoritativeState: () => {
+        this.presentationState.playbackActive = false;
         this.displayBoardOverride = null;
         this.hudStateOverride = null;
         this.selectedCoordinate = null;
         this.rejectedCoordinates = [];
         this.hasError = false;
         this.renderScene();
+        this.publishBrowserStatus('synchronizing');
       },
       reportPlaybackError: (error: unknown) => {
+        this.hardSyncRecoveryCount += 1;
+        this.lastErrorCode = error instanceof Error ? error.name : 'unknown-playback-error';
         console.error('Resolution playback failed; synchronized to authoritative state', error);
         this.summaryMessage =
           'Playback interrupted. Synchronized to the authoritative board state.';
         this.renderScene();
+        this.publishBrowserStatus('error');
       },
     };
   }
@@ -430,6 +556,14 @@ export class PuzzleScene extends Phaser.Scene {
     if (!this.playbackController) {
       return;
     }
+
+    this.lastCommandIndex = command.index;
+    this.lastCommandKind = command.kind;
+    this.commandTrace.push(command.kind);
+    if (command.kind === 'special-activation') {
+      this.lastActivationIndex = command.activation.index;
+    }
+    this.publishBrowserStatus('playing');
 
     switch (command.kind) {
       case 'score-feedback':
@@ -455,8 +589,7 @@ export class PuzzleScene extends Phaser.Scene {
     const startScore = this.hudStateOverride.score;
     const targetScore = command.scoreEntry.cumulativeScoreAfter;
     const duration = getScoreCountDuration(1, settings);
-    const labelPromise =
-      this.hudView?.showScoreFeedback(command.scoreEntry.label, settings) ?? Promise.resolve();
+    void this.hudView?.showScoreFeedback(command.scoreEntry.label, settings);
 
     await this.runHudTransition(
       duration,
@@ -510,8 +643,6 @@ export class PuzzleScene extends Phaser.Scene {
         this.renderHudOnly();
       },
     );
-
-    await labelPromise;
   }
 
   private async playObjectiveFeedbackCommand(
@@ -676,21 +807,240 @@ export class PuzzleScene extends Phaser.Scene {
     const nextMode: PlaybackMode =
       this.playbackMode === 'normal' ? 'fast' : this.playbackMode === 'fast' ? 'instant' : 'normal';
 
-    this.playbackMode = nextMode;
+    this.playbackMode = this.settingsController?.setPlaybackMode(nextMode).playbackMode ?? nextMode;
     this.playbackController?.setMode(nextMode);
     this.renderScene();
+    this.publishBrowserStatus('idle');
   }
 
   private toggleReducedMotion(): void {
-    this.reducedMotion = !this.reducedMotion;
+    this.reducedMotion =
+      this.settingsController?.setReducedMotion(!this.reducedMotion).reducedMotion ??
+      !this.reducedMotion;
     this.playbackController?.setReducedMotion(this.reducedMotion);
     this.renderScene();
   }
 
   private returnToMenu(): void {
+    this.clearHint();
     this.cancelSummaryTimer();
     this.playbackController?.cancel({ restoreInput: false });
     this.cancelHudPlaybackEffects();
-    this.scene.start(MainMenuScene.key);
+    this.time.delayedCall(0, () => {
+      console.debug('Starting main menu after playback cancellation');
+      this.scene.start(MainMenuScene.key);
+    });
+  }
+
+  private publishBrowserStatus(playbackState: BrowserPlaybackState): void {
+    if (!this.statusBridge || !this.controller) {
+      return;
+    }
+
+    const state = this.controller.getState();
+    const renderedBoard = this.displayBoardOverride ?? state.board;
+    const dimensions = renderedBoard.getDimensions();
+    const layout = calculatePuzzleLayout({
+      width: this.scale.width,
+      height: this.scale.height,
+      rows: dimensions.rows,
+      columns: dimensions.columns,
+    });
+    const expectedRenderedHash = getBoardHash(renderedBoard);
+    const actualRenderedHash = this.boardView?.getRenderedBoardHash() ?? 'unavailable';
+    const expectedMove = this.browserFixture?.expectedMove;
+    if (this.playbackStateTrace.at(-1) !== playbackState) {
+      this.playbackStateTrace.push(playbackState);
+    }
+    const expectedMoveSourceKinds = expectedMove
+      ? [
+          state.board.getPieceAt(expectedMove.from).kind,
+          state.board.getPieceAt(expectedMove.to).kind,
+        ].join(',')
+      : '';
+    const fixtureSpecialCount = state.board
+      .toGridSnapshot()
+      .flat()
+      .filter((piece) => piece.kind !== 'standard').length;
+    this.statusBridge.update({
+      sceneGeneration: this.sceneGeneration,
+      fixtureId: this.browserFixture?.id ?? 'prototype',
+      levelStatus: state.status,
+      playbackState,
+      playbackSequence: this.playbackSequence,
+      playbackMode: this.playbackMode,
+      paused: this.presentationState.paused,
+      hasActiveHint: this.presentationState.hasActiveHint,
+      selectedCoordinate: this.selectedCoordinate
+        ? `${this.selectedCoordinate.row}:${this.selectedCoordinate.column}`
+        : '',
+      inputLocked: this.inputLocked,
+      lastMoveAccepted: this.lastMoveAccepted,
+      lastMoveKind: this.lastMoveKind,
+      lastCommandIndex: this.lastCommandIndex,
+      lastCommandKind: this.lastCommandKind,
+      lastActivationIndex: this.lastActivationIndex,
+      lastErrorCode: this.lastErrorCode,
+      playbackStateTrace: this.playbackStateTrace.join(','),
+      commandTrace: this.commandTrace.join(','),
+      renderConsistency:
+        playbackState === 'error'
+          ? 'failed'
+          : actualRenderedHash === expectedRenderedHash
+            ? 'passed'
+            : 'failed',
+      authoritativeBoardHash: getBoardHash(state.board),
+      renderedBoardHash: actualRenderedHash,
+      score: state.score,
+      movesRemaining: state.movesRemaining,
+      objectivesHash: state.objectiveProgress
+        .map((objective) => `${objective.objectiveId}:${objective.current}/${objective.target}`)
+        .join(','),
+      hardSyncRecoveryCount: this.hardSyncRecoveryCount,
+      expectedMoveFrom: expectedMove ? `${expectedMove.from.row}:${expectedMove.from.column}` : '',
+      expectedMoveTo: expectedMove ? `${expectedMove.to.row}:${expectedMove.to.column}` : '',
+      expectedMoveSourceKinds,
+      fixtureSpecialCount,
+      fixtureExpectedScoreAfter: this.browserFixture?.expectedOutcome.scoreAfter ?? -1,
+      fixtureExpectedMovesAfter: this.browserFixture?.expectedOutcome.movesAfter ?? -1,
+      fixtureExpectedObjectivesHash: this.browserFixture?.expectedOutcome.objectivesHash ?? '',
+      fixtureExpectedMoveKind: this.browserFixture?.expectedOutcome.moveKind ?? '',
+      fixtureExpectedActivationCount: this.browserFixture?.expectedOutcome.activationCount ?? 0,
+      logicalCanvasWidth: this.scale.width,
+      logicalCanvasHeight: this.scale.height,
+      boardX: layout.boardRect.x,
+      boardY: layout.boardRect.y,
+      cellSize: layout.cellSize,
+      boardRows: dimensions.rows,
+      boardColumns: dimensions.columns,
+    });
+  }
+
+  private getBrowserFixtureFromUrl(): BrowserFixture | null {
+    const query = new window.URLSearchParams(window.location.search);
+    if (query.get('e2e') !== '1') {
+      return null;
+    }
+    return getBrowserFixture(query.get('fixture'));
+  }
+
+  private setInputLocked(locked: boolean): void {
+    this.inputLocked = locked;
+    this.presentationState.inputLocked = locked;
+  }
+
+  private requestHint(): void {
+    if (!this.controller || !this.settingsController) {
+      return;
+    }
+    const state = this.controller.getState();
+    const result = selectHint({
+      board: state.board,
+      levelIsActive: state.status === 'active',
+      hintsEnabled: this.settingsController.getSnapshot().hintsEnabled,
+      presentationState: this.presentationState,
+    });
+    if (result.kind === 'hint') {
+      this.presentationState.hasActiveHint = true;
+      this.boardView?.showHint({
+        from: result.move.from,
+        to: result.move.to,
+        duration: PuzzleScene.hintDuration,
+        reducedMotion: this.reducedMotion,
+      });
+      this.summaryMessage = 'Hint: swap the highlighted pieces.';
+    } else if (result.reason === 'no-playable-move') {
+      console.error('Active puzzle board has no playable move; presentation did not alter state.');
+      this.summaryMessage = 'No playable move was found. Board view synchronized.';
+      this.playbackController?.cancel({ restoreInput: false });
+    } else {
+      this.summaryMessage =
+        result.reason === 'disabled' ? 'Hints are disabled in settings.' : 'Hint unavailable.';
+    }
+    this.renderScene();
+    this.publishBrowserStatus('idle');
+  }
+
+  private clearHint(): void {
+    this.presentationState.hasActiveHint = false;
+    this.boardView?.clearHint();
+  }
+
+  private toggleHints(): void {
+    if (!this.settingsController) {
+      return;
+    }
+    const settings = this.settingsController.getSnapshot();
+    const next = this.settingsController.setHintsEnabled(!settings.hintsEnabled);
+    if (!next.hintsEnabled) {
+      this.clearHint();
+    }
+    this.renderScene();
+  }
+
+  private resetSettings(): void {
+    const settings = this.settingsController?.reset();
+    if (!settings) {
+      return;
+    }
+    this.playbackMode = settings.playbackMode;
+    this.reducedMotion = settings.reducedMotion;
+    this.playbackController?.setMode(this.playbackMode);
+    this.playbackController?.setReducedMotion(this.reducedMotion);
+    this.renderScene();
+  }
+
+  private togglePause(): void {
+    if (this.presentationState.paused) {
+      this.presentationState.paused = false;
+      this.setInputLocked(this.controller?.getState().status !== 'active');
+      this.summaryMessage = 'Resumed.';
+      this.renderScene();
+      this.publishBrowserStatus('idle');
+      return;
+    }
+    if (!canPause(this.presentationState)) {
+      return;
+    }
+    this.clearHint();
+    this.selectedCoordinate = null;
+    this.rejectedCoordinates = [];
+    this.cancelSummaryTimer();
+    this.playbackController?.cancel({ restoreInput: false });
+    this.cancelHudPlaybackEffects();
+    this.presentationState.playbackActive = false;
+    this.presentationState.paused = true;
+    this.setInputLocked(true);
+    this.summaryMessage = 'Paused.';
+    this.renderScene();
+    this.publishBrowserStatus('idle');
+  }
+
+  private registerLifecycleHandlers(): void {
+    this.visibilityHandler = () => {
+      if (document.hidden && !this.presentationState.paused) {
+        this.togglePause();
+      }
+    };
+    document.addEventListener('visibilitychange', this.visibilityHandler);
+    this.escapeKeyHandler = () => this.togglePause();
+    this.hintKeyHandler = () => this.requestHint();
+    this.input.keyboard?.on('keydown-ESC', this.escapeKeyHandler);
+    this.input.keyboard?.on('keydown-H', this.hintKeyHandler);
+  }
+
+  private unregisterLifecycleHandlers(): void {
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
+    }
+    if (this.escapeKeyHandler) {
+      this.input.keyboard?.off('keydown-ESC', this.escapeKeyHandler);
+      this.escapeKeyHandler = null;
+    }
+    if (this.hintKeyHandler) {
+      this.input.keyboard?.off('keydown-H', this.hintKeyHandler);
+      this.hintKeyHandler = null;
+    }
   }
 }

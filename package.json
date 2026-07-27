@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:headed": "playwright test --headed",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier . --write",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.16.5",
+    "@playwright/test": "^1.62.0",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
     "eslint": "^9.31.0",
