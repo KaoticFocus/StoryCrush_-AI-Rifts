@@ -2,10 +2,9 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
 import { PuzzleScene } from './scenes/PuzzleScene';
+import { getBrowserTestOptions } from './presentation/testing/browserTestOptions';
 
-const useE2eCanvasRenderer =
-  typeof window !== 'undefined' &&
-  new window.URLSearchParams(window.location.search).get('e2e') === '1';
+const useE2eCanvasRenderer = typeof window !== 'undefined' && getBrowserTestOptions().e2eEnabled;
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: useE2eCanvasRenderer ? Phaser.CANVAS : Phaser.AUTO,

@@ -1,3 +1,4 @@
+/* global performance, Performance */
 import Phaser from 'phaser';
 import { type Board, type BoardCoordinate } from '../board';
 import {
@@ -47,6 +48,7 @@ import {
   syncBrowserTestSceneFromGame,
   type BrowserPlaybackState,
 } from '../presentation/testing/BrowserTestStatusBridge';
+import { getBrowserTestOptions } from '../presentation/testing/browserTestOptions';
 import {
   AnimationFrameMeasurement,
   createPerformanceSample,
@@ -103,6 +105,8 @@ export class PuzzleScene extends Phaser.Scene {
   private performanceMeasurement: AnimationFrameMeasurement | null = null;
   private performanceResourcesBefore: PerformanceResourceSnapshot | null = null;
   private performanceSample: PerformanceSample | null = null;
+  private diagnosticsState: 'disabled' | 'initializing' | 'ready' | 'error' = 'disabled';
+  private diagnosticsError = '';
   private static readonly hintDuration = 2500;
 
   public constructor() {
@@ -114,6 +118,7 @@ export class PuzzleScene extends Phaser.Scene {
     this.initializePresentationSettings();
     this.sceneGeneration += 1;
     this.statusBridge = new BrowserTestStatusBridge();
+    this.diagnosticsState = this.isPerformanceDiagnosticsEnabled() ? 'initializing' : 'disabled';
     markBrowserTestScene('puzzle');
     this.browserFixture = this.getBrowserFixtureFromUrl();
 
@@ -196,6 +201,7 @@ export class PuzzleScene extends Phaser.Scene {
       });
 
       this.renderScene();
+      this.diagnosticsState = this.isPerformanceDiagnosticsEnabled() ? 'ready' : 'disabled';
       this.publishBrowserStatus('idle');
       const statusElement = document.getElementById('storycrush-test-status');
       if (statusElement) {
@@ -911,6 +917,8 @@ export class PuzzleScene extends Phaser.Scene {
       .filter((piece) => piece.kind !== 'standard').length;
     const resources = this.getPerformanceResources();
     this.statusBridge.update({
+      diagnosticsState: this.diagnosticsState,
+      diagnosticsError: this.diagnosticsError,
       sceneGeneration: this.sceneGeneration,
       fixtureId: this.browserFixture?.id ?? 'prototype',
       levelStatus: state.status,
@@ -972,8 +980,7 @@ export class PuzzleScene extends Phaser.Scene {
   }
 
   private isPerformanceDiagnosticsEnabled(): boolean {
-    const query = new window.URLSearchParams(window.location.search);
-    return query.get('e2e') === '1' && query.get('debugPerformance') === '1';
+    return getBrowserTestOptions().performanceDiagnosticsEnabled;
   }
 
   private getPerformanceResources(): PerformanceResourceSnapshot {
@@ -1012,7 +1019,8 @@ export class PuzzleScene extends Phaser.Scene {
   }
 
   private stopPerformanceMeasurement(): void {
-    if (!this.performanceMeasurement || !this.performanceResourcesBefore || !this.controller) return;
+    if (!this.performanceMeasurement || !this.performanceResourcesBefore || !this.controller)
+      return;
     const measurement = this.performanceMeasurement.stop();
     const deviceMemory = performance as Performance & { memory?: { usedJSHeapSize?: number } };
     const state = this.controller.getState();
@@ -1041,7 +1049,7 @@ export class PuzzleScene extends Phaser.Scene {
 
   private getBrowserFixtureFromUrl(): BrowserFixture | null {
     const query = new window.URLSearchParams(window.location.search);
-    if (query.get('e2e') !== '1') {
+    if (!getBrowserTestOptions().e2eEnabled) {
       return null;
     }
     return getBrowserFixture(query.get('fixture'));

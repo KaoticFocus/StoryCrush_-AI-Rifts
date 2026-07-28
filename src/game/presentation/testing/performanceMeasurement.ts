@@ -1,3 +1,4 @@
+/* global performance */
 import { type PlaybackMode } from '../playback/playbackTypes';
 
 export interface PerformanceResourceSnapshot {
@@ -87,7 +88,10 @@ export class AnimationFrameMeasurement {
   private previousFrameTime: number | null = null;
   private startedAt = 0;
 
-  public constructor(private readonly enabled: boolean, private readonly maxFrames = 2_000) {}
+  public constructor(
+    private readonly enabled: boolean,
+    private readonly maxFrames = 2_000,
+  ) {}
 
   public start(now = performance.now()): void {
     if (!this.enabled || this.frameHandle !== null) return;
@@ -107,6 +111,9 @@ export class AnimationFrameMeasurement {
   public stop(now = performance.now()): { frameDurations: readonly number[]; durationMs: number } {
     if (this.frameHandle !== null) window.cancelAnimationFrame(this.frameHandle);
     this.frameHandle = null;
-    return { frameDurations: [...this.frameDurations], durationMs: Math.max(0, now - this.startedAt) };
+    return {
+      frameDurations: [...this.frameDurations],
+      durationMs: Math.max(0, now - this.startedAt),
+    };
   }
 }

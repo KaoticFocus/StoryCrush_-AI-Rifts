@@ -4,15 +4,16 @@ export function formatCoordinate(coordinate: BoardCoordinate): string {
   return `row ${coordinate.row + 1}, column ${coordinate.column + 1}`;
 }
 
-export function createAriaStatusMessage(input:
-  | { kind: 'move-accepted'; score: number; movesRemaining: number }
-  | { kind: 'move-rejected' }
-  | { kind: 'hint'; from: BoardCoordinate; to: BoardCoordinate }
-  | { kind: 'objective-completed'; label: string }
-  | { kind: 'paused' }
-  | { kind: 'resumed' }
-  | { kind: 'level-complete' }
-  | { kind: 'out-of-moves' },
+export function createAriaStatusMessage(
+  input:
+    | { kind: 'move-accepted'; score: number; movesRemaining: number }
+    | { kind: 'move-rejected' }
+    | { kind: 'hint'; from: BoardCoordinate; to: BoardCoordinate }
+    | { kind: 'objective-completed'; label: string }
+    | { kind: 'paused' }
+    | { kind: 'resumed' }
+    | { kind: 'level-complete' }
+    | { kind: 'out-of-moves' },
 ): string {
   switch (input.kind) {
     case 'move-accepted':
@@ -40,14 +41,16 @@ export class AriaStatusAnnouncer {
   public announce(message: string): boolean {
     if (!message || message === this.lastMessage) return false;
     this.lastMessage = message;
-    const element = typeof document === 'undefined' ? null : document.getElementById('storycrush-status');
+    const element =
+      typeof document === 'undefined' ? null : document.getElementById('storycrush-status');
     if (element) element.textContent = message;
     return true;
   }
 
   public clear(): void {
     this.lastMessage = '';
-    const element = typeof document === 'undefined' ? null : document.getElementById('storycrush-status');
+    const element =
+      typeof document === 'undefined' ? null : document.getElementById('storycrush-status');
     if (element) element.textContent = '';
   }
 }

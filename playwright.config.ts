@@ -1,3 +1,4 @@
+/* global process */
 import { defineConfig, devices } from '@playwright/test';
 
 const preview = process.env.PLAYWRIGHT_PREVIEW === '1';

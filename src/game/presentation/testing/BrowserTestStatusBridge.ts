@@ -1,9 +1,12 @@
 import { type Board, type BoardPiece } from '../../board';
+import { getBrowserTestOptions } from './browserTestOptions';
 
 export type BrowserPlaybackState =
   'idle' | 'starting' | 'playing' | 'synchronizing' | 'completed' | 'cancelled' | 'error';
 
 export interface BrowserTestStatus {
+  diagnosticsState: 'disabled' | 'initializing' | 'ready' | 'error';
+  diagnosticsError: string;
   sceneGeneration: number;
   fixtureId: string;
   levelStatus: string;
@@ -54,6 +57,17 @@ export interface BrowserTestStatus {
   performanceSample: string;
 }
 
+const performanceAttributeKeys = new Set([
+  'displayObjects',
+  'boardPieceCount',
+  'temporaryObjectCount',
+  'activeTweenCount',
+  'activeTimerCount',
+  'listenerCount',
+  'performanceSample',
+  'diagnosticsError',
+]);
+
 export function getBoardPieceHash(piece: BoardPiece): string {
   return `${piece.kind}:${piece.pieceType}:${piece.kind === 'line-clear' ? piece.orientation : ''}`;
 }
@@ -68,7 +82,7 @@ export function getBoardHash(board: Board): string {
 }
 
 export function markBrowserTestScene(scene: string): void {
-  if (new window.URLSearchParams(window.location.search).get('e2e') !== '1') return;
+  if (!getBrowserTestOptions().e2eEnabled) return;
   const element = document.getElementById('storycrush-test-status');
   if (!element) return;
   element.setAttribute('data-scene', scene);
@@ -79,7 +93,7 @@ export function markBrowserTestScene(scene: string): void {
 }
 
 export function syncBrowserTestSceneFromGame(): void {
-  if (new window.URLSearchParams(window.location.search).get('e2e') !== '1') return;
+  if (!getBrowserTestOptions().e2eEnabled) return;
   const element = document.getElementById('storycrush-test-status');
   const game =
     typeof window !== 'undefined'
@@ -117,17 +131,29 @@ export function syncBrowserTestSceneFromGame(): void {
 
 export class BrowserTestStatusBridge {
   private readonly element: HTMLElement | null;
+  private readonly performanceDiagnosticsEnabled: boolean;
 
   public constructor() {
-    const enabled = new window.URLSearchParams(window.location.search).get('e2e') === '1';
-    this.element = enabled ? document.getElementById('storycrush-test-status') : null;
+    const options = getBrowserTestOptions();
+    // E2E owns basic status; performance attributes require the separate opt-in flag.
+    this.element = options.e2eEnabled ? document.getElementById('storycrush-test-status') : null;
+    this.performanceDiagnosticsEnabled = options.performanceDiagnosticsEnabled;
   }
 
   public update(status: BrowserTestStatus): void {
     if (!this.element) return;
     for (const [key, value] of Object.entries(status)) {
       const attributeKey = key.replace(/[A-Z]/g, (character) => `-${character.toLowerCase()}`);
-      this.element.setAttribute(`data-${attributeKey}`, String(value));
+      if (!this.performanceDiagnosticsEnabled && performanceAttributeKeys.has(key)) {
+        this.element.removeAttribute(`data-${attributeKey}`);
+        continue;
+      }
+      this.element.setAttribute(
+        `data-${attributeKey}`,
+        key === 'diagnosticsState' && !this.performanceDiagnosticsEnabled
+          ? 'disabled'
+          : String(value),
+      );
     }
   }
 

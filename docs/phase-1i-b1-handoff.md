@@ -9,7 +9,31 @@ following in-progress Phase 1I-B1 changes. Do not mark Phase 1I-B1 complete
 until the browser suite, preview suite, full verification, audit report, and
 documentation updates have all passed.
 
-## Completed Work
+## Completed in Recovery Pass A
+
+- Established an explicit browser diagnostics contract.
+  - `e2e=1` owns `#storycrush-test-status` and publishes basic read-only E2E
+    scene, fixture, playback, input, render, board, score, objective, and
+    geometry status.
+  - `debugPerformance=1` is effective only with `e2e=1` and adds resource and
+    frame-sample diagnostics.
+  - `data-diagnostics-state` is `disabled`, `initializing`, `ready`, or `error`.
+    Performance attributes are absent when diagnostics are disabled.
+- Added centralized Playwright URL construction plus scene and diagnostics
+  readiness/resource helpers. Diagnostics tests now wait for `ready` before
+  reading resource attributes.
+- Corrected the HUD test coordinate. The old coordinate clicked above the first
+  control row, leaving later status assertions waiting on an action that never
+  occurred.
+- Repaired diagnostics resource assertions to check stable cleanup categories
+  rather than compare a partial object with a complete snapshot.
+- Added browser coverage for normal E2E, diagnostics E2E, and normal production
+  URL behavior.
+- Development Playwright passes: 18 tests (9 Chromium desktop, 9 Chromium
+  mobile). Production-preview Playwright passes: 18 tests on the same projects.
+  The suites cover `fast-gravity`, `instant-resolution`, and `wildcard-pair`.
+
+## Completed Work Before Recovery Pass A
 
 - Added presentation-only performance measurement helpers in
   `src/game/presentation/testing/performanceMeasurement.ts`.
@@ -42,9 +66,12 @@ documentation updates have all passed.
   resize soak assertions, and changed Playwright to desktop + Chromium mobile
   projects with the requested serial execution and retained failure artifacts.
 
-## Last Known Validation
+## Current Validation
 
-The following focused tests passed before the browser-suite expansion:
+Focused B1 unit coverage, including browser diagnostics option parsing, passes.
+Recovery Pass A final unit result: 50 Vitest files and 227 tests passed.
+
+### Historical Validation
 
 ```text
 tests/unit/presentation/performanceMeasurement.test.ts
@@ -64,18 +91,8 @@ npm run verify
 Those baseline counts and browser results do not validate the in-progress
 Phase 1I-B1 browser changes.
 
-## Current Unverified or Failing State
+## Remaining for Recovery Pass B
 
-- `test-results/` is untracked and contains Playwright videos, traces,
-  screenshots, and error contexts from failed desktop browser runs.
-  Preserve the artifacts until their failures are investigated; do not include
-  them in source control unless intentionally requested.
-- The browser tests now include diagnostics and soak cases but have not passed
-  after the latest changes.
-- `tests/browser/presentation.spec.ts` starts diagnostic and soak sessions
-  without `debugPerformance=1` for resource baseline assertions. Verify that
-  the bridge publishes the expected diagnostics in that case, or update the
-  test/helper contract consistently.
 - The required deterministic scenario registry has not been completed for all
   20 named scenarios. The current fixtures still center on `fast-gravity`,
   `instant-resolution`, and `wildcard-pair`.
@@ -83,14 +100,11 @@ Phase 1I-B1 browser changes.
 - No confirmed bottleneck has been measured, fixed, and documented.
 - No presentation resource registry has been added. Existing direct counts are
   only partial lifecycle evidence and need audit coverage.
-- Required accessibility, safe-area, text-scale, contrast, flash-safety, and
-  touch audits are not complete.
-- Required project documentation remains unchanged:
-  - `README.md`
-  - `docs/architecture.md`
-  - `docs/roadmap.md`
-  - `docs/known-issues.md`
-  - `docs/performance-accessibility-audit.md` has not been created.
+- Restart, navigation, resize, and gameplay soak tests remain deferred.
+- Required mobile-layout, touch, reduced-motion, flash, keyboard, ARIA,
+  safe-area, text-scale, and contrast audits are not complete.
+- `docs/performance-accessibility-audit.md` and final milestone documentation
+  remain incomplete. Do not mark Phase 1I-B1 complete.
 
 ## Working Tree Scope
 
@@ -127,21 +141,15 @@ Generated, untracked artifacts:
 test-results/
 ```
 
-## Resume Sequence
+## Recovery Pass B Sequence
 
-1. Run the focused new unit tests, then `npm run typecheck` and `npm run lint`.
-2. Run `npm run test:browser` and inspect the existing `test-results/` traces
-   and error contexts for the first browser failure.
-3. Repair browser tests and diagnostics only after identifying whether the
-   failure is an application issue, a status-bridge contract issue, or a test
-   coordinate/layout issue.
-4. Run `npm run test:browser:preview` after the development browser suite
-   passes.
-5. Complete the required scenario registry, measurements, lifecycle and layout
-   audits, then write `docs/performance-accessibility-audit.md` with actual
-   measured results.
-6. Update the requested project documentation and run every command in the
-   Phase 1I-B1 verification requirements.
+1. Expand the deterministic performance scenario registry.
+2. Collect development and preview baseline measurements.
+3. Audit resource/listener lifecycle and run restart/navigation/resize/gameplay
+   soak tests.
+4. Complete mobile, touch, reduced-motion, flash, keyboard, and ARIA audits.
+5. Write `docs/performance-accessibility-audit.md` with measured evidence.
+6. Repair only evidence-backed defects and complete final milestone documentation.
 
 ## Non-Negotiable Boundaries
 

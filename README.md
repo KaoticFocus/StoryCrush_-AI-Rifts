@@ -2,7 +2,8 @@
 
 StoryCrush is a narrative-driven match-3 concept where player choices and cross-universe rifts reshape gameplay outcomes.
 
-This repository is currently in Phase 1H-B2 (special-effect presentation, reshuffle movement, and incremental HUD feedback).
+This repository is currently in Phase 1I-B1 Recovery Pass A. The prototype
+gameplay polish and QA milestone remains in progress.
 
 ## Current Milestone Status
 
@@ -75,6 +76,8 @@ npm run typecheck
 npm run format
 npm run format:check
 npm run verify
+npm run test:browser
+npm run test:browser:preview
 ```
 
 ## Play The Prototype
@@ -133,6 +136,21 @@ npm run verify
 ```
 
 This runs formatting checks, lint, type-check, tests, and production build in a non-watch flow.
+
+## Browser Test Diagnostics
+
+Browser test instrumentation is opt-in and remains inert during normal gameplay:
+
+- `?e2e=1` exposes the hidden `#storycrush-test-status` bridge with read-only
+  scene, fixture, playback, input, render-consistency, board, score, objective,
+  and geometry attributes.
+- `?e2e=1&debugPerformance=1` additionally enables frame samples and resource
+  diagnostics. `data-diagnostics-state` progresses from `initializing` to
+  `ready`; performance attributes are absent when diagnostics are disabled.
+
+Run `npm run test:browser` for the desktop and mobile development suite. Run
+`npm run test:browser:preview` for the same suite against a built Vite preview
+server.
 
 ## Project Structure Summary
 

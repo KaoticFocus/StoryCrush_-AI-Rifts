@@ -395,6 +395,23 @@ Successful reshuffles preserve all of the following:
 - BoardView keeps a coordinate-keyed display-object map.
 - Development assertions verify one rendered piece per occupied coordinate, no pieces for transient null cells, and piece-kind/piece-type agreement with the expected snapshot.
 
+### Phase 1I-B1 Browser Diagnostics Contract
+
+Browser observability is a presentation-only test boundary and cannot mutate
+board or level state.
+
+- `e2e=1` enables the hidden `#storycrush-test-status` bridge and its basic
+  read-only scene and gameplay status.
+- `debugPerformance=1` is effective only with `e2e=1`, adding frame samples and
+  resource-category counts.
+- Basic status is available without performance collection; performance
+  attributes are absent unless diagnostics are enabled.
+- `data-diagnostics-state` is `disabled` without diagnostics, then
+  `initializing` and `ready` when requested. An optional diagnostics failure is
+  represented by `error` without preventing puzzle load.
+- Playwright centralizes URL construction and waits for diagnostics `ready`
+  before reading performance attributes.
+
 ### Phase 1I Deferrals
 
 - Hint presentation remains deferred.
