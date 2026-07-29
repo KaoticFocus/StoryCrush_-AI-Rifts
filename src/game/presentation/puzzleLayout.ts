@@ -75,8 +75,8 @@ export function calculatePuzzleLayout(input: {
   rows: number;
   columns: number;
 }): PuzzleLayout {
-  const width = Math.max(320, Math.floor(input.width));
-  const height = Math.max(320, Math.floor(input.height));
+  const width = Math.max(1, Math.floor(input.width));
+  const height = Math.max(1, Math.floor(input.height));
   const rows = input.rows;
   const columns = input.columns;
 

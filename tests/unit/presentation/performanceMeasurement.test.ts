@@ -39,6 +39,7 @@ describe('performanceMeasurement', () => {
       playbackMode: 'fast',
       reducedMotion: false,
       frameDurations: [16, 17, 40],
+      longFrameCommandCounts: { 'special-activation': 1 },
       playbackDurationMs: 100,
       resourcesBefore: resources,
       resourcesAfter: resources,
@@ -53,6 +54,7 @@ describe('performanceMeasurement', () => {
       framesOver100Ms: 0,
     });
     expect('heapBeforeBytes' in sample).toBe(false);
+    expect(sample.longFrameCommandCounts).toEqual({ 'special-activation': 1 });
     expect(JSON.parse(JSON.stringify(sample))).toEqual(sample);
   });
 });

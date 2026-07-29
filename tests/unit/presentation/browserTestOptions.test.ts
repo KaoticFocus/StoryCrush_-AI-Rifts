@@ -6,6 +6,7 @@ describe('parseBrowserTestOptions', () => {
     expect(parseBrowserTestOptions('?fixture=fast-gravity')).toEqual({
       e2eEnabled: false,
       performanceDiagnosticsEnabled: false,
+      safeAreaSimulationEnabled: false,
     });
   });
 
@@ -13,6 +14,7 @@ describe('parseBrowserTestOptions', () => {
     expect(parseBrowserTestOptions('?e2e=1&fixture=fast-gravity')).toEqual({
       e2eEnabled: true,
       performanceDiagnosticsEnabled: false,
+      safeAreaSimulationEnabled: false,
     });
   });
 
@@ -20,10 +22,17 @@ describe('parseBrowserTestOptions', () => {
     expect(parseBrowserTestOptions('?debugPerformance=1')).toEqual({
       e2eEnabled: false,
       performanceDiagnosticsEnabled: false,
+      safeAreaSimulationEnabled: false,
     });
     expect(parseBrowserTestOptions('?e2e=1&debugPerformance=1')).toEqual({
       e2eEnabled: true,
       performanceDiagnosticsEnabled: true,
+      safeAreaSimulationEnabled: false,
     });
+  });
+
+  it('requires E2E enablement before applying safe-area simulation', () => {
+    expect(parseBrowserTestOptions('?safeAreaTest=1').safeAreaSimulationEnabled).toBe(false);
+    expect(parseBrowserTestOptions('?e2e=1&safeAreaTest=1').safeAreaSimulationEnabled).toBe(true);
   });
 });

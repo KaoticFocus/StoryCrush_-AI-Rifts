@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameConfig } from './game/config';
+import { getBrowserTestOptions } from './game/presentation/testing/browserTestOptions';
 import './styles/global.css';
 
 function showStartupFallback(message: string): void {
@@ -11,6 +12,9 @@ function showStartupFallback(message: string): void {
 }
 
 function initializeGame(): Phaser.Game {
+  document.documentElement.dataset.safeAreaTest = String(
+    getBrowserTestOptions().safeAreaSimulationEnabled,
+  );
   const existingGame = window.__storyCrushGame;
   if (existingGame) {
     existingGame.destroy(true);

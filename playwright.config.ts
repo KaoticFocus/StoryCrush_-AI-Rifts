@@ -7,7 +7,7 @@ const port = preview ? 4174 : 4173;
 export default defineConfig({
   testDir: './tests/browser',
   timeout: 30_000,
-  retries: 0,
+  retries: process.env.CI === 'true' ? 1 : 0,
   workers: 1,
   fullyParallel: false,
   use: {

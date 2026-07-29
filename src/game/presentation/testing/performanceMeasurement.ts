@@ -23,6 +23,7 @@ export interface PerformanceSample {
   framesOver33Ms: number;
   framesOver50Ms: number;
   framesOver100Ms: number;
+  longFrameCommandCounts?: Record<string, number>;
   playbackDurationMs: number;
   resourcesBefore: PerformanceResourceSnapshot;
   resourcesAfter: PerformanceResourceSnapshot;
@@ -74,6 +75,9 @@ export function createPerformanceSample(
     framesOver33Ms: countLongFrames(frameDurations, 33),
     framesOver50Ms: countLongFrames(frameDurations, 50),
     framesOver100Ms: countLongFrames(frameDurations, 100),
+    ...(input.longFrameCommandCounts === undefined
+      ? {}
+      : { longFrameCommandCounts: { ...input.longFrameCommandCounts } }),
     playbackDurationMs: input.playbackDurationMs,
     resourcesBefore: { ...input.resourcesBefore },
     resourcesAfter: { ...input.resourcesAfter },
@@ -87,10 +91,12 @@ export class AnimationFrameMeasurement {
   private frameHandle: number | null = null;
   private previousFrameTime: number | null = null;
   private startedAt = 0;
+  private readonly longFrameCommandCounts = new Map<string, number>();
 
   public constructor(
     private readonly enabled: boolean,
     private readonly maxFrames = 2_000,
+    private readonly getActiveCommand: () => string = () => 'unknown',
   ) {}
 
   public start(now = performance.now()): void {
@@ -100,7 +106,15 @@ export class AnimationFrameMeasurement {
     const observe = (timestamp: number) => {
       if (this.frameHandle === null) return;
       if (this.previousFrameTime !== null && this.frameDurations.length < this.maxFrames) {
-        this.frameDurations.push(timestamp - this.previousFrameTime);
+        const duration = timestamp - this.previousFrameTime;
+        this.frameDurations.push(duration);
+        if (duration > 100) {
+          const command = this.getActiveCommand() || 'unknown';
+          this.longFrameCommandCounts.set(
+            command,
+            (this.longFrameCommandCounts.get(command) ?? 0) + 1,
+          );
+        }
       }
       this.previousFrameTime = timestamp;
       this.frameHandle = window.requestAnimationFrame(observe);
@@ -108,12 +122,17 @@ export class AnimationFrameMeasurement {
     this.frameHandle = window.requestAnimationFrame(observe);
   }
 
-  public stop(now = performance.now()): { frameDurations: readonly number[]; durationMs: number } {
+  public stop(now = performance.now()): {
+    frameDurations: readonly number[];
+    durationMs: number;
+    longFrameCommandCounts: Record<string, number>;
+  } {
     if (this.frameHandle !== null) window.cancelAnimationFrame(this.frameHandle);
     this.frameHandle = null;
     return {
       frameDurations: [...this.frameDurations],
       durationMs: Math.max(0, now - this.startedAt),
+      longFrameCommandCounts: Object.fromEntries(this.longFrameCommandCounts),
     };
   }
 }

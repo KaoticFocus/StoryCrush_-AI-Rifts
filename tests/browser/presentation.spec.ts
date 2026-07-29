@@ -77,7 +77,10 @@ async function clickMainMenuPlay(page: Page) {
   await clickCanvasPoint(page, { x: bounds.width / 2, y: bounds.height / 2 }, bounds);
 }
 
-async function clickHudButton(page: Page, key: 'restart' | 'menu' | 'mode') {
+async function clickHudButton(
+  page: Page,
+  key: 'restart' | 'menu' | 'mode' | 'motion' | 'hint' | 'pause',
+) {
   const geometry = await getBoardGeometry(page);
   const layout = calculatePuzzleLayout({
     width: geometry.logicalCanvasWidth,
@@ -85,7 +88,7 @@ async function clickHudButton(page: Page, key: 'restart' | 'menu' | 'mode') {
     rows: geometry.rows,
     columns: geometry.columns,
   });
-  const buttonIndex = key === 'restart' ? 0 : key === 'menu' ? 1 : 2;
+  const buttonIndex = ['restart', 'menu', 'mode', 'motion', 'hint', 'pause'].indexOf(key);
   const buttonGap = 8;
   const buttonWidth = Math.max(92, Math.floor((layout.footerRect.width - 36 - buttonGap * 2) / 3));
   const canvas = page.locator('canvas');
@@ -95,10 +98,16 @@ async function clickHudButton(page: Page, key: 'restart' | 'menu' | 'mode') {
     page,
     {
       x:
-        ((layout.footerRect.x + 18 + buttonIndex * (buttonWidth + buttonGap) + buttonWidth / 2) /
+        ((layout.footerRect.x +
+          18 +
+          (buttonIndex % 3) * (buttonWidth + buttonGap) +
+          buttonWidth / 2) /
           geometry.logicalCanvasWidth) *
         bounds.width,
-      y: ((layout.footerRect.y + 60) / geometry.logicalCanvasHeight) * bounds.height,
+      y:
+        ((layout.footerRect.y + 42 + Math.floor(buttonIndex / 3) * 44 + 18) /
+          geometry.logicalCanvasHeight) *
+        bounds.height,
     },
     bounds,
   );
@@ -129,11 +138,24 @@ async function enterFixtureWithDiagnostics(page: Page, fixtureId: string) {
   return errors;
 }
 
-async function selectPlaybackMode(page: Page, mode: 'fast' | 'instant') {
+async function selectPlaybackMode(page: Page, mode: 'normal' | 'fast' | 'instant') {
   while ((await getTestStatus(page).getAttribute('data-playback-mode')) !== mode) {
     await clickHudButton(page, 'mode');
   }
   await expect(getTestStatus(page)).toHaveAttribute('data-playback-mode', mode);
+}
+
+async function expectStableResources(page: Page, baseline: Record<string, number>) {
+  const resources = await readResourceSnapshot(page);
+  for (const resourceName of [
+    'board-piece-count',
+    'temporary-object-count',
+    'active-timer-count',
+    'listener-count',
+  ] as const) {
+    expect(resources[resourceName]).toBe(baseline[resourceName]);
+  }
+  return resources;
 }
 
 async function submitExpectedFixtureMove(page: Page, expectsVisiblePlayback = true) {
@@ -166,9 +188,9 @@ async function submitExpectedFixtureMove(page: Page, expectsVisiblePlayback = tr
   }
 }
 
-async function expectFixtureCompletion(page: Page) {
+async function expectFixtureCompletion(page: Page, timeout = 5_000) {
   const status = page.locator(statusSelector);
-  await expect(status).toHaveAttribute('data-playback-state', /^(completed|idle)$/);
+  await expect(status).toHaveAttribute('data-playback-state', /^(completed|idle)$/, { timeout });
   await expect(status).toHaveAttribute('data-render-consistency', 'passed');
   await expect(status).toHaveAttribute(
     'data-authoritative-board-hash',
@@ -228,6 +250,22 @@ test('wildcard pair resolves through real canvas input and chains the fixture sp
   await expectFixtureCompletion(page);
   errors.assertNone();
 });
+
+for (const [id, fixtureId, sourceKinds] of [
+  ['B1-FX-004', 'line-area-combination', 'line-clear,area-clear'],
+  ['B1-FX-005', 'wildcard-target', 'wildcard,standard'],
+] as const) {
+  test(`${id} resolves ${fixtureId} through real canvas input`, async ({ page }) => {
+    test.setTimeout(90_000);
+    const errors = await enterFixture(page, fixtureId);
+    const status = page.locator(statusSelector);
+    await expect(status).toHaveAttribute('data-expected-move-source-kinds', sourceKinds);
+    await submitExpectedFixtureMove(page);
+    await expect(status).toHaveAttribute('data-command-trace', /special-activation/);
+    await expectFixtureCompletion(page, fixtureId === 'wildcard-target' ? 15_000 : 5_000);
+    errors.assertNone();
+  });
+}
 
 test('restart, resize, and menu exit safely cancel fast playback through real UI', async ({
   page,
@@ -317,6 +355,186 @@ test('diagnostics E2E mode publishes an initial resource baseline', async ({ pag
   expect(resources['board-piece-count']).toBe(64);
   expect(resources['temporary-object-count']).toBe(0);
   expect(resources['active-timer-count']).toBe(0);
+  errors.assertNone();
+});
+
+test('B1-SK-001 lifecycle resources return to baseline through restart and resize before menu exit', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const errors = await enterFixtureWithDiagnostics(page, 'fast-gravity');
+  const baseline = await readResourceSnapshot(page);
+  const stableResourceNames = [
+    'board-piece-count',
+    'temporary-object-count',
+    'active-timer-count',
+    'listener-count',
+  ] as const;
+  const initialViewport = page.viewportSize();
+  if (!initialViewport) throw new Error('Expected configured Playwright viewport');
+
+  for (let iteration = 0; iteration < 3; iteration += 1) {
+    await clickHudButton(page, 'restart');
+    await expect(getTestStatus(page)).toHaveAttribute('data-playback-state', 'idle');
+
+    await page.setViewportSize({
+      width: initialViewport.width - (iteration + 1) * 8,
+      height: initialViewport.height - (iteration + 1) * 8,
+    });
+    await expect(getTestStatus(page)).toHaveAttribute('data-render-consistency', 'passed');
+
+    const resources = await readResourceSnapshot(page);
+    for (const resourceName of stableResourceNames)
+      expect(resources[resourceName]).toBe(baseline[resourceName]);
+  }
+
+  await page.locator('canvas').press('KeyM');
+  await waitForSceneReady(page, 'main-menu');
+  errors.assertNone();
+});
+
+test('B1-SC-001 scenario metadata selects its E2E-gated fixture and remains read-only', async ({
+  page,
+}) => {
+  const errors = collectBrowserErrors(page);
+  await page.goto(buildE2EUrl({ scenario: 'reduced-motion' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickMainMenuPlay(page);
+  const status = await waitForSceneReady(page, 'puzzle');
+  await expect(status).toHaveAttribute('data-scenario-id', 'reduced-motion');
+  await expect(status).toHaveAttribute('data-fixture-id', 'line-area-combination');
+  await expect(status).toHaveAttribute('data-scenario-features', /reduced-motion/);
+  errors.assertNone();
+});
+
+for (const [scenario, fixture, mode, reducedMotion] of [
+  ['ordinary-match', 'fast-gravity', 'normal', false],
+  ['fast-gravity', 'fast-gravity', 'fast', false],
+  ['instant-resolution', 'instant-resolution', 'instant', false],
+  ['wildcard-pair', 'wildcard-pair', 'normal', false],
+  ['reduced-motion', 'line-area-combination', 'normal', true],
+] as const) {
+  test(`B1-PF ${scenario} records a bounded performance sample`, async ({ page }) => {
+    test.setTimeout(90_000);
+    const errors = await enterFixtureWithDiagnostics(page, fixture);
+    await selectPlaybackMode(page, mode);
+    if (reducedMotion) {
+      await clickHudButton(page, 'motion');
+      await expect(getTestStatus(page)).toHaveAttribute('data-reduced-motion', 'true');
+    }
+    await submitExpectedFixtureMove(page, mode !== 'instant');
+    await expectFixtureCompletion(page, scenario === 'wildcard-pair' ? 20_000 : 5_000);
+    await expect(getTestStatus(page)).toHaveAttribute('data-performance-sample', /.+/);
+    const serialized = await getRequiredStatusAttribute(page, 'performance-sample');
+    const sample = JSON.parse(serialized) as {
+      buildKind: string;
+      frameCount: number;
+      averageFrameMs: number;
+      percentile95FrameMs: number;
+      longestFrameMs: number;
+      framesOver33Ms: number;
+      framesOver50Ms: number;
+      framesOver100Ms: number;
+      playbackDurationMs: number;
+      resourcesAfter: { temporaryObjects: number; activeTweens: number; activeTimers: number };
+    };
+    expect(sample.frameCount).toBeGreaterThanOrEqual(mode === 'instant' ? 0 : 1);
+    expect(sample.playbackDurationMs).toBeGreaterThan(0);
+    expect(sample.resourcesAfter).toMatchObject({
+      temporaryObjects: 0,
+      activeTweens: 0,
+      activeTimers: 0,
+    });
+    console.log(`B1_PERFORMANCE_SAMPLE ${scenario} ${JSON.stringify(sample)}`);
+    errors.assertNone();
+  });
+}
+
+test('B1-SK-002 restart soak keeps deterministic resources stable for 25 cycles', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const errors = await enterFixtureWithDiagnostics(page, 'fast-gravity');
+  const baseline = await readResourceSnapshot(page);
+  for (let iteration = 1; iteration <= 25; iteration += 1) {
+    await clickHudButton(page, 'restart');
+    await expect(getTestStatus(page)).toHaveAttribute('data-playback-state', 'idle');
+    if (iteration % 5 === 0) await expectStableResources(page, baseline);
+  }
+  await expect(getTestStatus(page)).toHaveAttribute('data-hard-sync-recovery-count', '0');
+  errors.assertNone();
+});
+
+test('B1-SK-003 navigation soak completes 20 menu to puzzle to menu cycles', async ({ page }) => {
+  test.setTimeout(90_000);
+  const errors = await enterFixture(page, 'fast-gravity');
+  for (let iteration = 0; iteration < 20; iteration += 1) {
+    await clickHudButton(page, 'menu');
+    await waitForSceneReady(page, 'main-menu');
+    await clickMainMenuPlay(page);
+    await waitForSceneReady(page, 'puzzle');
+    await expect(getTestStatus(page)).toHaveAttribute('data-render-consistency', 'passed');
+  }
+  errors.assertNone();
+});
+
+test('B1-SK-004 resize soak preserves stable state across required viewports', async ({ page }) => {
+  test.setTimeout(90_000);
+  const errors = await enterFixtureWithDiagnostics(page, 'fast-gravity');
+  const baseline = await readResourceSnapshot(page);
+  const viewports = [
+    { width: 1280, height: 720 },
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+    { width: 320, height: 568 },
+    { width: 1440, height: 900 },
+  ];
+  for (let iteration = 0; iteration < 10; iteration += 1) {
+    await page.setViewportSize(viewports[iteration % viewports.length]);
+    await expect(getTestStatus(page)).toHaveAttribute('data-render-consistency', 'passed');
+    await expect(getTestStatus(page)).toHaveAttribute('data-input-locked', 'false');
+    await expectStableResources(page, baseline);
+  }
+  errors.assertNone();
+});
+
+test('B1-SK-005 gameplay soak completes 20 accepted instant moves without recovery', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = await enterFixtureWithDiagnostics(page, 'instant-resolution');
+  await selectPlaybackMode(page, 'instant');
+  const baseline = await readResourceSnapshot(page);
+  for (let iteration = 0; iteration < 20; iteration += 1) {
+    await submitExpectedFixtureMove(page, false);
+    await expectFixtureCompletion(page);
+    await expectStableResources(page, baseline);
+    if (iteration < 19) await clickHudButton(page, 'restart');
+  }
+  errors.assertNone();
+});
+
+test('B1-SK-006 hint, pause, and settings soak keeps controls singular and preferences scoped', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = await enterFixtureWithDiagnostics(page, 'fast-gravity');
+  const baseline = await readResourceSnapshot(page);
+  for (let iteration = 0; iteration < 25; iteration += 1) {
+    await page.keyboard.press('H');
+    await expect(getTestStatus(page)).toHaveAttribute('data-has-active-hint', 'true');
+    await page.keyboard.press('Escape');
+    await expect(getTestStatus(page)).toHaveAttribute('data-paused', 'true');
+    await page.keyboard.press('Escape');
+    await expect(getTestStatus(page)).toHaveAttribute('data-paused', 'false');
+    if (iteration % 5 === 0) {
+      await clickHudButton(page, 'mode');
+      await clickHudButton(page, 'motion');
+      await expectStableResources(page, baseline);
+    }
+  }
+  const storageKeys = await page.evaluate(() => Object.keys(window.localStorage));
+  expect(storageKeys).toEqual(['storycrush.prototype-settings.v1']);
   errors.assertNone();
 });
 

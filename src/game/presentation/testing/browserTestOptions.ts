@@ -2,6 +2,7 @@
 export interface BrowserTestOptions {
   e2eEnabled: boolean;
   performanceDiagnosticsEnabled: boolean;
+  safeAreaSimulationEnabled: boolean;
 }
 
 export function parseBrowserTestOptions(search: string): BrowserTestOptions {
@@ -11,6 +12,7 @@ export function parseBrowserTestOptions(search: string): BrowserTestOptions {
   return {
     e2eEnabled,
     performanceDiagnosticsEnabled: e2eEnabled && query.get('debugPerformance') === '1',
+    safeAreaSimulationEnabled: e2eEnabled && query.get('safeAreaTest') === '1',
   };
 }
 

@@ -11,13 +11,21 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:browser": "playwright test",
+    "test:browser:smoke": "playwright test --grep \"fast fixture|instant fixture|wildcard pair resolves|B1-FX-004|B1-FX-005|hint, pause, and persisted|normal production URL\"",
+    "test:browser:full": "playwright test",
     "test:browser:preview": "PLAYWRIGHT_PREVIEW=1 playwright test",
+    "test:browser:evidence": "B1_EVIDENCE=1 PLAYWRIGHT_PREVIEW=1 playwright test --grep B1-EV",
+    "test:browser:outlier": "B1_OUTLIER=1 PLAYWRIGHT_PREVIEW=1 playwright test --grep B1-OUT",
+    "test:browser:performance": "playwright test --grep B1-PF",
+    "test:browser:soak": "playwright test --grep B1-SK",
     "test:browser:headed": "playwright test --headed",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:run && npm run build"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:run && npm run build",
+    "test:release": "npm run verify && npm run test:browser:smoke && PLAYWRIGHT_PREVIEW=1 npm run test:browser:smoke",
+    "test:release:full": "npm run test:release && npm run test:browser:full && npm run test:browser:preview && npm run test:browser:soak"
   },
   "dependencies": {
     "phaser": "^3.90.0"

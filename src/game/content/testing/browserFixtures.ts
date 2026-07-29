@@ -12,7 +12,13 @@ import {
 } from '../../level';
 import { createPrototypeBoard, prototypeLevelDefinition } from '../prototypeLevel';
 
-export type BrowserFixtureId = 'fast-gravity' | 'instant-resolution' | 'wildcard-pair';
+export type BrowserFixtureId =
+  | 'fast-gravity'
+  | 'terminal-failure'
+  | 'instant-resolution'
+  | 'line-area-combination'
+  | 'wildcard-target'
+  | 'wildcard-pair';
 
 export interface BrowserFixture {
   id: BrowserFixtureId;
@@ -110,15 +116,36 @@ const fixtures: Record<BrowserFixtureId, BrowserFixture> = {
     initialBoard: createPrototypeFixtureBoard(),
     expectedMove: { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } },
   }),
+  'terminal-failure': createFixture({
+    id: 'terminal-failure',
+    definition: {
+      ...createFixtureDefinition('terminal-failure', 31_006),
+      moveLimit: 1,
+    },
+    initialBoard: createPrototypeFixtureBoard(),
+    expectedMove: { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } },
+  }),
   'instant-resolution': createFixture({
     id: 'instant-resolution',
     definition: createFixtureDefinition('instant-resolution', 31_002),
     initialBoard: createPrototypeFixtureBoard(),
     expectedMove: { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } },
   }),
+  'line-area-combination': createFixture({
+    id: 'line-area-combination',
+    definition: createFixtureDefinition('line-area-combination', 31_003),
+    initialBoard: createPrototypeFixtureBoard(),
+    expectedMove: { from: { row: 6, column: 6 }, to: { row: 6, column: 7 } },
+  }),
+  'wildcard-target': createFixture({
+    id: 'wildcard-target',
+    definition: createFixtureDefinition('wildcard-target', 31_004),
+    initialBoard: createPrototypeFixtureBoard(),
+    expectedMove: { from: { row: 4, column: 4 }, to: { row: 4, column: 5 } },
+  }),
   'wildcard-pair': createFixture({
     id: 'wildcard-pair',
-    definition: createFixtureDefinition('wildcard-pair', 31_003),
+    definition: createFixtureDefinition('wildcard-pair', 31_005),
     initialBoard: createWildcardPairBoard(),
     expectedMove: { from: { row: 4, column: 4 }, to: { row: 4, column: 5 } },
   }),

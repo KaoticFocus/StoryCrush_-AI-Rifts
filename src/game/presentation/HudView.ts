@@ -212,10 +212,17 @@ export class HudView {
       }
     }
 
-    this.summaryText.setText(summary);
-    this.summaryText.setColor(input.hasError ? '#fca5a5' : '#cbd5e1');
-    this.summaryText.setPosition(layout.footerRect.x + horizontalPadding, layout.footerRect.y + 8);
-    this.summaryText.setWordWrapWidth(layout.footerRect.width - horizontalPadding * 2);
+    const showSummary = layout.footerRect.height > 124;
+    this.summaryText.setVisible(showSummary);
+    if (showSummary) {
+      this.summaryText.setText(summary);
+      this.summaryText.setColor(input.hasError ? '#fca5a5' : '#cbd5e1');
+      this.summaryText.setPosition(
+        layout.footerRect.x + horizontalPadding,
+        layout.footerRect.y + 8,
+      );
+      this.summaryText.setWordWrapWidth(layout.footerRect.width - horizontalPadding * 2);
+    }
 
     const buttonGap = 8;
     const buttonHeight = 36;

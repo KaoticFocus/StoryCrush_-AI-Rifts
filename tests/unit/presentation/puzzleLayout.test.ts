@@ -40,6 +40,14 @@ describe('puzzleLayout', () => {
     expect(layout.boardRect.y + layout.boardRect.height).toBeLessThanOrEqual(layout.viewportHeight);
   });
 
+  it('fits inside the reduced content area used by safe-area simulation', () => {
+    const layout = calculatePuzzleLayout({ width: 296, height: 514, rows: 8, columns: 8 });
+
+    expect(layout.viewportWidth).toBe(296);
+    expect(layout.boardRect.x + layout.boardRect.width).toBeLessThanOrEqual(296);
+    expect(layout.footerRect.y + layout.footerRect.height).toBeLessThanOrEqual(514);
+  });
+
   it('creates a landscape layout that fits HUD and board without overlap', () => {
     const layout = calculatePuzzleLayout({ width: 1280, height: 720, rows: 8, columns: 8 });
 

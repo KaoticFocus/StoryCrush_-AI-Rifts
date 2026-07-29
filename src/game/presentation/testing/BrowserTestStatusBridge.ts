@@ -8,11 +8,14 @@ export interface BrowserTestStatus {
   diagnosticsState: 'disabled' | 'initializing' | 'ready' | 'error';
   diagnosticsError: string;
   sceneGeneration: number;
+  scenarioId: string;
+  scenarioFeatures: string;
   fixtureId: string;
   levelStatus: string;
   playbackState: BrowserPlaybackState;
   playbackSequence: number;
   playbackMode: string;
+  reducedMotion: boolean;
   paused: boolean;
   hasActiveHint: boolean;
   selectedCoordinate: string;

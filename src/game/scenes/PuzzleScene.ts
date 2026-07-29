@@ -6,6 +6,10 @@ import {
   getBrowserFixture,
   type BrowserFixture,
 } from '../content/testing/browserFixtures';
+import {
+  getBrowserScenario,
+  type BrowserScenarioDefinition,
+} from '../content/testing/browserScenarios';
 import { createPrototypeLevelSession, prototypeLevelDefinition } from '../content/prototypeLevel';
 import { BoardView } from '../presentation/BoardView';
 import { createBoardViewModel } from '../presentation/boardViewModel';
@@ -45,7 +49,6 @@ import {
   BrowserTestStatusBridge,
   getBoardHash,
   markBrowserTestScene,
-  syncBrowserTestSceneFromGame,
   type BrowserPlaybackState,
 } from '../presentation/testing/BrowserTestStatusBridge';
 import { getBrowserTestOptions } from '../presentation/testing/browserTestOptions';
@@ -60,6 +63,8 @@ import {
   createAriaStatusMessage,
 } from '../presentation/accessibility/ariaStatus';
 import { MainMenuScene } from './MainMenuScene';
+
+type ShortcutKeyEvent = { key: string; repeat: boolean };
 
 export class PuzzleScene extends Phaser.Scene {
   public static readonly key = 'PuzzleScene';
@@ -86,8 +91,9 @@ export class PuzzleScene extends Phaser.Scene {
   private readonly hudTimers = new Set<Phaser.Time.TimerEvent>();
   private readonly hudResolvers = new Set<() => void>();
   private visibilityHandler: (() => void) | null = null;
-  private escapeKeyHandler: (() => void) | null = null;
-  private hintKeyHandler: (() => void) | null = null;
+  private escapeKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
+  private hintKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
+  private menuKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
   private statusBridge: BrowserTestStatusBridge | null = null;
   private sceneGeneration = 0;
   private playbackSequence = 0;
@@ -95,6 +101,7 @@ export class PuzzleScene extends Phaser.Scene {
   private lastCommandKind = 'none';
   private hardSyncRecoveryCount = 0;
   private browserFixture: BrowserFixture | null = null;
+  private browserScenario: BrowserScenarioDefinition | null = null;
   private lastMoveAccepted = false;
   private lastMoveKind = 'none';
   private lastActivationIndex = -1;
@@ -105,6 +112,7 @@ export class PuzzleScene extends Phaser.Scene {
   private performanceMeasurement: AnimationFrameMeasurement | null = null;
   private performanceResourcesBefore: PerformanceResourceSnapshot | null = null;
   private performanceSample: PerformanceSample | null = null;
+  private performanceFinalizeHandle: number | null = null;
   private diagnosticsState: 'disabled' | 'initializing' | 'ready' | 'error' = 'disabled';
   private diagnosticsError = '';
   private static readonly hintDuration = 2500;
@@ -120,6 +128,7 @@ export class PuzzleScene extends Phaser.Scene {
     this.statusBridge = new BrowserTestStatusBridge();
     this.diagnosticsState = this.isPerformanceDiagnosticsEnabled() ? 'initializing' : 'disabled';
     markBrowserTestScene('puzzle');
+    this.browserScenario = this.getBrowserScenarioFromUrl();
     this.browserFixture = this.getBrowserFixtureFromUrl();
 
     try {
@@ -185,6 +194,10 @@ export class PuzzleScene extends Phaser.Scene {
         this.cancelSummaryTimer();
         this.playbackController?.cancel({ restoreInput: false });
         this.cancelHudPlaybackEffects();
+        if (this.performanceFinalizeHandle !== null) {
+          window.cancelAnimationFrame(this.performanceFinalizeHandle);
+          this.performanceFinalizeHandle = null;
+        }
         if (this.resizeHandler) {
           this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler);
           this.resizeHandler = null;
@@ -462,11 +475,12 @@ export class PuzzleScene extends Phaser.Scene {
     return {
       applyInputLock: (locked: boolean) => {
         this.setInputLocked(locked);
-        this.presentationState.playbackActive = this.playbackController?.isPlaying() ?? false;
-        if (!this.playbackController?.isPlaying()) {
+        const playbackActive = this.playbackController?.isPlaying() ?? false;
+        this.presentationState.playbackActive = playbackActive;
+        if (!playbackActive) {
           this.renderScene();
         }
-        this.publishBrowserStatus(locked ? 'playing' : 'idle');
+        this.publishBrowserStatus(playbackActive ? 'playing' : locked ? 'completed' : 'idle');
       },
       isAuthoritativeTerminal: () => this.controller?.getState().status !== 'active',
       getObjectiveDefinitions: () => this.controller?.getDefinition().objectives ?? [],
@@ -569,7 +583,6 @@ export class PuzzleScene extends Phaser.Scene {
         this.rejectedCoordinates = [];
         this.hasError = false;
         this.renderScene();
-        this.stopPerformanceMeasurement();
         this.publishBrowserStatus('synchronizing');
       },
       reportPlaybackError: (error: unknown) => {
@@ -864,6 +877,7 @@ export class PuzzleScene extends Phaser.Scene {
       !this.reducedMotion;
     this.playbackController?.setReducedMotion(this.reducedMotion);
     this.renderScene();
+    this.publishBrowserStatus('idle');
   }
 
   private returnToMenu(): void {
@@ -879,10 +893,8 @@ export class PuzzleScene extends Phaser.Scene {
     this.hasError = false;
     this.summaryMessage = 'Returning to the menu.';
     this.stopPerformanceMeasurement();
-    this.scene.start(MainMenuScene.key);
-    window.setTimeout(() => {
-      syncBrowserTestSceneFromGame();
-    }, 0);
+    this.game.scene.start(MainMenuScene.key);
+    this.game.scene.stop(PuzzleScene.key);
   }
 
   private publishBrowserStatus(playbackState: BrowserPlaybackState): void {
@@ -920,11 +932,14 @@ export class PuzzleScene extends Phaser.Scene {
       diagnosticsState: this.diagnosticsState,
       diagnosticsError: this.diagnosticsError,
       sceneGeneration: this.sceneGeneration,
+      scenarioId: this.browserScenario?.id ?? '',
+      scenarioFeatures: this.browserScenario?.expectedFeatures.join(',') ?? '',
       fixtureId: this.browserFixture?.id ?? 'prototype',
       levelStatus: state.status,
       playbackState,
       playbackSequence: this.playbackSequence,
       playbackMode: this.playbackMode,
+      reducedMotion: this.reducedMotion,
       paused: this.presentationState.paused,
       hasActiveHint: this.presentationState.hasActiveHint,
       selectedCoordinate: this.selectedCoordinate
@@ -1014,7 +1029,11 @@ export class PuzzleScene extends Phaser.Scene {
   private startPerformanceMeasurement(): void {
     if (!this.isPerformanceDiagnosticsEnabled()) return;
     this.performanceResourcesBefore = this.getPerformanceResources();
-    this.performanceMeasurement = new AnimationFrameMeasurement(true);
+    this.performanceMeasurement = new AnimationFrameMeasurement(
+      true,
+      2_000,
+      () => this.lastCommandKind,
+    );
     this.performanceMeasurement.start();
   }
 
@@ -1022,29 +1041,51 @@ export class PuzzleScene extends Phaser.Scene {
     if (!this.performanceMeasurement || !this.performanceResourcesBefore || !this.controller)
       return;
     const measurement = this.performanceMeasurement.stop();
-    const deviceMemory = performance as Performance & { memory?: { usedJSHeapSize?: number } };
-    const state = this.controller.getState();
-    this.performanceSample = createPerformanceSample({
-      scenarioId: this.browserFixture?.id ?? 'prototype',
-      buildKind: import.meta.env.DEV ? 'development' : 'preview',
-      viewport: {
-        width: this.scale.width,
-        height: this.scale.height,
-        devicePixelRatio: window.devicePixelRatio,
-      },
-      playbackMode: this.playbackMode,
-      reducedMotion: this.reducedMotion,
-      frameDurations: measurement.frameDurations,
-      playbackDurationMs: measurement.durationMs,
-      resourcesBefore: this.performanceResourcesBefore,
-      resourcesAfter: this.getPerformanceResources(),
-      ...(deviceMemory.memory?.usedJSHeapSize === undefined
-        ? {}
-        : { heapAfterBytes: deviceMemory.memory.usedJSHeapSize }),
-    });
+    const resourcesBefore = this.performanceResourcesBefore;
     this.performanceMeasurement = null;
     this.performanceResourcesBefore = null;
-    this.publishBrowserStatus(state.status === 'active' ? 'completed' : 'idle');
+    if (this.performanceFinalizeHandle !== null) {
+      window.cancelAnimationFrame(this.performanceFinalizeHandle);
+    }
+    this.schedulePerformanceFinalization(measurement, resourcesBefore);
+  }
+
+  private schedulePerformanceFinalization(
+    measurement: ReturnType<AnimationFrameMeasurement['stop']>,
+    resourcesBefore: PerformanceResourceSnapshot,
+    remainingFrames = 12,
+  ): void {
+    this.performanceFinalizeHandle = window.requestAnimationFrame(() => {
+      this.performanceFinalizeHandle = null;
+      const resourcesAfter = this.getPerformanceResources();
+      if (resourcesAfter.activeTweens > 0 && remainingFrames > 0) {
+        this.schedulePerformanceFinalization(measurement, resourcesBefore, remainingFrames - 1);
+        return;
+      }
+      const deviceMemory = performance as Performance & { memory?: { usedJSHeapSize?: number } };
+      const state = this.controller?.getState();
+      if (!state) return;
+      this.performanceSample = createPerformanceSample({
+        scenarioId: this.browserFixture?.id ?? 'prototype',
+        buildKind: import.meta.env.DEV ? 'development' : 'preview',
+        viewport: {
+          width: this.scale.width,
+          height: this.scale.height,
+          devicePixelRatio: window.devicePixelRatio,
+        },
+        playbackMode: this.playbackMode,
+        reducedMotion: this.reducedMotion,
+        frameDurations: measurement.frameDurations,
+        longFrameCommandCounts: measurement.longFrameCommandCounts,
+        playbackDurationMs: measurement.durationMs,
+        resourcesBefore,
+        resourcesAfter,
+        ...(deviceMemory.memory?.usedJSHeapSize === undefined
+          ? {}
+          : { heapAfterBytes: deviceMemory.memory.usedJSHeapSize }),
+      });
+      this.publishBrowserStatus(state.status === 'active' ? 'completed' : 'idle');
+    });
   }
 
   private getBrowserFixtureFromUrl(): BrowserFixture | null {
@@ -1052,7 +1093,13 @@ export class PuzzleScene extends Phaser.Scene {
     if (!getBrowserTestOptions().e2eEnabled) {
       return null;
     }
-    return getBrowserFixture(query.get('fixture'));
+    return getBrowserFixture(this.browserScenario?.fixtureId ?? query.get('fixture'));
+  }
+
+  private getBrowserScenarioFromUrl(): BrowserScenarioDefinition | null {
+    if (!getBrowserTestOptions().e2eEnabled) return null;
+    const query = new window.URLSearchParams(window.location.search);
+    return getBrowserScenario(query.get('scenario'));
   }
 
   private setInputLocked(locked: boolean): void {
@@ -1122,6 +1169,7 @@ export class PuzzleScene extends Phaser.Scene {
     this.playbackController?.setMode(this.playbackMode);
     this.playbackController?.setReducedMotion(this.reducedMotion);
     this.renderScene();
+    this.publishBrowserStatus('idle');
   }
 
   private togglePause(): void {
@@ -1159,13 +1207,18 @@ export class PuzzleScene extends Phaser.Scene {
       }
     };
     document.addEventListener('visibilitychange', this.visibilityHandler);
-    this.escapeKeyHandler = () => this.togglePause();
-    this.hintKeyHandler = () => this.requestHint();
-    this.input.keyboard?.on('keydown-M', () => {
-      this.returnToMenu();
-    });
-    this.input.keyboard?.on('keydown-ESC', this.escapeKeyHandler);
-    this.input.keyboard?.on('keydown-H', this.hintKeyHandler);
+    this.escapeKeyHandler = (event) => {
+      if (event.key === 'Escape' && !event.repeat) this.togglePause();
+    };
+    this.hintKeyHandler = (event) => {
+      if (event.key.toLowerCase() === 'h' && !event.repeat) this.requestHint();
+    };
+    this.menuKeyHandler = (event) => {
+      if (event.key.toLowerCase() === 'm' && !event.repeat) this.returnToMenu();
+    };
+    document.addEventListener('keydown', this.escapeKeyHandler);
+    document.addEventListener('keydown', this.hintKeyHandler);
+    document.addEventListener('keydown', this.menuKeyHandler);
   }
 
   private unregisterLifecycleHandlers(): void {
@@ -1174,11 +1227,15 @@ export class PuzzleScene extends Phaser.Scene {
       this.visibilityHandler = null;
     }
     if (this.escapeKeyHandler) {
-      this.input.keyboard?.off('keydown-ESC', this.escapeKeyHandler);
+      document.removeEventListener('keydown', this.escapeKeyHandler);
       this.escapeKeyHandler = null;
     }
+    if (this.menuKeyHandler) {
+      document.removeEventListener('keydown', this.menuKeyHandler);
+      this.menuKeyHandler = null;
+    }
     if (this.hintKeyHandler) {
-      this.input.keyboard?.off('keydown-H', this.hintKeyHandler);
+      document.removeEventListener('keydown', this.hintKeyHandler);
       this.hintKeyHandler = null;
     }
   }
