@@ -1,0 +1,423 @@
+{
+  "runId": "phase-1i-b1-codespace-2026-07-28",
+  "environment": {
+    "host": "Ubuntu 24.04.4 LTS dev container (Codespaces)",
+    "browser": "Chromium via Playwright projects",
+    "playwright": "1.62.0",
+    "notes": [
+      "Samples use bounded requestAnimationFrame intervals around the scenario action.",
+      "Instant playback can complete before one animation frame; its zero frame count is an honest unsupported timing sample, not a 0 ms frame rate claim.",
+      "Heap after values are Chromium non-standard estimates when exposed. Heap before is not available from the current browser API contract."
+    ]
+  },
+  "evidence": {
+    "runId": "phase-1i-b1-evidence-codespace-2026-07-28",
+    "directory": "docs/evidence/phase-1i-b1",
+    "previewViewports": [
+      "320x568",
+      "360x800",
+      "390x844",
+      "412x915",
+      "844x390",
+      "1280x720",
+      "1440x900"
+    ],
+    "zoom": {
+      "desktopChromium": ["125%", "150%", "200%"],
+      "mobileEquivalent": "390x844 at CDP page scale 150%",
+      "result": "passed; Phaser canvas text remains canvas-scaled rather than DOM-reflowed"
+    },
+    "touch": {
+      "emulation": "Playwright Chromium iPhone 13 context with touch enabled",
+      "viewports": ["390x844", "320x568", "844x390"],
+      "result": "passed",
+      "targets": [
+        { "viewport": "390x844", "boardCell": "44x44", "footerButton": "100x36", "overlap": false },
+        { "viewport": "320x568", "boardCell": "30x30", "footerButton": "92x36", "overlap": false },
+        { "viewport": "844x390", "boardCell": "26x26", "footerButton": "92x36", "overlap": false }
+      ]
+    },
+    "safeAreaSimulation": {
+      "gate": "e2e=1&safeAreaTest=1",
+      "insetsPx": { "top": 30, "right": 12, "bottom": 24, "left": 12 },
+      "portrait": "passed",
+      "landscape": "passed",
+      "pauseOverlay": "passed",
+      "coordinateConversion": "passed"
+    }
+  },
+  "samples": [
+    {
+      "scenarioId": "ordinary-match",
+      "buildKind": "development",
+      "viewport": { "width": 1280, "height": 720, "devicePixelRatio": 1 },
+      "playbackMode": "normal",
+      "reducedMotion": false,
+      "frameCount": 56,
+      "averageFrameMs": 23.809,
+      "percentile95FrameMs": 66.6,
+      "longestFrameMs": 83.4,
+      "framesOver33Ms": 15,
+      "framesOver50Ms": 3,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 1360.4,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 21700000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "fast-gravity",
+      "buildKind": "development",
+      "viewport": { "width": 1280, "height": 720, "devicePixelRatio": 1 },
+      "playbackMode": "fast",
+      "reducedMotion": false,
+      "frameCount": 28,
+      "averageFrameMs": 23.214,
+      "percentile95FrameMs": 50,
+      "longestFrameMs": 66.7,
+      "framesOver33Ms": 8,
+      "framesOver50Ms": 1,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 675.7,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 19300000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "instant-resolution",
+      "buildKind": "development",
+      "viewport": { "width": 1280, "height": 720, "devicePixelRatio": 1 },
+      "playbackMode": "instant",
+      "reducedMotion": false,
+      "frameCount": 0,
+      "averageFrameMs": 0,
+      "percentile95FrameMs": 0,
+      "longestFrameMs": 0,
+      "framesOver33Ms": 0,
+      "framesOver50Ms": 0,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 92,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 19300000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "wildcard-pair",
+      "buildKind": "development",
+      "viewport": { "width": 1280, "height": 720, "devicePixelRatio": 1 },
+      "playbackMode": "normal",
+      "reducedMotion": false,
+      "frameCount": 402,
+      "averageFrameMs": 18.924,
+      "percentile95FrameMs": 33.3,
+      "longestFrameMs": 66.7,
+      "framesOver33Ms": 45,
+      "framesOver50Ms": 4,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 7666.7,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 19300000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "reduced-motion",
+      "buildKind": "development",
+      "viewport": { "width": 390, "height": 664, "devicePixelRatio": 3 },
+      "playbackMode": "normal",
+      "reducedMotion": true,
+      "frameCount": 96,
+      "averageFrameMs": 16.681,
+      "percentile95FrameMs": 16.8,
+      "longestFrameMs": 33.3,
+      "framesOver33Ms": 1,
+      "framesOver50Ms": 0,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 1625.1,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 21700000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "ordinary-match",
+      "buildKind": "preview",
+      "viewport": { "width": 1280, "height": 720, "devicePixelRatio": 1 },
+      "playbackMode": "normal",
+      "reducedMotion": false,
+      "frameCount": 56,
+      "averageFrameMs": 22.914,
+      "percentile95FrameMs": 50.1,
+      "longestFrameMs": 83.5,
+      "framesOver33Ms": 13,
+      "framesOver50Ms": 3,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 1307.7,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 10600000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "fast-gravity",
+      "buildKind": "preview",
+      "viewport": { "width": 1280, "height": 720, "devicePixelRatio": 1 },
+      "playbackMode": "fast",
+      "reducedMotion": false,
+      "frameCount": 29,
+      "averageFrameMs": 23.566,
+      "percentile95FrameMs": 50,
+      "longestFrameMs": 50.1,
+      "framesOver33Ms": 10,
+      "framesOver50Ms": 1,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 719.5,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 13400000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "instant-resolution",
+      "buildKind": "preview",
+      "viewport": { "width": 1280, "height": 720, "devicePixelRatio": 1 },
+      "playbackMode": "instant",
+      "reducedMotion": false,
+      "frameCount": 0,
+      "averageFrameMs": 0,
+      "percentile95FrameMs": 0,
+      "longestFrameMs": 0,
+      "framesOver33Ms": 0,
+      "framesOver50Ms": 0,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 38.3,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 11900000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "wildcard-pair",
+      "buildKind": "preview",
+      "viewport": { "width": 390, "height": 664, "devicePixelRatio": 3 },
+      "playbackMode": "normal",
+      "reducedMotion": false,
+      "frameCount": 428,
+      "averageFrameMs": 16.979,
+      "percentile95FrameMs": 16.8,
+      "longestFrameMs": 66.7,
+      "framesOver33Ms": 6,
+      "framesOver50Ms": 1,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 7294.6,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 12700000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    },
+    {
+      "scenarioId": "reduced-motion",
+      "buildKind": "preview",
+      "viewport": { "width": 390, "height": 664, "devicePixelRatio": 3 },
+      "playbackMode": "normal",
+      "reducedMotion": true,
+      "frameCount": 94,
+      "averageFrameMs": 17.977,
+      "percentile95FrameMs": 33.3,
+      "longestFrameMs": 50.1,
+      "framesOver33Ms": 5,
+      "framesOver50Ms": 1,
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": 1714.6,
+      "resourcesBefore": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "resourcesAfter": {
+        "displayObjects": 29,
+        "boardPieces": 64,
+        "temporaryObjects": 0,
+        "activeTweens": 0,
+        "activeTimers": 0,
+        "listeners": 4
+      },
+      "heapAfterBytes": 11200000,
+      "renderConsistency": "passed",
+      "hardSyncRecoveryDelta": 0,
+      "errors": []
+    }
+  ],
+  "wildcardOutlierInvestigation": {
+    "originalObservation": {
+      "longestFrameMs": 183.3,
+      "buildKind": "preview",
+      "viewport": "390x664",
+      "scenarioId": "wildcard-pair"
+    },
+    "repeatRunCount": 10,
+    "buildKind": "preview",
+    "viewport": { "width": 390, "height": 844, "devicePixelRatio": 3 },
+    "classification": "Shared-host/browser scheduling outlier",
+    "blocking": false,
+    "distribution": {
+      "averageFrameMs": { "min": 16.878, "max": 18.249 },
+      "percentile95FrameMs": { "min": 16.7, "max": 33.3 },
+      "longestFrameMs": { "min": 33.4, "max": 100 },
+      "framesOver100Ms": 0,
+      "scenarioDurationMs": { "min": 7241.8, "max": 7348.1 }
+    },
+    "longFrameCommandCounts": {},
+    "cleanup": "all ten runs: 29 display objects, 64 board pieces, zero temporary objects, tweens, and timers; hard-sync delta 0; no console or page errors"
+  }
+}

@@ -14,6 +14,19 @@
 - Phase 1H-A is complete: first playable Phaser puzzle scene, responsive board rendering, pointer/touch input, HUD synchronization, deterministic prototype level, and restart/menu flow.
 - Phase 1H-B1 is complete: deterministic playback planning, accepted/rejected swap animation, match highlighting, generic special feedback, removal, special creation, gravity, refill, cascade sequencing, reshuffle fade fallback, playback controls, reduced motion, and final-state synchronization.
 - Phase 1H-B2 is current and implemented: distinct special-effect presentation, deterministic reshuffle movement, incremental score feedback, incremental objective feedback, refined timing, and reduced-motion equivalents.
+- Phase 1I-A is complete.
+- Phase 1I-B1 is complete: viewport screenshots, zoom, touch emulation,
+  safe-area simulation, and wildcard outlier classification are recorded in
+  `performance-accessibility-audit.md`. Physical-device and canvas-semantics
+  limits remain documented there.
+- Practical Milestone 2 / Phase 1I-B2 is locally complete: local release gates,
+  preview parity, regression matrix, CI verification/browser-smoke workflows,
+  static-host configuration, release checklist, known-issue classification, and
+  release-candidate handoff are verified. GitHub-hosted workflow observation and
+  public deployed-site smoke remain externally blocked pending a push plus a
+  real URL or deployment credentials.
+- Practical Milestone 3 is not active until the user decides how to close the
+  remaining external verification.
 
 ## Phase 0B - Foundation Scaffold
 

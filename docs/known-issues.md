@@ -153,6 +153,23 @@
 
 - Scope: ordered score counting, collection progress updates, and short completion feedback.
 
+## Recently Resolved in Practical Milestone 2
+
+### B1-SK-006: Preview keyboard shortcut delivery
+
+- Severity: High before repair.
+- Release blocking: resolved.
+- Affected environment: production-preview desktop browser soak.
+- Reproduction: rapid `H` and `Escape` input after canvas/HUD interaction could
+  be missed by Phaser keyboard-manager delivery.
+- Impact: hint/pause state could fail to change during the release-blocking
+  hint/pause/settings soak.
+- Workaround: none required after repair.
+- Planned milestone: resolved in Practical Milestone 2.
+- Resolution: scene-scoped document `keydown` listeners now own Escape, H, and
+  M with repeat filtering; ten isolated preview-desktop B1-SK-006 repetitions
+  and the full preview suite passed.
+
 ## Remaining Confirmed Limitations
 
 - Only score and collection objectives are implemented.
@@ -165,6 +182,10 @@
 - No save persistence layer is implemented.
 - Phaser production bundle-size warning remains non-blocking.
 - Browser-specific edge cases may still exist until broader manual device coverage is expanded.
+- Codespace Chromium performance samples are regression evidence, not physical-device performance certification. The 183.3 ms preview-mobile wildcard observation was classified as an isolated shared-host/browser scheduling outlier after ten repeat runs with no >100 ms frame, lifecycle drift, or command correlation.
+- Browser emulation and safe-area simulation do not certify notch safe areas, touch ergonomics, or multi-touch behavior on hardware. Physical-device touch and safe-area verification remains deferred to release-candidate work.
+- The Phaser canvas board has no semantic cell mirror and no full keyboard board navigation. Canvas text does not follow browser zoom like DOM text.
+- B1 diagnostics are inert without `e2e=1&debugPerformance=1`; only presentation preferences use local storage, not gameplay state.
 
 ## Process Risks
 
@@ -189,3 +210,75 @@
 - Preferred package manager (npm/pnpm/yarn)?
 - Preferred deployment target for preview (Netlify vs GitHub Pages)?
 - Minimum supported device profile for performance targets?
+
+## Release-Candidate Classification
+
+### RC-ISSUE-001: Public deployment verification unavailable
+
+- Severity: High
+- Release blocking: Yes
+- Affected environment: public static host
+- Reproduction: no deployed URL or deployment credential is in repository configuration.
+- Impact: public asset, refresh, and normal-user smoke checks cannot run.
+- Workaround: run the documented smoke after configuring a real host URL.
+- Planned milestone: Practical Milestone 2 closure after deployment access.
+
+### RC-ISSUE-002: Physical-device touch and safe-area certification absent
+
+- Severity: Medium
+- Release blocking: No
+- Affected environment: notch devices and physical touch hardware
+- Reproduction: evidence is Chromium emulation plus safe-area simulation only.
+- Impact: real-device ergonomics and multi-touch are unverified.
+- Workaround: retain emulation evidence and perform hardware sign-off before broader release.
+- Planned milestone: post-prototype device validation.
+
+### RC-ISSUE-003: Canvas board lacks semantic and complete keyboard access
+
+- Severity: Medium
+- Release blocking: No
+- Affected environment: screen readers and keyboard-only board play
+- Reproduction: board cells are Phaser canvas; only Escape/H and ARIA status are supported.
+- Impact: no semantic cell mirror or full keyboard board navigation.
+- Workaround: use pointer/touch input and HUD announcements.
+- Planned milestone: Practical Milestone 3 or later accessibility work.
+
+### RC-ISSUE-004: Browser zoom has no semantic canvas reflow
+
+- Severity: Low
+- Release blocking: No
+- Affected environment: browser zoom users
+- Reproduction: Phaser canvas scales visually rather than providing DOM reflow.
+- Impact: tested zoom is usable but is not WCAG reflow certification.
+- Workaround: use tested viewport/layout settings.
+- Planned milestone: later accessibility work.
+
+### RC-ISSUE-005: Shared-host frame pacing varies
+
+- Severity: Advisory
+- Release blocking: No
+- Affected environment: shared Codespaces or CI hosts
+- Reproduction: desktop P95 and the historical wildcard frame vary by host scheduling.
+- Impact: evidence is not a 60 FPS certification.
+- Workaround: use deterministic state/lifecycle assertions and remeasure on target hardware.
+- Planned milestone: performance work after prototype scope.
+
+### RC-ISSUE-006: Prototype scope and bundle advisory
+
+- Severity: Low
+- Release blocking: No
+- Affected environment: all builds
+- Reproduction: placeholder visuals; no sound, final art, narrative, saves; score and collection objectives only; enhanced combinations deferred; Vite reports its Phaser-sized main chunk.
+- Impact: incomplete product scope and a non-blocking bundle advisory.
+- Workaround: document limits and do not suppress the Vite warning.
+- Planned milestone: Practical Milestone 3 and later.
+
+### RC-ISSUE-007: Dependency audit advisories
+
+- Severity: High
+- Release blocking: No
+- Affected environment: development and CI dependency installation
+- Reproduction: `npm ci` completes, then npm reports five high-severity dependency advisories.
+- Impact: the lockfile's transitive dependency graph requires a separately reviewed update.
+- Workaround: do not use `npm audit fix --force` during release hardening; review and update dependencies in a dedicated change.
+- Planned milestone: dependency-maintenance follow-up.

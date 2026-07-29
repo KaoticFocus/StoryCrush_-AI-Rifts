@@ -2,8 +2,10 @@
 
 StoryCrush is a narrative-driven match-3 concept where player choices and cross-universe rifts reshape gameplay outcomes.
 
-This repository is currently in Phase 1I-B1 Recovery Pass A. The prototype
-gameplay polish and QA milestone remains in progress.
+Practical Milestones 1 and 2 are locally complete as `prototype-rc1`.
+GitHub-hosted workflow observation and public deployment verification remain
+blocked until the working tree is pushed and a real hosted URL is available.
+The measured audit is available at [docs/performance-accessibility-audit.md](docs/performance-accessibility-audit.md).
 
 ## Current Milestone Status
 
@@ -22,7 +24,8 @@ gameplay polish and QA milestone remains in progress.
 - Tooling is configured: Vitest, ESLint, Prettier, type-check, and production build.
 - The main playable flow is BootScene -> MainMenuScene -> PuzzleScene.
 
-Prototype gameplay polish and QA remain deferred to Phase 1I.
+Phase 1I prototype hardening and local release-candidate QA are complete. The
+prototype retains the documented accessibility, scope, and deployment limits.
 
 ## Project Description
 
@@ -77,7 +80,12 @@ npm run format
 npm run format:check
 npm run verify
 npm run test:browser
+npm run test:browser:smoke
+npm run test:browser:full
 npm run test:browser:preview
+npm run test:browser:soak
+npm run test:release
+npm run test:release:full
 ```
 
 ## Play The Prototype
@@ -151,6 +159,34 @@ Browser test instrumentation is opt-in and remains inert during normal gameplay:
 Run `npm run test:browser` for the desktop and mobile development suite. Run
 `npm run test:browser:preview` for the same suite against a built Vite preview
 server.
+
+## Accessibility and Viewports
+
+The responsive prototype is exercised at `320 x 568`, `360 x 800`, `390 x 844`,
+`412 x 915`, `844 x 390`, `1280 x 720`, and `1440 x 900`. Curated preview
+screenshots are in [docs/evidence/phase-1i-b1](docs/evidence/phase-1i-b1).
+
+Desktop Chromium evidence covers 125%, 150%, and 200% page scale. Mobile
+Chromium touch emulation covers portrait, narrow portrait, and landscape; the
+safe-area simulation is gated by `?e2e=1&safeAreaTest=1` and uses 30/12/24/12 px
+top/right/bottom/left insets. These are browser-emulation checks, not physical
+device, notch, or formal accessibility certification. Phaser canvas text does
+not provide complete DOM-style zoom/reflow.
+
+- `Escape` pauses or resumes the puzzle.
+- `H` requests a hint.
+- Reduced motion preserves gameplay order while removing nonessential travel
+  and scale-heavy effects.
+- The polite ARIA status region announces authoritative move, hint, objective,
+  terminal, and pause state updates. The board and controls are canvas-only:
+  they do not provide complete screen-reader cell semantics or keyboard board
+  navigation.
+
+Use `?e2e=1&debugPerformance=1` only for the read-only browser diagnostics
+used by automation. It is inactive on normal URLs. See
+[docs/performance-results.json](docs/performance-results.json) for structured
+measurements. The evidence commands are `npm run test:browser:evidence` and
+`npm run test:browser:outlier`.
 
 ## Project Structure Summary
 
@@ -287,6 +323,9 @@ docs/
 - [docs/roadmap.md](docs/roadmap.md)
 - [docs/content-model.md](docs/content-model.md)
 - [docs/known-issues.md](docs/known-issues.md)
+- [docs/release-regression-matrix.md](docs/release-regression-matrix.md)
+- [docs/prototype-release-checklist.md](docs/prototype-release-checklist.md)
+- [docs/release-candidate-handoff.md](docs/release-candidate-handoff.md)
 
 ## Current Milestone Notes
 

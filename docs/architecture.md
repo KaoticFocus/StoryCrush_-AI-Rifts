@@ -411,6 +411,24 @@ board or level state.
   represented by `error` without preventing puzzle load.
 - Playwright centralizes URL construction and waits for diagnostics `ready`
   before reading performance attributes.
+- `PuzzleScene` owns resize, visibility, and keyboard listeners; `BoardView`
+  and `HudView` own display objects, effects, tweens, and timers. Shutdown
+  cancels and removes these resources before the next scene generation.
+- The DOM shell applies four-way safe-area padding, and Phaser recomputes
+  logical board geometry after resize. Reduced motion changes only
+  choreography/timing, never domain command ordering.
+- The polite ARIA live region is separate from the hidden E2E bridge and is
+  fed from authoritative presentation events. Canvas cells remain
+  non-semantic; full keyboard board navigation is deferred.
+- `safeAreaTest=1` is only honored with `e2e=1`; it applies CSS-only simulated
+  30/12/24/12 px insets. The game recalculates Phaser logical geometry within
+  the resulting canvas, and browser tests verify corner-cell conversion.
+- The evidence suite captures stable preview screenshots under
+  `docs/evidence/phase-1i-b1` and uses Playwright touchscreen input for mobile
+  gesture/target checks. Browser emulation is not physical-device validation.
+- Wildcard outlier measurement samples bounded RAF intervals across repeated
+  runs. Only over-100-ms intervals record the active presentation command,
+  avoiding raw frame logs while enabling command-correlation classification.
 
 ### Phase 1I Deferrals
 
@@ -670,3 +688,32 @@ Win precedence ensures completing final objective on final move results in `won`
 - Architecture summarized: complete (this document).
 - Vertical-slice scope written: complete (docs/product-scope.md).
 - No broad rewrite started: complete.
+
+## Release Tooling Boundary (Practical Milestone 2)
+
+- Browser verification is tiered without changing test ownership:
+  `test:browser:smoke` selects fast release-blocking fixtures,
+  `test:browser:full` runs deterministic regression, and
+  `test:browser:soak` selects B1 soak IDs. `test:browser:preview` runs against
+  Vite production output.
+- Playwright is serial (`workers: 1`, `fullyParallel: false`), keeps trace,
+  screenshot, and video only on failure, uses zero local retries, and permits
+  one CI retry. A retry pass is a flakiness concern, not silent proof.
+- `.github/workflows/verify.yml` runs formatting, lint, typecheck, unit tests,
+  and build. `.github/workflows/browser-smoke.yml` installs Chromium only and
+  uploads report, trace, screenshot, and video directories only after failure.
+- Browser instrumentation remains URL-gated: `e2e=1` exposes a read-only status
+  bridge; `debugPerformance=1` separately enables diagnostics. Normal URLs do
+  not expose fixtures or diagnostics.
+- Escape, H, and M are scene-scoped document keyboard shortcuts with repeat
+  filtering. This keeps pause, hint, and menu commands available after canvas or
+  HUD interaction; listeners are removed during scene shutdown.
+- Static deployment is Vite output only. Netlify-compatible builds run
+  `npm run build` and publish `dist`. The app has one entry route, so no SPA
+  fallback is configured. Rollback requires host deploy history or a previously
+  verified commit reference.
+- Workflow YAML and equivalent commands are validated locally. GitHub-hosted
+  execution and deployed smoke remain separate evidence and cannot be inferred
+  from local preview results.
+- Board and level modules remain Phaser-free; release tooling uses normal UI
+  input and read-only status, never scene mutation APIs.
