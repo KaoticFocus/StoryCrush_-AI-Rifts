@@ -2,9 +2,10 @@
 
 StoryCrush is a narrative-driven match-3 concept where player choices and cross-universe rifts reshape gameplay outcomes.
 
-Practical Milestones 1 and 2 are locally complete as `prototype-rc1`.
-GitHub-hosted workflow observation and public deployment verification remain
-blocked until the working tree is pushed and a real hosted URL is available.
+Practical Milestones 1 and 2 are complete as `prototype-rc1`.
+GitHub-hosted verify and browser-smoke workflows ran successfully for the push,
+and the prototype is publicly deployed at [https://storycrush-ai-rifts.netlify.app](https://storycrush-ai-rifts.netlify.app).
+The draft deployment used for pre-release smoke was [https://6a6a87292c190c238782ef42--storycrush-ai-rifts.netlify.app](https://6a6a87292c190c238782ef42--storycrush-ai-rifts.netlify.app).
 The measured audit is available at [docs/performance-accessibility-audit.md](docs/performance-accessibility-audit.md).
 
 ## Current Milestone Status

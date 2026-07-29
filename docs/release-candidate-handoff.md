@@ -5,7 +5,7 @@
 - Identifier: `prototype-rc1`
 - Date: 2026-07-29
 - Branch: `main`
-- Commit: `ab6e1b4` (release work remains intentionally uncommitted)
+- Verification commit: `ef53d34`
 - Node: `v24.14.0`; npm: `11.9.0`
 - Build target: Vite static output in `dist`
 
@@ -35,12 +35,16 @@ Local release candidate verified on this working tree:
 The GitHub workflow files are locally syntax/configuration validated and their
 equivalent commands pass locally. No GitHub-hosted run has been observed.
 
-## Release Blockers
+## Release Status
 
-Public deployed-site smoke and GitHub-hosted workflow observation are blocked:
-no deployed URL or deployment credentials are configured, and this uncommitted
-working tree has not been pushed. This is a verified local release candidate,
-not a fully verified public release.
+Public deployment verification is complete:
+
+- Production URL: https://storycrush-ai-rifts.netlify.app
+- Production deploy ID: 6a6a87d91421349213b6da47
+- Draft URL: https://6a6a87292c190c238782ef42--storycrush-ai-rifts.netlify.app
+- Draft deploy ID: 6a6a87292c190c238782ef42
+- GitHub-hosted verify and browser-smoke workflows passed for the current push
+- Desktop and mobile browser smoke passed on the production site (7/7 each)
 
 ## Non-Blocking Limitations
 
@@ -63,6 +67,5 @@ Netlify-compatible hosting runs `npm run build` and publishes `dist`. The app ha
 
 ## Next Milestone
 
-Practical Milestone 2 closure remains external: commit and push through the
-normal user process, observe GitHub-hosted workflows, then run public smoke once
-a deployed URL and credentials are available.
+Practical Milestone 2 closure is complete with public deployment and hosted
+verification confirmed.

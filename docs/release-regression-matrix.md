@@ -62,7 +62,7 @@ Fields for every row: **ID | Category | Scenario | Fixture/setup | Viewport | Pl
 | RC-PREVIEW-001 | Production preview | Full suite | all fixtures | parity | Yes | No | Yes | Passed | 46 passed, 8 intentionally evidence-gated skips across desktop/mobile after B1-SK-006 repair |
 | RC-DEPLOY-001 | Deploy | Static build | netlify.toml | build/publish correct | Yes | No | Yes | Passed | config/build |
 | RC-DEPLOY-002 | Deploy | Local preview | local server | assets/refresh/nav | Yes | No | Yes | Passed | preview smoke |
-| RC-DEPLOY-003 | Deploy | Public deployed smoke | real URL | normal-user smoke | No | Yes | Yes | Blocked | no URL/credentials |
+| RC-DEPLOY-003 | Deploy | Public deployed smoke | real URL | normal-user smoke | No | Yes | Yes | Passed | production and draft Netlify URLs confirmed with desktop/mobile smoke |
 | RC-ISO-001 | Isolation | Normal URL instrumentation | normal URL | fixtures inert | Yes | No | Yes | Passed | smoke |
 
 Manual canvas review passed for visual distinction, effects/chains, hints/selection, pause, objective/terminal states, desktop/mobile, reduced motion, and 200% zoom. Canvas contrast is manually reviewed only, not WCAG certified.

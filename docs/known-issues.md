@@ -213,11 +213,12 @@
 
 ## Release-Candidate Classification
 
-### RC-ISSUE-001: Public deployment verification unavailable
+### RC-ISSUE-001: Public deployment verification resolved
 
 - Severity: High
-- Release blocking: Yes
+- Release blocking: Resolved
 - Affected environment: public static host
+- Resolution: Netlify authentication completed, the existing site was linked, the production deployment was published at https://storycrush-ai-rifts.netlify.app, and desktop/mobile smoke passed.
 - Reproduction: no deployed URL or deployment credential is in repository configuration.
 - Impact: public asset, refresh, and normal-user smoke checks cannot run.
 - Workaround: run the documented smoke after configuring a real host URL.

@@ -1,6 +1,6 @@
 # Prototype Release Checklist
 
-Candidate: `prototype-rc1`; statuses reflect the local release candidate on 2026-07-29.
+Candidate: `prototype-rc1`; statuses reflect the verified public release on 2026-07-29.
 
 | Area          | Item                                                                                | Status  | Evidence / note                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------- |
@@ -15,9 +15,9 @@ Candidate: `prototype-rc1`; statuses reflect the local release candidate on 2026
 | Gameplay      | Startup, moves, cascades, specials, reshuffle, score, objectives, terminal, restart | Passed  | regression matrix                                                                                       |
 | Presentation  | Hint, pause, visibility pause, modes, settings, ARIA, mobile                        | Passed  | regression matrix                                                                                       |
 | Deployment    | Build command, publish directory, asset paths, local preview                        | Passed  | Netlify config and output audit                                                                         |
-| Deployment    | Public deployed smoke                                                               | Blocked | no deployed URL or credentials available                                                                |
-| CI            | GitHub-hosted workflow execution                                                    | Blocked | workflow syntax/configuration and equivalent commands pass locally; no hosted run observed              |
+| Deployment    | Public deployed smoke                                                               | Passed  | Netlify production and draft URLs live; desktop/mobile smoke passed against the public site           |
+| CI            | GitHub-hosted workflow execution                                                    | Passed  | verify and browser-smoke workflows completed successfully for the current push                          |
 | Documentation | README, architecture, roadmap, known issues, B1 audit                               | Passed  | reconciled docs                                                                                         |
 | Documentation | Matrix, checklist, release handoff                                                  | Passed  | release documents                                                                                       |
 
-Counts: **Passed 14; Failed 0; Blocked 2; Not applicable 0.**
+Counts: **Passed 16; Failed 0; Blocked 0; Not applicable 0.**
