@@ -125,10 +125,25 @@ export function syncBrowserTestSceneFromGame(): void {
     sceneManager?.getScene?.('MainMenuScene')?.scene?.key ??
     'unknown';
   if (sceneKey) {
-    element.setAttribute(
-      'data-scene',
-      sceneKey === 'MainMenuScene' ? 'main-menu' : sceneKey === 'PuzzleScene' ? 'puzzle' : sceneKey,
-    );
+    const mappedScene =
+      sceneKey === 'MainMenuScene'
+        ? 'main-menu'
+        : sceneKey === 'PuzzleScene'
+          ? 'puzzle'
+          : sceneKey === 'MultiverseMapScene'
+            ? 'multiverse-map'
+            : sceneKey === 'ChapterIntroScene'
+              ? 'chapter-intro'
+              : sceneKey === 'DialogueScene'
+                ? 'dialogue'
+                : sceneKey === 'StoryChoiceScene'
+                  ? 'story-choice'
+                  : sceneKey === 'ResultsScene'
+                    ? 'results'
+                    : sceneKey === 'ConsequenceScene'
+                      ? 'consequence'
+                      : sceneKey;
+    element.setAttribute('data-scene', mappedScene);
   }
 }
 

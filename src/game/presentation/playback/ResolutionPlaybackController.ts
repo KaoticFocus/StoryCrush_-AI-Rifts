@@ -70,9 +70,9 @@ export class ResolutionPlaybackController {
     this.playing = false;
     this.adapter.cancelActiveVisuals();
     this.adapter.clearTransientState();
-    this.adapter.synchronizeAuthoritativeState();
 
     if (restoreInput) {
+      this.adapter.synchronizeAuthoritativeState();
       this.adapter.applyInputLock(this.adapter.isAuthoritativeTerminal());
     }
   }

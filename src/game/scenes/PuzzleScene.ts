@@ -63,6 +63,9 @@ import {
   createAriaStatusMessage,
 } from '../presentation/accessibility/ariaStatus';
 import { MainMenuScene } from './MainMenuScene';
+import { ResultsScene } from './ResultsScene';
+import { MultiverseMapScene } from './MultiverseMapScene';
+import { getSharedGameFlowController } from '../flow/gameFlowController';
 
 type ShortcutKeyEvent = { key: string; repeat: boolean };
 
@@ -109,6 +112,8 @@ export class PuzzleScene extends Phaser.Scene {
   private playbackStateTrace: BrowserPlaybackState[] = [];
   private commandTrace: string[] = [];
   private readonly ariaAnnouncer = new AriaStatusAnnouncer();
+  private readonly flowController = getSharedGameFlowController();
+  private campaignMode = false;
   private performanceMeasurement: AnimationFrameMeasurement | null = null;
   private performanceResourcesBefore: PerformanceResourceSnapshot | null = null;
   private performanceSample: PerformanceSample | null = null;
@@ -122,6 +127,11 @@ export class PuzzleScene extends Phaser.Scene {
   }
 
   public create(): void {
+    const launchContext = this.scene.settings.data as { campaignMode?: boolean } | undefined;
+    this.campaignMode = launchContext?.campaignMode ?? false;
+    if (this.campaignMode) {
+      this.flowController.advanceTo('puzzle');
+    }
     this.cameras.main.setBackgroundColor('#020617');
     this.initializePresentationSettings();
     this.sceneGeneration += 1;
@@ -214,6 +224,20 @@ export class PuzzleScene extends Phaser.Scene {
       });
 
       this.renderScene();
+      this.add
+        .text(this.scale.width * 0.86, this.scale.height * 0.12, 'Back to Map', {
+          fontFamily: 'monospace',
+          fontSize: '16px',
+          color: '#f8fafc',
+          backgroundColor: '#0f766e',
+          padding: { x: 10, y: 6 },
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          this.flowController.advanceTo('multiverse-map');
+          this.scene.start(MultiverseMapScene.key);
+        });
       this.diagnosticsState = this.isPerformanceDiagnosticsEnabled() ? 'ready' : 'disabled';
       this.publishBrowserStatus('idle');
       const statusElement = document.getElementById('storycrush-test-status');
@@ -549,6 +573,23 @@ export class PuzzleScene extends Phaser.Scene {
         this.renderScene();
         this.stopPerformanceMeasurement();
         this.publishBrowserStatus('completed');
+        if (result.nextState.status !== 'active') {
+          if (this.campaignMode) {
+            this.flowController.recordPuzzleResult({
+              outcome: result.nextState.status === 'won' ? 'won' : 'failed',
+              score: result.nextState.score,
+              movesRemaining: result.nextState.movesRemaining,
+              objectiveCompleted: result.nextState.objectiveProgress.every(
+                (entry) => entry.complete,
+              ),
+            });
+            this.flowController.advanceTo('results');
+            this.scene.start(ResultsScene.key);
+          } else {
+            this.scene.start(MainMenuScene.key);
+          }
+          return;
+        }
         this.scheduleSummaryClear();
       },
       finishRejectedMove: (result: RejectedLevelMoveResult) => {
