@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { MainMenuScene } from './MainMenuScene';
+import { getSharedGameFlowController } from '../flow/gameFlowController';
 
 export class BootScene extends Phaser.Scene {
   public static readonly key = 'BootScene';
@@ -10,6 +11,7 @@ export class BootScene extends Phaser.Scene {
 
   public create(): void {
     const { width, height } = this.scale;
+    getSharedGameFlowController();
 
     this.add
       .text(width / 2, height / 2, 'Booting StoryCrush...', {

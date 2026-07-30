@@ -79,7 +79,7 @@ Given there is no existing implementation to preserve, adopt a modular architect
 - progression: butterfly tokens and unlock effects.
 - content: typed data definitions and authored content.
 - services:
-  - save (localStorage), analytics (stub), audio (stub), ai (interface + fallback).
+  - save (Phase 2B placeholder, not enabled in Phase 2A), analytics (stub), audio (stub), ai (interface + fallback).
 - ui: reusable presentation components.
 - types: shared interfaces.
 - utils: deterministic RNG, helpers.

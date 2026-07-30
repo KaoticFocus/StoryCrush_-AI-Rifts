@@ -25,8 +25,10 @@
   release-candidate handoff are verified. GitHub-hosted workflow observation and
   public deployed-site smoke remain externally blocked pending a push plus a
   real URL or deployment credentials.
-- Practical Milestone 3 is not active until the user decides how to close the
-  remaining external verification.
+- Practical Milestone 3 is active as a mobile-first narrative-shell milestone.
+  Phase 2A delivers a placeholder Fantasy chapter, typed flow-controller state,
+  puzzle-lab isolation, and the menu-to-map-to-story-to-puzzle-to-results-to-consequence loop.
+  Durable browser persistence remains deferred to Phase 2B.
 
 ## Phase 0B - Foundation Scaffold
 
