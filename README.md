@@ -189,6 +189,14 @@ used by automation. It is inactive on normal URLs. See
 measurements. The evidence commands are `npm run test:browser:evidence` and
 `npm run test:browser:outlier`.
 
+## Visual Asset Sources
+
+The current Fantasy prototype source-art pack is stored at:
+
+`assets/source/fantasy/`
+
+These files are not yet part of the runtime Phaser asset pipeline. Runtime integration, optimization, atlasing, responsive testing, and placeholder replacement are reserved for a later visual-integration milestone.
+
 ## Project Structure Summary
 
 ```text
