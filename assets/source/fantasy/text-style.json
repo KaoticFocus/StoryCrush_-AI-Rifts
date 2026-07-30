@@ -1,0 +1,56 @@
+{
+  "fontRecommendations": {
+    "display": {
+      "family": "Cinzel",
+      "fallback": ["Noto Serif Display", "DejaVu Serif"],
+      "licenseNote": "Use the freely licensed Cinzel family from Google Fonts; font files are not bundled."
+    },
+    "body": {
+      "family": "Noto Serif",
+      "fallback": ["DejaVu Serif", "Georgia"],
+      "licenseNote": "Use the freely licensed Noto Serif family; font files are not bundled."
+    }
+  },
+  "colors": {
+    "gold": "#F4D77A",
+    "paleGold": "#E9D9A6",
+    "statusGreen": "#D8FF58",
+    "shadow": "#09070A",
+    "stroke": "#4A2C0B"
+  },
+  "sizeRatios": {
+    "title": 1.0,
+    "sectionHeading": 0.62,
+    "statLabel": 0.46,
+    "statValue": 0.92,
+    "body": 0.42,
+    "button": 0.44
+  },
+  "stroke": {
+    "widthEm": 0.045,
+    "color": "#4A2C0B"
+  },
+  "shadow": {
+    "offsetXEm": 0.04,
+    "offsetYEm": 0.06,
+    "blurEm": 0.08,
+    "color": "#09070A",
+    "opacity": 0.85
+  },
+  "letterSpacingEm": 0.025,
+  "alignment": "center",
+  "maximumTextBounds": {
+    "titlePlaque": {
+      "widthRatio": 0.86,
+      "heightRatio": 0.58
+    },
+    "button": {
+      "widthRatio": 0.62,
+      "heightRatio": 0.58
+    },
+    "statusPlaque": {
+      "widthRatio": 0.82,
+      "heightRatio": 0.55
+    }
+  }
+}
