@@ -7,17 +7,25 @@ import { StoryChoiceScene } from './StoryChoiceScene';
 import { ResultsScene } from './ResultsScene';
 import { ConsequenceScene } from './ConsequenceScene';
 import { getSharedGameFlowController, type GameFlowNodeId } from '../flow/gameFlowController';
+import { createBrowserGameFlowStorage, createGameFlowRepository } from '../flow/gameFlowRepository';
+import { createGameFlowPersistenceCoordinator } from '../flow/gameFlowPersistenceCoordinator';
 import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusBridge';
 
 export class MainMenuScene extends Phaser.Scene {
   public static readonly key = 'MainMenuScene';
   private readonly flowController = getSharedGameFlowController();
+  private readonly persistenceCoordinator = createGameFlowPersistenceCoordinator(
+    this.flowController,
+    createGameFlowRepository(createBrowserGameFlowStorage()),
+  );
 
   public constructor() {
     super(MainMenuScene.key);
   }
 
   public create(): void {
+    this.persistenceCoordinator.initialize();
+
     this.events.on(Phaser.Scenes.Events.WAKE, () => {
       markBrowserTestScene('main-menu');
     });

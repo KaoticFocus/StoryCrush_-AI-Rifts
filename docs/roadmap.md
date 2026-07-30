@@ -28,7 +28,8 @@
 - Practical Milestone 3 is active as a mobile-first narrative-shell milestone.
   Phase 2A delivers a placeholder Fantasy chapter, typed flow-controller state,
   puzzle-lab isolation, and the menu-to-map-to-story-to-puzzle-to-results-to-consequence loop.
-  Durable browser persistence remains deferred to Phase 2B.
+  Phase 2B adds durable browser persistence with restore-on-startup, continue-state availability,
+  migration-tolerant storage handling, and persistence-coordinator auto-save behavior.
 
 ## Phase 0B - Foundation Scaffold
 
