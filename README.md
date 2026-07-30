@@ -23,7 +23,7 @@ The measured audit is available at [docs/performance-accessibility-audit.md](doc
 - Phase 1H-B1 presentation playback is complete with deterministic playback planning, accepted/rejected swap animation, match highlighting, generic special feedback, removal, special creation, gravity, refill, cascade sequencing, reshuffle fade fallback, and final-state synchronization.
 - Phase 1H-B2 presentation polish is implemented with distinct special effects, deterministic reshuffle movement, incremental score feedback, incremental objective feedback, and refined playback timings.
 - Tooling is configured: Vitest, ESLint, Prettier, type-check, and production build.
-- The main playable flow is BootScene -> MainMenuScene -> PuzzleScene.
+- The main playable flow is BootScene -> MainMenuScene -> Narrative Flow -> PuzzleScene.
 
 Phase 1I prototype hardening and local release-candidate QA are complete. The
 prototype retains the documented accessibility, scope, and deployment limits.
@@ -54,7 +54,7 @@ This foundation build currently validates:
 - Non-interactive verification pipeline for CI-style checks
 
 It intentionally keeps board and level rules outside Phaser. Phaser reads immutable move history, animates display objects, and hard-synchronizes to the authoritative controller state after playback.
-It does not yet include final art, sound, narrative branching systems, rift mechanics, saves, universe content, or AI features.
+It does not yet include final art, sound, full narrative branching, rift mechanics, durable saves, universe content beyond the placeholder Fantasy chapter, or AI features.
 
 ## Prerequisites
 

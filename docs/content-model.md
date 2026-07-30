@@ -86,5 +86,6 @@ Validator must detect:
 
 ## Phase 0 Notes
 
-- No runtime schema implementation exists yet.
-- This document is the contract target for Phase 3 implementation.
+- A lightweight runtime flow-content model exists for Phase 2A narrative nodes,
+  choice flags, and consequence outcomes.
+- This document remains the long-term contract target for a fuller schema system.

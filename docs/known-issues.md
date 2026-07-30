@@ -179,7 +179,7 @@
 - Placeholder visuals only.
 - No sound integration is implemented.
 - No narrative integration is implemented.
-- No save persistence layer is implemented.
+- No durable save persistence layer is implemented; Phase 2A uses an in-memory flow controller only.
 - Phaser production bundle-size warning remains non-blocking.
 - Browser-specific edge cases may still exist until broader manual device coverage is expanded.
 - Codespace Chromium performance samples are regression evidence, not physical-device performance certification. The 183.3 ms preview-mobile wildcard observation was classified as an isolated shared-host/browser scheduling outlier after ten repeat runs with no >100 ms frame, lifecycle drift, or command correlation.

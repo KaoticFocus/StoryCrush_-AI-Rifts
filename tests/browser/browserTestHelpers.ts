@@ -25,7 +25,15 @@ export function getTestStatus(page: Page): Locator {
 
 export async function waitForSceneReady(
   page: Page,
-  scene: 'main-menu' | 'puzzle',
+  scene:
+    | 'main-menu'
+    | 'puzzle'
+    | 'multiverse-map'
+    | 'chapter-intro'
+    | 'dialogue'
+    | 'story-choice'
+    | 'results'
+    | 'consequence',
 ): Promise<Locator> {
   const status = getTestStatus(page);
   await expect(status).toHaveAttribute('data-scene', scene);
