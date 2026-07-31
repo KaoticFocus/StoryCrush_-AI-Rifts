@@ -98,4 +98,28 @@ describe('game flow repository', () => {
     expect(result.status).toBe('invalid-payload');
     expect(controller.getState().currentNodeId).toBe('main-menu');
   });
+
+  it('rejects persisted states with unsupported node identifiers', () => {
+    const { repository, storage } = createStorageHarness();
+    storage.setItem(
+      'storycrush.game-flow',
+      JSON.stringify({
+        schemaVersion: 1,
+        state: {
+          currentNodeId: 'not-a-real-node',
+          storyFlags: [],
+          chapterStatus: {},
+          latestPuzzleResult: null,
+          hasContinuableSession: false,
+        },
+      }),
+    );
+
+    const controller = createGameFlowController(createPrototypeCampaignDefinition());
+    const result = repository.restore(controller);
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe('invalid-payload');
+    expect(controller.getState().currentNodeId).toBe('main-menu');
+  });
 });

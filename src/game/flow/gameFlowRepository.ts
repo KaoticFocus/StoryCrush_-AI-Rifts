@@ -1,7 +1,9 @@
 import {
   createInitialGameFlowState,
   type GameFlowController,
+  type GameFlowNodeId,
   type GameFlowState,
+  VALID_GAME_FLOW_NODE_IDS,
 } from './gameFlowController';
 
 export interface GameFlowStorageAdapter {
@@ -96,6 +98,11 @@ export function createGameFlowRepository(storage: GameFlowStorageAdapter) {
       const state = parsed.state as Partial<GameFlowState>;
       const currentNodeId =
         typeof state.currentNodeId === 'string' ? state.currentNodeId : initialState.currentNodeId;
+      const isKnownNode = VALID_GAME_FLOW_NODE_IDS.includes(currentNodeId as GameFlowNodeId);
+      if (!isKnownNode) {
+        return { envelope: null, status: 'invalid-payload' };
+      }
+
       const storyFlags = Array.isArray(state.storyFlags)
         ? state.storyFlags.filter(
             (flag): flag is NonNullable<GameFlowState['storyFlags'][number]> => Boolean(flag),

@@ -9,6 +9,18 @@ export type GameFlowNodeId =
   | 'fantasy-consequence'
   | 'return-to-map';
 
+export const VALID_GAME_FLOW_NODE_IDS: readonly GameFlowNodeId[] = [
+  'main-menu',
+  'multiverse-map',
+  'fantasy-chapter-intro',
+  'fantasy-dialogue',
+  'fantasy-choice',
+  'puzzle',
+  'results',
+  'fantasy-consequence',
+  'return-to-map',
+];
+
 export type StoryFlag = 'FANTASY_ARCHIVE_STABILIZED' | 'FANTASY_FRACTURE_EXPLOITED';
 
 export type PuzzleOutcome = 'won' | 'failed';
@@ -148,9 +160,37 @@ function isValidStoryFlag(flag: unknown): flag is StoryFlag {
   return flag === 'FANTASY_ARCHIVE_STABILIZED' || flag === 'FANTASY_FRACTURE_EXPLOITED';
 }
 
-function isValidGameFlowState(state: GameFlowState): boolean {
+function getValidNodeIds(definition: PrototypeCampaignDefinition): Set<GameFlowNodeId> {
+  const baseNodes: readonly GameFlowNodeId[] = [
+    'main-menu',
+    'multiverse-map',
+    'fantasy-chapter-intro',
+    'fantasy-dialogue',
+    'fantasy-choice',
+    'puzzle',
+    'results',
+    'fantasy-consequence',
+    'return-to-map',
+  ];
+  const chapterNodes = definition.chapters.flatMap((chapter) => [
+    chapter.introNodeId,
+    chapter.dialogueNodeId,
+    chapter.choiceNodeId,
+    chapter.puzzleNodeId,
+    chapter.resultsNodeId,
+    chapter.consequenceNodeId,
+  ]);
+
+  return new Set<GameFlowNodeId>([...baseNodes, ...chapterNodes]);
+}
+
+function isValidGameFlowState(
+  state: GameFlowState,
+  definition: PrototypeCampaignDefinition,
+): boolean {
   if (!state || typeof state !== 'object') return false;
   if (typeof state.currentNodeId !== 'string') return false;
+  if (!getValidNodeIds(definition).has(state.currentNodeId as GameFlowNodeId)) return false;
   if (!Array.isArray(state.storyFlags)) return false;
   if (!state.storyFlags.every((flag) => isValidStoryFlag(flag))) return false;
   if (typeof state.hasContinuableSession !== 'boolean') return false;
@@ -160,9 +200,6 @@ function isValidGameFlowState(state: GameFlowState): boolean {
     if (outcome !== 'won' && outcome !== 'failed') return false;
     if (typeof score !== 'number' || typeof movesRemaining !== 'number') return false;
     if (objectiveCompleted !== undefined && typeof objectiveCompleted !== 'boolean') return false;
-  }
-  if (state.latestPuzzleResult === null) {
-    return true;
   }
   return true;
 }
@@ -314,7 +351,7 @@ export function createGameFlowController(
       return cloneState(state);
     },
     restoreState(nextState: GameFlowState): GameFlowState {
-      if (!isValidGameFlowState(nextState)) {
+      if (!isValidGameFlowState(nextState, definition)) {
         return cloneState(state);
       }
       state = cloneState(nextState);
