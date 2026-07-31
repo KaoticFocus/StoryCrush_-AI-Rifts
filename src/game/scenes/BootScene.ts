@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { MainMenuScene } from './MainMenuScene';
 import { getSharedGameFlowController } from '../flow/gameFlowController';
-import { createBrowserGameFlowStorage, createGameFlowRepository } from '../flow/gameFlowRepository';
-import { createGameFlowPersistenceCoordinator } from '../flow/gameFlowPersistenceCoordinator';
+import { initializeSharedGameFlowPersistence } from '../flow/gameFlowPersistenceCoordinator';
 
 export class BootScene extends Phaser.Scene {
   public static readonly key = 'BootScene';
@@ -13,10 +12,8 @@ export class BootScene extends Phaser.Scene {
 
   public create(): void {
     const { width, height } = this.scale;
-    const controller = getSharedGameFlowController();
-    const repository = createGameFlowRepository(createBrowserGameFlowStorage());
-    const coordinator = createGameFlowPersistenceCoordinator(controller, repository);
-    coordinator.initialize();
+    getSharedGameFlowController();
+    initializeSharedGameFlowPersistence();
 
     this.add
       .text(width / 2, height / 2, 'Booting StoryCrush...', {

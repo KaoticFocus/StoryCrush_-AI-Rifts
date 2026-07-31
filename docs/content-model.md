@@ -87,5 +87,7 @@ Validator must detect:
 ## Phase 0 Notes
 
 - A lightweight runtime flow-content model exists for Phase 2A narrative nodes,
-  choice flags, and consequence outcomes.
+  choice flags, consequence outcomes, and persisted chapter state.
+- Persistence now uses a schema-versioned envelope with strict validation for
+  narrative state, resume resolution, and safe recovery paths.
 - This document remains the long-term contract target for a fuller schema system.

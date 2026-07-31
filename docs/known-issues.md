@@ -179,7 +179,7 @@
 - Placeholder visuals only.
 - No sound integration is implemented.
 - No narrative integration is implemented.
-- Durable browser save/restore for the narrative flow is now implemented through a schema-versioned repository and startup restore path.
+- Durable browser save/restore for the narrative flow is now implemented through a schema-versioned repository, shared persistence coordinator, strict validation, and startup restore handling.
 - Phaser production bundle-size warning remains non-blocking.
 - Browser-specific edge cases may still exist until broader manual device coverage is expanded.
 - Codespace Chromium performance samples are regression evidence, not physical-device performance certification. The 183.3 ms preview-mobile wildcard observation was classified as an isolated shared-host/browser scheduling outlier after ten repeat runs with no >100 ms frame, lifecycle drift, or command correlation.

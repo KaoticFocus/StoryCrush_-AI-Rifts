@@ -29,7 +29,7 @@
   Phase 2A delivers a placeholder Fantasy chapter, typed flow-controller state,
   puzzle-lab isolation, and the menu-to-map-to-story-to-puzzle-to-results-to-consequence loop.
   Phase 2B adds durable browser persistence with restore-on-startup, continue-state availability,
-  migration-tolerant storage handling, and persistence-coordinator auto-save behavior.
+  migration-tolerant storage handling, shared coordinator lifecycle, and persistence-coordinator auto-save behavior.
 
 ## Phase 0B - Foundation Scaffold
 
