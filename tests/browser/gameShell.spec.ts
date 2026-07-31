@@ -70,6 +70,43 @@ async function submitExpectedFixtureMove(page: Page) {
   await clickCanvasPoint(page, pointFor({ row: to[0], column: to[1] }));
 }
 
+test('restores a saved fantasy chapter state from browser storage', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.addInitScript(() => {
+    window.localStorage.clear();
+    window.localStorage.setItem(
+      'storycrush.game-flow',
+      JSON.stringify({
+        schemaVersion: 2,
+        savedAtEpochMs: 42,
+        state: {
+          currentNodeId: 'results',
+          storyFlags: ['FANTASY_ARCHIVE_STABILIZED'],
+          chapterStatus: {
+            'fantasy-chapter': {
+              status: 'completed',
+              lastOutcome: 'won',
+            },
+          },
+          latestPuzzleResult: {
+            outcome: 'won',
+            score: 1200,
+            movesRemaining: 7,
+            objectiveCompleted: true,
+          },
+          hasContinuableSession: true,
+        },
+      }),
+    );
+  });
+
+  await page.goto(buildE2EUrl());
+
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneButton(page, 0.5, 0.7);
+  await waitForSceneReady(page, 'results');
+});
+
 test('plays the fantasy chapter shell flow through results and consequence scenes', async ({
   page,
 }) => {
