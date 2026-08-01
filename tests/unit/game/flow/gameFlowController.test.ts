@@ -3,6 +3,7 @@ import {
   createPrototypeCampaignDefinition,
   createInitialGameFlowState,
   createGameFlowController,
+  resolveGameFlowResumeState,
   type GameFlowState,
 } from '../../../../src/game/flow/gameFlowController';
 
@@ -107,5 +108,25 @@ describe('game flow controller', () => {
     clone.currentNodeId = 'puzzle';
 
     expect(controller.getState().currentNodeId).toBe('main-menu');
+  });
+
+  it('resolves interrupted puzzles back to a safe restart state', () => {
+    const definition = createPrototypeCampaignDefinition();
+    const state: GameFlowState = {
+      currentNodeId: 'results',
+      storyFlags: ['FANTASY_ARCHIVE_STABILIZED'],
+      chapterStatus: {
+        'fantasy-chapter': { status: 'in-progress' },
+      },
+      latestPuzzleResult: null,
+      hasContinuableSession: true,
+    };
+
+    const resolved = resolveGameFlowResumeState('puzzle', state, definition);
+    expect(resolved.reason).toBe('puzzle');
+    expect(resolved.resolvedNodeId).toBe('puzzle');
+    expect(resolved.state.currentNodeId).toBe('puzzle');
+    expect(resolved.state.latestPuzzleResult).toBeNull();
+    expect(resolved.state.storyFlags).toEqual(['FANTASY_ARCHIVE_STABILIZED']);
   });
 });

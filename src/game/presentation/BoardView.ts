@@ -91,6 +91,9 @@ export class BoardView {
   private hintTimer: Phaser.Time.TimerEvent | null = null;
   private layout: PuzzleLayout | null = null;
   private boardViewModel: BoardViewModel | null = null;
+  private readonly pointerDownHandler: (pointer: Phaser.Input.Pointer) => void;
+  private readonly pointerMoveHandler: (pointer: Phaser.Input.Pointer) => void;
+  private readonly pointerOutHandler: () => void;
   private state: BoardViewState = {
     selectedCoordinate: null,
     hoverCoordinate: null,
@@ -108,16 +111,7 @@ export class BoardView {
     this.overlayGraphics = scene.add.graphics();
     this.hitZone = scene.add.zone(0, 0, 1, 1).setOrigin(0, 0).setInteractive();
 
-    this.root.add([
-      this.backgroundGraphics,
-      this.cellBackgroundGraphics,
-      this.pieceLayer,
-      this.effectLayer,
-      this.overlayGraphics,
-      this.hitZone,
-    ]);
-
-    this.hitZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    this.pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
       if (!this.layout || this.state.disabled || !this.onCellSelected) {
         return;
       }
@@ -129,9 +123,8 @@ export class BoardView {
       if (coordinate) {
         this.onCellSelected(coordinate);
       }
-    });
-
-    this.hitZone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    };
+    this.pointerMoveHandler = (pointer: Phaser.Input.Pointer) => {
       if (!this.layout || this.state.disabled) {
         return;
       }
@@ -153,9 +146,8 @@ export class BoardView {
         hoverCoordinate,
       };
       this.redrawOverlay();
-    });
-
-    this.hitZone.on('pointerout', () => {
+    };
+    this.pointerOutHandler = () => {
       if (!this.state.hoverCoordinate) {
         return;
       }
@@ -165,7 +157,19 @@ export class BoardView {
         hoverCoordinate: null,
       };
       this.redrawOverlay();
-    });
+    };
+    this.hitZone.on('pointerdown', this.pointerDownHandler);
+    this.hitZone.on('pointermove', this.pointerMoveHandler);
+    this.hitZone.on('pointerout', this.pointerOutHandler);
+
+    this.root.add([
+      this.backgroundGraphics,
+      this.cellBackgroundGraphics,
+      this.pieceLayer,
+      this.effectLayer,
+      this.overlayGraphics,
+      this.hitZone,
+    ]);
   }
 
   public setCellSelectedHandler(handler: (coordinate: BoardCoordinate) => void): void {

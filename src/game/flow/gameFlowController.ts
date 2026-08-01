@@ -9,6 +9,18 @@ export type GameFlowNodeId =
   | 'fantasy-consequence'
   | 'return-to-map';
 
+export const VALID_GAME_FLOW_NODE_IDS: readonly GameFlowNodeId[] = [
+  'main-menu',
+  'multiverse-map',
+  'fantasy-chapter-intro',
+  'fantasy-dialogue',
+  'fantasy-choice',
+  'puzzle',
+  'results',
+  'fantasy-consequence',
+  'return-to-map',
+];
+
 export type StoryFlag = 'FANTASY_ARCHIVE_STABILIZED' | 'FANTASY_FRACTURE_EXPLOITED';
 
 export type PuzzleOutcome = 'won' | 'failed';
@@ -148,23 +160,361 @@ function isValidStoryFlag(flag: unknown): flag is StoryFlag {
   return flag === 'FANTASY_ARCHIVE_STABILIZED' || flag === 'FANTASY_FRACTURE_EXPLOITED';
 }
 
-function isValidGameFlowState(state: GameFlowState): boolean {
-  if (!state || typeof state !== 'object') return false;
-  if (typeof state.currentNodeId !== 'string') return false;
-  if (!Array.isArray(state.storyFlags)) return false;
-  if (!state.storyFlags.every((flag) => isValidStoryFlag(flag))) return false;
-  if (typeof state.hasContinuableSession !== 'boolean') return false;
-  if (!state.chapterStatus || typeof state.chapterStatus !== 'object') return false;
-  if (state.latestPuzzleResult && typeof state.latestPuzzleResult === 'object') {
-    const { outcome, score, movesRemaining, objectiveCompleted } = state.latestPuzzleResult;
-    if (outcome !== 'won' && outcome !== 'failed') return false;
-    if (typeof score !== 'number' || typeof movesRemaining !== 'number') return false;
-    if (objectiveCompleted !== undefined && typeof objectiveCompleted !== 'boolean') return false;
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
   }
-  if (state.latestPuzzleResult === null) {
-    return true;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function hasUnsafeKeys(value: Record<string, unknown>): boolean {
+  return ['__proto__', 'constructor', 'prototype'].some((key) =>
+    Object.prototype.hasOwnProperty.call(value, key),
+  );
+}
+
+function getValidNodeIds(definition: PrototypeCampaignDefinition): Set<GameFlowNodeId> {
+  const baseNodes: readonly GameFlowNodeId[] = [
+    'main-menu',
+    'multiverse-map',
+    'fantasy-chapter-intro',
+    'fantasy-dialogue',
+    'fantasy-choice',
+    'puzzle',
+    'results',
+    'fantasy-consequence',
+    'return-to-map',
+  ];
+  const chapterNodes = definition.chapters.flatMap((chapter) => [
+    chapter.introNodeId,
+    chapter.dialogueNodeId,
+    chapter.choiceNodeId,
+    chapter.puzzleNodeId,
+    chapter.resultsNodeId,
+    chapter.consequenceNodeId,
+  ]);
+
+  return new Set<GameFlowNodeId>([...baseNodes, ...chapterNodes]);
+}
+
+function isValidChapterStatusRecord(value: unknown): value is ChapterStatusRecord {
+  if (!isPlainObject(value) || hasUnsafeKeys(value)) {
+    return false;
+  }
+  const status = value.status;
+  if (typeof status !== 'string') {
+    return false;
+  }
+  if (status !== 'available' && status !== 'in-progress' && status !== 'completed') {
+    return false;
+  }
+  if (
+    value.lastOutcome !== undefined &&
+    value.lastOutcome !== 'won' &&
+    value.lastOutcome !== 'failed'
+  ) {
+    return false;
   }
   return true;
+}
+
+function isValidPuzzleResultRecord(value: unknown): value is PuzzleResultRecord {
+  if (!isPlainObject(value) || hasUnsafeKeys(value)) {
+    return false;
+  }
+  const { outcome, score, movesRemaining, objectiveCompleted } = value;
+  if (outcome !== 'won' && outcome !== 'failed') {
+    return false;
+  }
+  if (typeof score !== 'number' || !Number.isFinite(score) || score < 0) {
+    return false;
+  }
+  if (
+    typeof movesRemaining !== 'number' ||
+    !Number.isFinite(movesRemaining) ||
+    movesRemaining < 0
+  ) {
+    return false;
+  }
+  if (objectiveCompleted !== undefined && typeof objectiveCompleted !== 'boolean') {
+    return false;
+  }
+  return true;
+}
+
+function isValidStoryFlagList(storyFlags: unknown): storyFlags is readonly StoryFlag[] {
+  return (
+    Array.isArray(storyFlags) &&
+    storyFlags.every((flag) => isValidStoryFlag(flag)) &&
+    new Set(storyFlags).size === storyFlags.length
+  );
+}
+
+function createResumeFallbackState(state: GameFlowState): GameFlowState {
+  const storyFlags = isValidStoryFlagList(state.storyFlags) ? [...state.storyFlags] : [];
+  const chapterStatus = isValidChapterStatusMap(state.chapterStatus)
+    ? Object.fromEntries(
+        Object.entries(state.chapterStatus).map(([id, chapter]) => [id, { ...chapter }]),
+      )
+    : {};
+
+  return {
+    currentNodeId: 'main-menu',
+    storyFlags,
+    chapterStatus,
+    latestPuzzleResult: null,
+    hasContinuableSession: false,
+  };
+}
+
+function isValidChapterStatusMap(value: unknown): value is Record<string, ChapterStatusRecord> {
+  if (!isPlainObject(value) || hasUnsafeKeys(value)) {
+    return false;
+  }
+  return Object.entries(value).every(([id, entry]) => {
+    if (typeof id !== 'string' || id.length === 0) {
+      return false;
+    }
+    return isValidChapterStatusRecord(entry);
+  });
+}
+
+function deriveHasContinuableSession(
+  currentNodeId: GameFlowNodeId,
+  latestPuzzleResult: PuzzleResultRecord | null,
+  storyFlags: readonly StoryFlag[],
+): boolean {
+  if (currentNodeId === 'main-menu' || currentNodeId === 'fantasy-consequence') {
+    return false;
+  }
+  if (currentNodeId === 'puzzle') {
+    return storyFlags.length === 1;
+  }
+  if (currentNodeId === 'results') {
+    return Boolean(latestPuzzleResult && storyFlags.length === 1);
+  }
+  return true;
+}
+
+export interface GameFlowValidationResult {
+  ok: boolean;
+  state: GameFlowState | null;
+}
+
+export interface GameFlowResumeResolution {
+  requestedNodeId: GameFlowNodeId;
+  resolvedNodeId: GameFlowNodeId;
+  reason:
+    'map' | 'intro' | 'dialogue' | 'choice' | 'puzzle' | 'results' | 'consequence' | 'recovered';
+  state: GameFlowState;
+}
+
+export function validateAndNormalizeGameFlowState(
+  state: GameFlowState,
+  definition: PrototypeCampaignDefinition,
+): GameFlowValidationResult {
+  if (!isPlainObject(state) || hasUnsafeKeys(state as Record<string, unknown>)) {
+    return { ok: false, state: null };
+  }
+
+  const validNodeIds = getValidNodeIds(definition);
+  if (
+    typeof state.currentNodeId !== 'string' ||
+    !validNodeIds.has(state.currentNodeId as GameFlowNodeId)
+  ) {
+    return { ok: false, state: null };
+  }
+  if (!isValidStoryFlagList(state.storyFlags)) {
+    return { ok: false, state: null };
+  }
+  if (new Set(state.storyFlags).size !== state.storyFlags.length) {
+    return { ok: false, state: null };
+  }
+  if (
+    state.storyFlags.includes('FANTASY_ARCHIVE_STABILIZED') &&
+    state.storyFlags.includes('FANTASY_FRACTURE_EXPLOITED')
+  ) {
+    return { ok: false, state: null };
+  }
+  if (typeof state.hasContinuableSession !== 'boolean') {
+    return { ok: false, state: null };
+  }
+  if (!isValidChapterStatusMap(state.chapterStatus)) {
+    return { ok: false, state: null };
+  }
+  const latestPuzzleResultInput = Object.prototype.hasOwnProperty.call(state, 'latestPuzzleResult')
+    ? state.latestPuzzleResult
+    : null;
+  if (
+    latestPuzzleResultInput !== null &&
+    latestPuzzleResultInput !== undefined &&
+    !isValidPuzzleResultRecord(latestPuzzleResultInput)
+  ) {
+    return { ok: false, state: null };
+  }
+
+  const currentNodeId = state.currentNodeId as GameFlowNodeId;
+  const storyFlags = [...state.storyFlags];
+  const chapterStatus = Object.fromEntries(
+    Object.entries(state.chapterStatus).map(([id, chapter]) => [id, { ...chapter }]),
+  );
+  const latestPuzzleResult =
+    latestPuzzleResultInput === undefined || latestPuzzleResultInput === null
+      ? null
+      : { ...latestPuzzleResultInput };
+
+  const hasContinuableSession = deriveHasContinuableSession(
+    currentNodeId,
+    latestPuzzleResult,
+    storyFlags,
+  );
+
+  if (currentNodeId === 'puzzle') {
+    if (storyFlags.length !== 1 || latestPuzzleResult !== null) {
+      return { ok: false, state: null };
+    }
+  }
+  if (currentNodeId === 'results') {
+    if (!latestPuzzleResult || storyFlags.length !== 1) {
+      return { ok: false, state: null };
+    }
+  }
+  if (currentNodeId === 'fantasy-consequence') {
+    if (!latestPuzzleResult || storyFlags.length !== 1) {
+      return { ok: false, state: null };
+    }
+  }
+  if (currentNodeId === 'fantasy-choice' && storyFlags.length > 1) {
+    return { ok: false, state: null };
+  }
+
+  return {
+    ok: true,
+    state: {
+      currentNodeId,
+      storyFlags,
+      chapterStatus,
+      latestPuzzleResult,
+      hasContinuableSession,
+    },
+  };
+}
+
+export function resolveGameFlowResumeState(
+  requestedNodeId: GameFlowNodeId,
+  state: GameFlowState,
+  definition: PrototypeCampaignDefinition,
+): GameFlowResumeResolution {
+  const validated = validateAndNormalizeGameFlowState(state, definition);
+  const normalizedState =
+    validated.ok && validated.state ? validated.state : createResumeFallbackState(state);
+
+  const requested = requestedNodeId === 'main-menu' ? 'main-menu' : requestedNodeId;
+  if (requested === 'multiverse-map' || requested === 'return-to-map') {
+    return {
+      requestedNodeId: requested,
+      resolvedNodeId: 'multiverse-map',
+      reason: 'map',
+      state: { ...normalizedState, currentNodeId: 'multiverse-map' },
+    };
+  }
+  if (requested === 'fantasy-chapter-intro') {
+    return {
+      requestedNodeId: requested,
+      resolvedNodeId: 'fantasy-chapter-intro',
+      reason: 'intro',
+      state: { ...normalizedState, currentNodeId: 'fantasy-chapter-intro' },
+    };
+  }
+  if (requested === 'fantasy-dialogue') {
+    return {
+      requestedNodeId: requested,
+      resolvedNodeId: 'fantasy-dialogue',
+      reason: 'dialogue',
+      state: { ...normalizedState, currentNodeId: 'fantasy-dialogue' },
+    };
+  }
+  if (requested === 'fantasy-choice') {
+    if (normalizedState.storyFlags.length === 0) {
+      return {
+        requestedNodeId: requested,
+        resolvedNodeId: 'fantasy-choice',
+        reason: 'choice',
+        state: { ...normalizedState, currentNodeId: 'fantasy-choice' },
+      };
+    }
+    return {
+      requestedNodeId: requested,
+      resolvedNodeId: 'puzzle',
+      reason: 'puzzle',
+      state: {
+        ...normalizedState,
+        currentNodeId: 'puzzle',
+        latestPuzzleResult: null,
+        hasContinuableSession: true,
+      },
+    };
+  }
+  if (requested === 'puzzle') {
+    if (normalizedState.storyFlags.length !== 1) {
+      return {
+        requestedNodeId: requested,
+        resolvedNodeId: 'fantasy-choice',
+        reason: 'choice',
+        state: { ...normalizedState, currentNodeId: 'fantasy-choice' },
+      };
+    }
+    return {
+      requestedNodeId: requested,
+      resolvedNodeId: 'puzzle',
+      reason: 'puzzle',
+      state: {
+        ...normalizedState,
+        currentNodeId: 'puzzle',
+        latestPuzzleResult: null,
+        hasContinuableSession: true,
+      },
+    };
+  }
+  if (requested === 'results') {
+    if (normalizedState.latestPuzzleResult && normalizedState.storyFlags.length === 1) {
+      return {
+        requestedNodeId: requested,
+        resolvedNodeId: 'results',
+        reason: 'results',
+        state: normalizedState,
+      };
+    }
+    return {
+      requestedNodeId: requested,
+      resolvedNodeId: 'main-menu',
+      reason: 'recovered',
+      state: createInitialGameFlowState(),
+    };
+  }
+  if (requested === 'fantasy-consequence') {
+    if (normalizedState.latestPuzzleResult && normalizedState.storyFlags.length === 1) {
+      return {
+        requestedNodeId: requested,
+        resolvedNodeId: 'fantasy-consequence',
+        reason: 'consequence',
+        state: normalizedState,
+      };
+    }
+    return {
+      requestedNodeId: requested,
+      resolvedNodeId: 'main-menu',
+      reason: 'recovered',
+      state: createInitialGameFlowState(),
+    };
+  }
+  return {
+    requestedNodeId: requested,
+    resolvedNodeId: 'main-menu',
+    reason: 'recovered',
+    state: createInitialGameFlowState(),
+  };
 }
 
 function getNodeMap(definition: PrototypeCampaignDefinition): Map<GameFlowNodeId, StoryNode> {
@@ -314,10 +664,11 @@ export function createGameFlowController(
       return cloneState(state);
     },
     restoreState(nextState: GameFlowState): GameFlowState {
-      if (!isValidGameFlowState(nextState)) {
+      const validation = validateAndNormalizeGameFlowState(nextState, definition);
+      if (!validation.ok || !validation.state) {
         return cloneState(state);
       }
-      state = cloneState(nextState);
+      state = cloneState(validation.state);
       notifyStateChanged(cloneState(state));
       return cloneState(state);
     },

@@ -54,7 +54,7 @@ This foundation build currently validates:
 - Non-interactive verification pipeline for CI-style checks
 
 It intentionally keeps board and level rules outside Phaser. Phaser reads immutable move history, animates display objects, and hard-synchronizes to the authoritative controller state after playback.
-It does not yet include final art, sound, full narrative branching, rift mechanics, durable saves, universe content beyond the placeholder Fantasy chapter, or AI features.
+It does not yet include final art, sound, full narrative branching, rift mechanics, cloud sync, or AI features. A durable browser-local narrative save/resume flow for the placeholder Fantasy chapter is now implemented and validated.
 
 ## Prerequisites
 

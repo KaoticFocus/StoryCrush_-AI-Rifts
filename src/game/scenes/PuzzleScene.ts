@@ -50,6 +50,7 @@ import {
   getBoardHash,
   markBrowserTestScene,
   type BrowserPlaybackState,
+  type BrowserTestStatus,
 } from '../presentation/testing/BrowserTestStatusBridge';
 import { getBrowserTestOptions } from '../presentation/testing/browserTestOptions';
 import {
@@ -235,8 +236,12 @@ export class PuzzleScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
-          this.flowController.advanceTo('multiverse-map');
-          this.scene.start(MultiverseMapScene.key);
+          if (this.campaignMode) {
+            this.flowController.advanceTo('multiverse-map');
+            this.scene.start(MultiverseMapScene.key);
+            return;
+          }
+          this.returnToMenu();
         });
       this.diagnosticsState = this.isPerformanceDiagnosticsEnabled() ? 'ready' : 'disabled';
       this.publishBrowserStatus('idle');
@@ -346,6 +351,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.selectedCoordinate = null;
       this.rejectedCoordinates = [];
       this.summaryMessage = 'Selection cleared.';
+      this.syncSelectionStatusAttribute(null);
       this.renderScene();
       this.publishBrowserStatus('idle');
       return;
@@ -355,6 +361,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.selectedCoordinate = coordinate;
       this.rejectedCoordinates = [];
       this.summaryMessage = 'Select an adjacent cell to submit a move.';
+      this.syncSelectionStatusAttribute(coordinate);
       this.renderScene();
       this.publishBrowserStatus('idle');
       return;
@@ -366,6 +373,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.selectedCoordinate = coordinate;
       this.rejectedCoordinates = [];
       this.summaryMessage = 'Selection moved. Choose an adjacent cell to submit a swap.';
+      this.syncSelectionStatusAttribute(coordinate);
       this.renderScene();
       this.publishBrowserStatus('idle');
       return;
@@ -431,6 +439,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.hudStateOverride = null;
       this.selectedCoordinate = null;
       this.rejectedCoordinates = [];
+      this.presentationState.playbackActive = false;
       this.setInputLocked(false);
       this.hasError = false;
       this.summaryMessage = 'Prototype level restarted with the same deterministic seed.';
@@ -938,9 +947,77 @@ export class PuzzleScene extends Phaser.Scene {
     this.game.scene.stop(PuzzleScene.key);
   }
 
-  private publishBrowserStatus(playbackState: BrowserPlaybackState): void {
-    if (!this.statusBridge || !this.controller) {
-      return;
+  private syncSelectionStatusAttribute(coordinate: BoardCoordinate | null): void {
+    const selectedCoordinate = coordinate ? `${coordinate.row}:${coordinate.column}` : '';
+    const statusElement = document.getElementById('storycrush-test-status');
+    statusElement?.setAttribute('data-selected-coordinate', selectedCoordinate);
+    if (this.statusBridge) {
+      this.statusBridge.update({
+        ...this.buildBrowserStatusPayload('idle'),
+        selectedCoordinate,
+      });
+    }
+  }
+
+  private buildBrowserStatusPayload(playbackState: BrowserPlaybackState): BrowserTestStatus {
+    if (!this.controller) {
+      return {
+        diagnosticsState: this.diagnosticsState,
+        diagnosticsError: this.diagnosticsError,
+        sceneGeneration: this.sceneGeneration,
+        scenarioId: this.browserScenario?.id ?? '',
+        scenarioFeatures: this.browserScenario?.expectedFeatures.join(',') ?? '',
+        fixtureId: this.browserFixture?.id ?? 'prototype',
+        levelStatus: 'inactive',
+        playbackState,
+        playbackSequence: this.playbackSequence,
+        playbackMode: this.playbackMode,
+        reducedMotion: this.reducedMotion,
+        paused: this.presentationState.paused,
+        hasActiveHint: this.presentationState.hasActiveHint,
+        selectedCoordinate: this.selectedCoordinate
+          ? `${this.selectedCoordinate.row}:${this.selectedCoordinate.column}`
+          : '',
+        inputLocked: this.inputLocked,
+        lastMoveAccepted: this.lastMoveAccepted,
+        lastMoveKind: this.lastMoveKind,
+        lastCommandIndex: this.lastCommandIndex,
+        lastCommandKind: this.lastCommandKind,
+        lastActivationIndex: this.lastActivationIndex,
+        lastErrorCode: this.lastErrorCode,
+        playbackStateTrace: this.playbackStateTrace.join(','),
+        commandTrace: this.commandTrace.join(','),
+        renderConsistency: 'unknown',
+        authoritativeBoardHash: '',
+        renderedBoardHash: '',
+        score: 0,
+        movesRemaining: 0,
+        objectivesHash: '',
+        hardSyncRecoveryCount: this.hardSyncRecoveryCount,
+        expectedMoveFrom: '',
+        expectedMoveTo: '',
+        expectedMoveSourceKinds: '',
+        fixtureSpecialCount: 0,
+        fixtureExpectedScoreAfter: this.browserFixture?.expectedOutcome.scoreAfter ?? -1,
+        fixtureExpectedMovesAfter: this.browserFixture?.expectedOutcome.movesAfter ?? -1,
+        fixtureExpectedObjectivesHash: this.browserFixture?.expectedOutcome.objectivesHash ?? '',
+        fixtureExpectedMoveKind: this.browserFixture?.expectedOutcome.moveKind ?? '',
+        fixtureExpectedActivationCount: this.browserFixture?.expectedOutcome.activationCount ?? 0,
+        logicalCanvasWidth: this.scale.width,
+        logicalCanvasHeight: this.scale.height,
+        boardX: 0,
+        boardY: 0,
+        cellSize: 0,
+        boardRows: 0,
+        boardColumns: 0,
+        displayObjects: 0,
+        boardPieceCount: 0,
+        temporaryObjectCount: 0,
+        activeTweenCount: 0,
+        activeTimerCount: 0,
+        listenerCount: 0,
+        performanceSample: this.performanceSample ? JSON.stringify(this.performanceSample) : '',
+      };
     }
 
     const state = this.controller.getState();
@@ -969,7 +1046,7 @@ export class PuzzleScene extends Phaser.Scene {
       .flat()
       .filter((piece) => piece.kind !== 'standard').length;
     const resources = this.getPerformanceResources();
-    this.statusBridge.update({
+    return {
       diagnosticsState: this.diagnosticsState,
       diagnosticsError: this.diagnosticsError,
       sceneGeneration: this.sceneGeneration,
@@ -1032,7 +1109,15 @@ export class PuzzleScene extends Phaser.Scene {
       activeTimerCount: resources.activeTimers,
       listenerCount: resources.listeners,
       performanceSample: this.performanceSample ? JSON.stringify(this.performanceSample) : '',
-    });
+    };
+  }
+
+  private publishBrowserStatus(playbackState: BrowserPlaybackState): void {
+    if (!this.statusBridge || !this.controller) {
+      return;
+    }
+
+    this.statusBridge.update(this.buildBrowserStatusPayload(playbackState));
   }
 
   private isPerformanceDiagnosticsEnabled(): boolean {
