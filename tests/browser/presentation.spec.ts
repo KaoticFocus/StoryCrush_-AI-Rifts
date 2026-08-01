@@ -64,10 +64,16 @@ async function clickCanvasPoint(
   page: Page,
   point: { x: number; y: number },
   bounds?: CanvasBounds,
+  touch = false,
 ) {
-  const canvasBounds = bounds ?? (await page.locator('canvas').boundingBox());
+  const canvas = page.locator('canvas');
+  const canvasBounds = bounds ?? (await canvas.boundingBox());
   if (!canvasBounds) throw new Error('Expected Phaser canvas bounds');
-  await page.mouse.click(canvasBounds.x + point.x, canvasBounds.y + point.y);
+  if (touch) {
+    await page.touchscreen.tap(canvasBounds.x + point.x, canvasBounds.y + point.y);
+    return;
+  }
+  await canvas.click({ position: { x: point.x, y: point.y } });
 }
 
 async function clickMainMenuPlay(page: Page) {
@@ -290,6 +296,34 @@ test('restart, resize, and menu exit safely cancel fast playback through real UI
   await submitExpectedFixtureMove(page);
   await page.locator('canvas').press('KeyM');
   await expect(status).toHaveAttribute('data-scene', 'main-menu');
+  errors.assertNone();
+});
+
+test('mobile touch selects once and submits exactly one swap', async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  const errors = await enterFixture(page, 'instant-resolution');
+  const status = getTestStatus(page);
+  const sequenceBefore = await getStatusNumber(page, 'playback-sequence');
+  const from = (await status.getAttribute('data-expected-move-from'))?.split(':').map(Number);
+  const to = (await status.getAttribute('data-expected-move-to'))?.split(':').map(Number);
+  if (!from || !to) throw new Error('Expected fixture move coordinates');
+  const bounds = await page.locator('canvas').boundingBox();
+  if (!bounds) throw new Error('Expected Phaser canvas bounds');
+  const geometry = await getBoardGeometry(page);
+  const pointFor = (coordinate: BoardCoordinate) =>
+    boardCoordinateToBrowserCanvasPoint({
+      coordinate,
+      geometry,
+      canvasBounds: { width: bounds.width, height: bounds.height },
+    });
+  const touch = testInfo.project.name === 'chromium-mobile';
+
+  await clickCanvasPoint(page, pointFor({ row: from[0], column: from[1] }), bounds, touch);
+  await expect(status).toHaveAttribute('data-selected-coordinate', `${from[0]}:${from[1]}`);
+  await clickCanvasPoint(page, pointFor({ row: to[0], column: to[1] }), bounds, touch);
+  await expect(status).toHaveAttribute('data-playback-sequence', String(sequenceBefore + 1));
+  await expect(status).toHaveAttribute('data-last-move-accepted', 'true');
+  await expectFixtureCompletion(page);
   errors.assertNone();
 });
 

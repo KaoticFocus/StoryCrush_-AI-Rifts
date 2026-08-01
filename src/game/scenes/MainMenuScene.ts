@@ -1,3 +1,4 @@
+/* global KeyboardEvent */
 import Phaser from 'phaser';
 import { PuzzleScene } from './PuzzleScene';
 import { MultiverseMapScene } from './MultiverseMapScene';
@@ -25,6 +26,9 @@ export class MainMenuScene extends Phaser.Scene {
   private persistenceStatusText: Phaser.GameObjects.Text | null = null;
   private confirmationContainer: Phaser.GameObjects.Container | null = null;
   private confirmationVisible = false;
+  private hasExistingSave = false;
+  private canContinue = false;
+  private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
   public constructor() {
     super(MainMenuScene.key);
@@ -82,25 +86,14 @@ export class MainMenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     const persistedStatus = getSharedPersistenceStatus();
-    const hasExistingSave = Boolean(
-      persistedStatus &&
-      persistedStatus.status !== 'not-found' &&
-      persistedStatus.status !== 'cleared',
-    );
+    const sessionStatus = getSharedGameFlowPersistenceCoordinator().getSessionStatus();
+    this.hasExistingSave = Boolean(sessionStatus.savePresent);
 
     newGameButton.on('pointerdown', () => {
-      if (hasExistingSave && !this.confirmationVisible) {
-        this.showNewGameConfirmation();
-        return;
-      }
-      this.startNewGame();
+      this.requestNewGame();
     });
 
-    const continueState = this.flowController.getState();
-    const canContinue =
-      continueState.hasContinuableSession ||
-      Boolean(continueState.latestPuzzleResult) ||
-      persistedStatus?.status === 'restored';
+    this.canContinue = sessionStatus.canContinue;
     const continueButton = this.add
       .text(width / 2, height * 0.7, 'Continue', {
         fontFamily: 'monospace',
@@ -110,9 +103,9 @@ export class MainMenuScene extends Phaser.Scene {
         padding: { x: 20, y: 12 },
       })
       .setOrigin(0.5)
-      .setAlpha(canContinue ? 1 : 0.6);
+      .setAlpha(this.canContinue ? 1 : 0.6);
 
-    if (canContinue) {
+    if (this.canContinue) {
       continueButton.setInteractive({ useHandCursor: true });
       continueButton.on('pointerdown', () => {
         this.resumeFlowFromState();
@@ -144,6 +137,23 @@ export class MainMenuScene extends Phaser.Scene {
         },
       )
       .setOrigin(0.5);
+
+    this.registerKeyboardControls();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.keydownHandler) {
+        document.removeEventListener('keydown', this.keydownHandler);
+        this.keydownHandler = null;
+      }
+      this.setConfirmationStatus(false);
+    });
+  }
+
+  private requestNewGame(): void {
+    if (this.hasExistingSave && !this.confirmationVisible) {
+      this.showNewGameConfirmation();
+      return;
+    }
+    this.startNewGame();
   }
 
   private showNewGameConfirmation(): void {
@@ -152,6 +162,8 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     this.confirmationVisible = true;
+    this.setConfirmationStatus(true);
+    this.announce('Replace saved progress? Press Enter to start a new game or Escape to cancel.');
     const { width, height } = this.scale;
     const panel = this.add.container(width / 2, height * 0.5);
     const background = this.add.rectangle(0, 0, width * 0.8, height * 0.3, 0x020617, 0.96);
@@ -195,12 +207,10 @@ export class MainMenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     cancelButton.on('pointerdown', () => {
-      this.confirmationVisible = false;
-      panel.destroy(true);
+      this.closeNewGameConfirmation();
     });
     confirmButton.on('pointerdown', () => {
-      this.confirmationVisible = false;
-      panel.destroy(true);
+      this.closeNewGameConfirmation(false);
       this.startNewGame();
     });
 
@@ -209,10 +219,68 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private startNewGame(): void {
-    this.flowController.resetProgress();
-    getSharedGameFlowPersistenceCoordinator().clear();
-    this.flowController.advanceTo('multiverse-map');
+    const result = getSharedGameFlowPersistenceCoordinator().replaceWithNewCampaign(() => {
+      this.flowController.resetProgress();
+      this.flowController.advanceTo('multiverse-map');
+    });
+    if (!result.ok && result.status !== 'storage-unavailable') {
+      this.announce('The existing save could not be replaced. Your saved progress was preserved.');
+      return;
+    }
     this.scene.start(MultiverseMapScene.key);
+  }
+
+  private closeNewGameConfirmation(announceCancellation = true): void {
+    if (!this.confirmationVisible) {
+      return;
+    }
+    this.confirmationVisible = false;
+    this.confirmationContainer?.destroy(true);
+    this.confirmationContainer = null;
+    this.setConfirmationStatus(false);
+    if (announceCancellation) {
+      this.announce('New Game cancelled. Saved progress was preserved.');
+    }
+  }
+
+  private registerKeyboardControls(): void {
+    this.keydownHandler = (event) => {
+      if (event.repeat) {
+        return;
+      }
+      if (this.confirmationVisible) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          this.closeNewGameConfirmation();
+        } else if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          this.closeNewGameConfirmation(false);
+          this.startNewGame();
+        }
+        return;
+      }
+      if (event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        this.requestNewGame();
+      } else if (event.key.toLowerCase() === 'c' && this.canContinue) {
+        event.preventDefault();
+        this.resumeFlowFromState();
+      }
+    };
+    document.addEventListener('keydown', this.keydownHandler);
+  }
+
+  private announce(message: string): void {
+    const statusElement = document.getElementById('storycrush-status');
+    if (statusElement) {
+      statusElement.textContent = message;
+    }
+  }
+
+  private setConfirmationStatus(visible: boolean): void {
+    document
+      .getElementById('storycrush-test-status')
+      ?.setAttribute('data-confirmation-visible', String(visible));
   }
 
   private resumeFlowFromState(): void {
@@ -227,7 +295,10 @@ export class MainMenuScene extends Phaser.Scene {
       );
     }
     if (sceneForNode) {
-      this.scene.start(sceneForNode);
+      this.scene.start(
+        sceneForNode,
+        resolved.reason === 'puzzle' ? { campaignMode: true } : undefined,
+      );
       return;
     }
 
@@ -243,6 +314,7 @@ export class MainMenuScene extends Phaser.Scene {
       case 'unsupported-version':
         return 'This save was created by a newer version of StoryCrush.';
       case 'invalid-payload':
+      case 'corrupt-cleared':
         return 'Corrupt save detected. Your progress was reset.';
       case 'storage-unavailable':
         return 'Progress will last only until this tab is closed.';

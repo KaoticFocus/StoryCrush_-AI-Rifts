@@ -291,7 +291,10 @@ function deriveHasContinuableSession(
   if (currentNodeId === 'puzzle') {
     return storyFlags.length === 1;
   }
-  return Boolean(latestPuzzleResult && storyFlags.length === 1);
+  if (currentNodeId === 'results') {
+    return Boolean(latestPuzzleResult && storyFlags.length === 1);
+  }
+  return true;
 }
 
 export interface GameFlowValidationResult {
@@ -340,7 +343,14 @@ export function validateAndNormalizeGameFlowState(
   if (!isValidChapterStatusMap(state.chapterStatus)) {
     return { ok: false, state: null };
   }
-  if (state.latestPuzzleResult !== null && !isValidPuzzleResultRecord(state.latestPuzzleResult)) {
+  const latestPuzzleResultInput = Object.prototype.hasOwnProperty.call(state, 'latestPuzzleResult')
+    ? state.latestPuzzleResult
+    : null;
+  if (
+    latestPuzzleResultInput !== null &&
+    latestPuzzleResultInput !== undefined &&
+    !isValidPuzzleResultRecord(latestPuzzleResultInput)
+  ) {
     return { ok: false, state: null };
   }
 
@@ -349,7 +359,10 @@ export function validateAndNormalizeGameFlowState(
   const chapterStatus = Object.fromEntries(
     Object.entries(state.chapterStatus).map(([id, chapter]) => [id, { ...chapter }]),
   );
-  const latestPuzzleResult = state.latestPuzzleResult ? { ...state.latestPuzzleResult } : null;
+  const latestPuzzleResult =
+    latestPuzzleResultInput === undefined || latestPuzzleResultInput === null
+      ? null
+      : { ...latestPuzzleResultInput };
 
   const hasContinuableSession = deriveHasContinuableSession(
     currentNodeId,

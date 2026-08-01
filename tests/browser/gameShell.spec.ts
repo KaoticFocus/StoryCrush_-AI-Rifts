@@ -12,7 +12,7 @@ async function clickCanvasPoint(page: Page, point: { x: number; y: number }) {
   const canvas = page.locator('canvas');
   const bounds = await canvas.boundingBox();
   if (!bounds) throw new Error('Expected Phaser canvas bounds');
-  await page.mouse.click(bounds.x + point.x, bounds.y + point.y);
+  await canvas.click({ position: { x: point.x, y: point.y } });
 }
 
 async function clickSceneButton(page: Page, xRatio: number, yRatio: number) {
@@ -144,4 +144,132 @@ test('plays the fantasy chapter shell flow through results and consequence scene
   await expect(getTestStatus(page)).toHaveAttribute('data-scene', 'consequence');
   await clickSceneButton(page, 0.5, 0.68);
   await waitForSceneReady(page, 'multiverse-map');
+});
+
+test('cancels and confirms future-save replacement without losing the old payload', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const futurePayload = JSON.stringify({
+    schemaVersion: 999,
+    state: { currentNodeId: 'main-menu' },
+  });
+  await page.addInitScript((payload) => {
+    if (window.sessionStorage.getItem('future-save-fixture-installed') === 'true') {
+      return;
+    }
+    window.sessionStorage.setItem('future-save-fixture-installed', 'true');
+    window.localStorage.clear();
+    window.localStorage.setItem('storycrush.game-flow', payload);
+  }, futurePayload);
+  await page.goto(buildE2EUrl());
+  await waitForSceneReady(page, 'main-menu');
+
+  await clickSceneButton(page, 0.5, 0.6);
+  await expect(getTestStatus(page)).toHaveAttribute('data-confirmation-visible', 'true');
+  await page.keyboard.press('Escape');
+  await expect(getTestStatus(page)).toHaveAttribute('data-confirmation-visible', 'false');
+  expect(await page.evaluate(() => window.localStorage.getItem('storycrush.game-flow'))).toBe(
+    futurePayload,
+  );
+
+  await page.keyboard.press('n');
+  await expect(getTestStatus(page)).toHaveAttribute('data-confirmation-visible', 'true');
+  await page.keyboard.press('Enter');
+  await waitForSceneReady(page, 'multiverse-map');
+  const replacement = await page.evaluate(() =>
+    JSON.parse(window.localStorage.getItem('storycrush.game-flow') ?? 'null'),
+  );
+  expect(replacement).toMatchObject({
+    schemaVersion: 2,
+    state: {
+      currentNodeId: 'multiverse-map',
+      storyFlags: [],
+    },
+  });
+  expect(replacement.state).not.toHaveProperty('latestPuzzleResult');
+
+  await page.reload();
+  await waitForSceneReady(page, 'main-menu');
+  await page.keyboard.press('c');
+  await waitForSceneReady(page, 'multiverse-map');
+});
+
+test('resumes an interrupted campaign puzzle as campaign play', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.addInitScript(() => {
+    window.localStorage.clear();
+    window.localStorage.setItem(
+      'storycrush.game-flow',
+      JSON.stringify({
+        schemaVersion: 2,
+        savedAtEpochMs: 42,
+        state: {
+          currentNodeId: 'puzzle',
+          storyFlags: ['FANTASY_ARCHIVE_STABILIZED'],
+          chapterStatus: { 'fantasy-chapter': { status: 'in-progress' } },
+          hasContinuableSession: true,
+        },
+      }),
+    );
+    window.localStorage.setItem(
+      'storycrush.prototype-settings.v1',
+      JSON.stringify({
+        version: 1,
+        playbackMode: 'instant',
+        reducedMotion: false,
+        hintsEnabled: true,
+      }),
+    );
+  });
+  await page.goto(buildE2EUrl({ fixture: 'terminal-failure' }));
+  await waitForSceneReady(page, 'main-menu');
+  await page.keyboard.press('c');
+  await waitForSceneReady(page, 'puzzle');
+  await submitExpectedFixtureMove(page);
+  await waitForSceneReady(page, 'results');
+
+  const savedState = await page.evaluate(
+    () => JSON.parse(window.localStorage.getItem('storycrush.game-flow') ?? 'null').state,
+  );
+  expect(savedState.currentNodeId).toBe('results');
+  expect(savedState.latestPuzzleResult).toBeTruthy();
+});
+
+test('keeps Puzzle Lab isolated from campaign persistence', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.addInitScript(() => {
+    window.localStorage.clear();
+    window.localStorage.setItem(
+      'storycrush.game-flow',
+      JSON.stringify({
+        schemaVersion: 2,
+        savedAtEpochMs: 42,
+        state: {
+          currentNodeId: 'results',
+          storyFlags: ['FANTASY_ARCHIVE_STABILIZED'],
+          chapterStatus: {
+            'fantasy-chapter': { status: 'completed', lastOutcome: 'won' },
+          },
+          latestPuzzleResult: { outcome: 'won', score: 1200, movesRemaining: 7 },
+          hasContinuableSession: true,
+        },
+      }),
+    );
+  });
+  await page.goto(buildE2EUrl({ fixture: 'instant-resolution' }));
+  await waitForSceneReady(page, 'main-menu');
+  const originalPayload = await page.evaluate(() =>
+    window.localStorage.getItem('storycrush.game-flow'),
+  );
+
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle');
+  await submitExpectedFixtureMove(page);
+  await clickSceneButton(page, 0.86, 0.12);
+  await waitForSceneReady(page, 'main-menu');
+
+  expect(await page.evaluate(() => window.localStorage.getItem('storycrush.game-flow'))).toBe(
+    originalPayload,
+  );
 });

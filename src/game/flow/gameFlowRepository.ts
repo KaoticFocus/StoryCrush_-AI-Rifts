@@ -28,10 +28,14 @@ export interface GameFlowStorageAdapter {
   removeItem(key: string): GameFlowStorageWriteResult;
 }
 
+type PersistedGameFlowState = Omit<GameFlowState, 'latestPuzzleResult'> & {
+  latestPuzzleResult?: GameFlowState['latestPuzzleResult'];
+};
+
 export interface PersistedGameFlowEnvelopeV2 {
   schemaVersion: 2;
   savedAtEpochMs: number;
-  state: GameFlowState;
+  state: PersistedGameFlowState;
 }
 
 export interface PersistedGameFlowEnvelopeV1 {
@@ -50,7 +54,8 @@ export interface GameFlowPersistenceResult {
     | 'not-found'
     | 'invalid-payload'
     | 'storage-unavailable'
-    | 'unsupported-version';
+    | 'unsupported-version'
+    | 'corrupt-cleared';
   state: GameFlowState;
   migratedFrom?: 1;
   preservedPayload?: string | null;
@@ -68,6 +73,23 @@ function cloneState(state: GameFlowState): GameFlowState {
     ),
     latestPuzzleResult: state.latestPuzzleResult ? { ...state.latestPuzzleResult } : null,
   };
+}
+
+function createPersistableState(state: GameFlowState): PersistedGameFlowState {
+  const persistedState: PersistedGameFlowState = {
+    currentNodeId: state.currentNodeId,
+    storyFlags: [...state.storyFlags],
+    chapterStatus: Object.fromEntries(
+      Object.entries(state.chapterStatus).map(([id, chapter]) => [id, { ...chapter }]),
+    ),
+    hasContinuableSession: state.hasContinuableSession,
+  };
+
+  if (state.latestPuzzleResult !== null) {
+    persistedState.latestPuzzleResult = { ...state.latestPuzzleResult };
+  }
+
+  return persistedState;
 }
 
 export function createInMemoryGameFlowStorage(): GameFlowStorageAdapter {
@@ -177,7 +199,7 @@ export function createGameFlowRepository(
   const now = options?.now ?? Date.now;
   const definition = options?.definition ?? createPrototypeCampaignDefinition();
   function readEnvelope(): {
-    envelope: PersistedGameFlowEnvelopeV2 | null;
+    envelope: (Omit<PersistedGameFlowEnvelopeV2, 'state'> & { state: GameFlowState }) | null;
     status: GameFlowPersistenceResult['status'];
     migratedFrom?: 1;
     preservedPayload?: string | null;
@@ -195,7 +217,12 @@ export function createGameFlowRepository(
       const parsed = JSON.parse(payload) as Partial<PersistedGameFlowEnvelope> & {
         state?: Partial<GameFlowState>;
       };
-      if (!parsed || typeof parsed !== 'object' || !parsed.state) {
+      if (
+        !parsed ||
+        typeof parsed !== 'object' ||
+        !parsed.state ||
+        typeof parsed.state !== 'object'
+      ) {
         return { envelope: null, status: 'invalid-payload', preservedPayload: payload };
       }
 
@@ -260,6 +287,7 @@ export function createGameFlowRepository(
   }
 
   return {
+    mode: storage.mode,
     save(controller: GameFlowController): GameFlowPersistenceResult {
       const existing = readEnvelope();
       if (existing.status === 'unsupported-version') {
@@ -275,7 +303,7 @@ export function createGameFlowRepository(
       const envelope: PersistedGameFlowEnvelopeV2 = {
         schemaVersion: GAME_FLOW_SCHEMA_VERSION,
         savedAtEpochMs: now(),
-        state,
+        state: createPersistableState(state),
       };
       const writeResult = storage.setItem(GAME_FLOW_STORAGE_KEY, JSON.stringify(envelope));
       if (!writeResult.ok) {
@@ -286,6 +314,23 @@ export function createGameFlowRepository(
     restore(controller: GameFlowController): GameFlowPersistenceResult {
       const { envelope, status, migratedFrom, preservedPayload } = readEnvelope();
       if (!envelope) {
+        if (status === 'invalid-payload') {
+          const removeResult = storage.removeItem(GAME_FLOW_STORAGE_KEY);
+          if (!removeResult.ok) {
+            return {
+              ok: false,
+              status: 'storage-unavailable',
+              state: controller.getState(),
+              preservedPayload,
+            };
+          }
+          return {
+            ok: false,
+            status: 'corrupt-cleared',
+            state: controller.getState(),
+            preservedPayload,
+          };
+        }
         return { ok: false, status, state: controller.getState(), migratedFrom, preservedPayload };
       }
 
