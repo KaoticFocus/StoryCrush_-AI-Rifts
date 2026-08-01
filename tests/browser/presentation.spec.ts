@@ -357,6 +357,7 @@ test('diagnostics capture a bounded cleanup sample and ARIA announces authoritat
   await expectFixtureCompletion(page);
   await expect(page.locator('#storycrush-status')).toContainText('Move accepted');
 
+  await expect(getTestStatus(page)).toHaveAttribute('data-performance-sample', /.+/);
   const serialized = await getRequiredStatusAttribute(page, 'performance-sample');
   const sample = JSON.parse(serialized) as {
     frameCount: number;

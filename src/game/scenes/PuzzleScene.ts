@@ -1056,8 +1056,9 @@ export class PuzzleScene extends Phaser.Scene {
     this.hasError = false;
     this.summaryMessage = 'Returning to the menu.';
     this.stopPerformanceMeasurement();
-    this.game.scene.start(MainMenuScene.key);
-    this.game.scene.stop(PuzzleScene.key);
+    // ScenePlugin.start shuts down this scene before starting Main Menu, so
+    // Puzzle status-bridge teardown cannot run after Main Menu has claimed status.
+    this.scene.start(MainMenuScene.key);
   }
 
   private syncSelectionStatusAttribute(coordinate: BoardCoordinate | null): void {

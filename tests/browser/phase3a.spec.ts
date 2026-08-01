@@ -188,6 +188,57 @@ test('Puzzle Lab run says Back to Menu and returns to Main Menu', async ({ page 
   errors.assertNone();
 });
 
+test('Puzzle exit keeps Main Menu status after Puzzle shutdown', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await page.goto(buildE2EUrl());
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle-lab');
+  await page.getByRole('button', { name: 'Play Archive Stabilization' }).click();
+  await waitForSceneReady(page, 'puzzle');
+
+  await clickSceneButton(page, 0.86, 0.12);
+  await waitForSceneReady(page, 'main-menu');
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const game = window.__storyCrushGame;
+        const puzzle = game?.scene.getScene('PuzzleScene');
+        const menu = game?.scene.getScene('MainMenuScene');
+        return {
+          puzzleActive: Boolean(puzzle?.sys?.isActive?.()),
+          menuActive: Boolean(menu?.sys?.isActive?.()),
+          scene: document.getElementById('storycrush-test-status')?.getAttribute('data-scene'),
+        };
+      }),
+    )
+    .toEqual({ puzzleActive: false, menuActive: true, scene: 'main-menu' });
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const menu = window.__storyCrushGame?.scene.getScene('MainMenuScene');
+        const scene = document.getElementById('storycrush-test-status')?.getAttribute('data-scene');
+        const menuActive = Boolean(menu?.sys?.isActive?.());
+        const menuObjects = menu?.children?.length ?? 0;
+        return scene === 'main-menu' && menuActive && menuObjects > 0;
+      }),
+    )
+    .toBe(true);
+  await expect(getTestStatus(page)).toHaveAttribute('data-scene', 'main-menu');
+  await expect(levelControls(page)).toHaveCount(0);
+  await expect(page.locator('.puzzle-lab-level-controls')).toHaveCount(0);
+  await expect(page.locator('.puzzle-lab-level-control')).toHaveCount(0);
+  const menuCount = await page.evaluate(() => {
+    const game = window.__storyCrushGame;
+    return game?.scene.getScenes(true).filter((scene) => scene.scene.key === 'MainMenuScene')
+      .length;
+  });
+  expect(menuCount).toBe(1);
+  errors.assertNone();
+});
+
 test('selects and plays every Fantasy level with visible run details', async ({ page }) => {
   await page.goto(buildE2EUrl());
   await waitForSceneReady(page, 'main-menu');

@@ -163,6 +163,7 @@ export function syncBrowserTestSceneFromGame(): void {
 export class BrowserTestStatusBridge {
   private readonly element: HTMLElement | null;
   private readonly performanceDiagnosticsEnabled: boolean;
+  private claimedSceneGeneration: number | null = null;
 
   public constructor() {
     const options = getBrowserTestOptions();
@@ -173,6 +174,11 @@ export class BrowserTestStatusBridge {
 
   public update(status: BrowserTestStatus): void {
     if (!this.element) return;
+    if (this.claimedSceneGeneration === null) {
+      this.claimedSceneGeneration = Number(
+        this.element.getAttribute('data-scene-generation') ?? '0',
+      );
+    }
     for (const [key, value] of Object.entries(status)) {
       const attributeKey = key.replace(/[A-Z]/g, (character) => `-${character.toLowerCase()}`);
       if (!this.performanceDiagnosticsEnabled && performanceAttributeKeys.has(key)) {
@@ -189,6 +195,12 @@ export class BrowserTestStatusBridge {
   }
 
   public destroy(): void {
-    if (this.element) this.element.replaceChildren();
+    if (!this.element) return;
+    const currentGeneration = Number(this.element.getAttribute('data-scene-generation') ?? '0');
+    // If a newer scene already claimed the shared status element, leave it alone.
+    if (this.claimedSceneGeneration !== null && currentGeneration !== this.claimedSceneGeneration) {
+      return;
+    }
+    this.element.replaceChildren();
   }
 }
