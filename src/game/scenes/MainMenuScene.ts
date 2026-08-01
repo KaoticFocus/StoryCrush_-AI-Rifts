@@ -17,6 +17,7 @@ import {
   getSharedGameFlowPersistenceCoordinator,
   getSharedPersistenceStatus,
 } from '../flow/gameFlowPersistenceCoordinator';
+import { getPlayableLevelIds, getPlayableLevelContent } from '../content/levelCatalog';
 import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusBridge';
 
 export class MainMenuScene extends Phaser.Scene {
@@ -71,7 +72,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     playPuzzleButton.on('pointerdown', () => {
-      this.scene.start(PuzzleScene.key, { campaignMode: false });
+      this.scene.start(PuzzleScene.key, { campaignMode: false, levelId: 'archive-stabilization' });
     });
 
     const newGameButton = this.add
@@ -124,18 +125,15 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.add.circle(width / 2, height * 0.78, 12, 0x22c55e);
 
+    const levels = getPlayableLevelIds();
     this.add
-      .text(
-        width / 2,
-        height * 0.76,
-        'Fantasy chapter: archive fracture.\nComplete the shell flow to reach the consequence scene.',
-        {
-          fontFamily: 'monospace',
-          fontSize: '18px',
-          color: '#cbd5e1',
-          align: 'center',
-        },
-      )
+      .text(width / 2, height * 0.76, 'Fantasy levels available: ' + levels.join(', '), {
+        fontFamily: 'monospace',
+        fontSize: '16px',
+        color: '#cbd5e1',
+        align: 'center',
+        wordWrap: { width: width * 0.9 },
+      })
       .setOrigin(0.5);
 
     this.registerKeyboardControls();

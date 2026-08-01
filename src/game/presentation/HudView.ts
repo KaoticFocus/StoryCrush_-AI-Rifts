@@ -169,7 +169,7 @@ export class HudView {
     const textX = layout.hudRect.x + horizontalPadding;
 
     this.titleText.setPosition(textX, cursorY);
-    this.titleText.setText('Prototype Level');
+    this.titleText.setText(viewModel.titleText ?? 'Prototype Level');
     cursorY += this.titleText.height + lineGap;
 
     this.scoreText.setPosition(textX, cursorY);

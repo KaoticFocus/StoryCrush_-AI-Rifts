@@ -10,6 +10,13 @@ import {
   getBrowserScenario,
   type BrowserScenarioDefinition,
 } from '../content/testing/browserScenarios';
+import {
+  createDefaultSeedProvider,
+  createGeneratedLevelSession,
+  getPlayableLevelContent,
+  type PlayableLevelContent,
+  type SeedProvider,
+} from '../content/levelCatalog';
 import { createPrototypeLevelSession, prototypeLevelDefinition } from '../content/prototypeLevel';
 import { BoardView } from '../presentation/BoardView';
 import { createBoardViewModel } from '../presentation/boardViewModel';
@@ -114,7 +121,14 @@ export class PuzzleScene extends Phaser.Scene {
   private commandTrace: string[] = [];
   private readonly ariaAnnouncer = new AriaStatusAnnouncer();
   private readonly flowController = getSharedGameFlowController();
+  private readonly seedProvider: SeedProvider = createDefaultSeedProvider();
   private campaignMode = false;
+  private launchContext:
+    | { mode: 'campaign'; levelId: string; seed: number }
+    | { mode: 'puzzle-lab'; levelId: string; seed: number }
+    | { mode: 'browser-fixture'; fixtureId: string }
+    | null = null;
+  private currentLevelContent: PlayableLevelContent | null = null;
   private performanceMeasurement: AnimationFrameMeasurement | null = null;
   private performanceResourcesBefore: PerformanceResourceSnapshot | null = null;
   private performanceSample: PerformanceSample | null = null;
@@ -128,11 +142,17 @@ export class PuzzleScene extends Phaser.Scene {
   }
 
   public create(): void {
-    const launchContext = this.scene.settings.data as { campaignMode?: boolean } | undefined;
+    const launchContext = this.scene.settings.data as
+      | { campaignMode?: boolean; levelId?: string; seed?: number; mode?: string; fixtureId?: string }
+      | undefined;
     this.campaignMode = launchContext?.campaignMode ?? false;
     if (this.campaignMode) {
       this.flowController.advanceTo('puzzle');
     }
+    this.launchContext = this.resolveLaunchContext(launchContext);
+    this.currentLevelContent = this.launchContext?.mode === 'browser-fixture'
+      ? null
+      : getPlayableLevelContent(this.launchContext?.levelId ?? 'archive-stabilization');
     this.cameras.main.setBackgroundColor('#020617');
     this.initializePresentationSettings();
     this.sceneGeneration += 1;
@@ -144,12 +164,21 @@ export class PuzzleScene extends Phaser.Scene {
 
     try {
       this.controller = new PuzzleSessionController(
-        this.browserFixture?.definition ?? prototypeLevelDefinition,
-        () =>
-          (this.browserFixture
-            ? createBrowserFixtureSession(this.browserFixture)
-            : createPrototypeLevelSession()
-          ).state,
+        this.browserFixture?.definition ?? this.getLaunchDefinition(),
+        () => {
+          if (this.browserFixture) {
+            return createBrowserFixtureSession(this.browserFixture).state;
+          }
+          if (this.launchContext?.mode === 'browser-fixture') {
+            return createPrototypeLevelSession().state;
+          }
+          const levelContent = this.currentLevelContent ?? getPlayableLevelContent('archive-stabilization');
+          if (!levelContent) {
+            return createPrototypeLevelSession().state;
+          }
+          const seed = this.resolveSeedForRestart(levelContent);
+          return createGeneratedLevelSession({ content: levelContent, seed }).state;
+        },
       );
       this.boardView = new BoardView(this);
       this.hudView = new HudView(this);
@@ -258,6 +287,42 @@ export class PuzzleScene extends Phaser.Scene {
       this.hasError = true;
       this.renderErrorState('Puzzle scene failed to initialize. Return to the menu and try again.');
     }
+  }
+
+  private resolveLaunchContext(launchContext: { campaignMode?: boolean; levelId?: string; seed?: number; mode?: string; fixtureId?: string } | undefined):
+    | { mode: 'campaign'; levelId: string; seed: number }
+    | { mode: 'puzzle-lab'; levelId: string; seed: number }
+    | { mode: 'browser-fixture'; fixtureId: string }
+    | null {
+    if (this.browserFixture) {
+      return { mode: 'browser-fixture', fixtureId: this.browserFixture.id };
+    }
+    if (launchContext?.mode === 'browser-fixture' && launchContext.fixtureId) {
+      return { mode: 'browser-fixture', fixtureId: launchContext.fixtureId };
+    }
+    const requestedLevelId = launchContext?.levelId ?? 'archive-stabilization';
+    const fallbackLevel = getPlayableLevelContent(requestedLevelId) ?? getPlayableLevelContent('archive-stabilization');
+    if (!fallbackLevel) {
+      return null;
+    }
+    const seed = launchContext?.seed ?? this.seedProvider.nextSeed();
+    return {
+      mode: launchContext?.campaignMode ? 'campaign' : 'puzzle-lab',
+      levelId: fallbackLevel.id,
+      seed,
+    };
+  }
+
+  private getLaunchDefinition(): import('../level').LevelDefinition {
+    const levelContent = this.currentLevelContent ?? getPlayableLevelContent('archive-stabilization');
+    return levelContent?.definition ?? prototypeLevelDefinition;
+  }
+
+  private resolveSeedForRestart(levelContent: PlayableLevelContent): number {
+    if (this.launchContext?.mode === 'campaign' || this.launchContext?.mode === 'puzzle-lab') {
+      return this.launchContext.seed;
+    }
+    return levelContent.definition.seed;
   }
 
   private renderScene(): void {
