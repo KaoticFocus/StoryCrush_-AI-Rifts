@@ -90,6 +90,9 @@ Given there is no existing implementation to preserve, adopt a modular architect
 - Phaser scenes render and orchestrate; they do not own core game logic.
 - Narrative consequences are data-driven via flags and level modifiers.
 - AI integration is optional and cannot gate gameplay completion.
+- Narrative and speech providers must be isolated behind interfaces and should never become the authority for progression or save state.
+- Server-side credentials and provider calls belong outside the client runtime.
+- Voice output must be subtitle-first, accessible, and fail-soft when a provider is unavailable.
 
 ## Phase 0B Guardrails
 

@@ -26,6 +26,12 @@
 - Severity: high.
 - Status: unresolved (planned for later phase).
 
+4. AI and voice integration remains unscoped
+
+- Impact: risk of over-coupling narrative or speech systems to core gameplay.
+- Severity: medium.
+- Status: addressed by the new deterministic-authority and provider-isolation roadmap guidance in [ai-voice-roadmap.md](ai-voice-roadmap.md).
+
 5. No save-state contract
 
 - Impact: risk of early data model drift and migration pain.

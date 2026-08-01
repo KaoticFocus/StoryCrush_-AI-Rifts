@@ -91,3 +91,15 @@ Validator must detect:
 - Persistence now uses a schema-versioned envelope with strict validation for
   narrative state, resume resolution, and safe recovery paths.
 - This document remains the long-term contract target for a fuller schema system.
+
+## AI and Voice Content Extensions
+
+The content model should eventually capture:
+
+- narrative event contracts for authored and provider-generated dialogue
+- provider eligibility flags and fallback content
+- voice profile metadata, subtitles, and authored audio notes
+- cost and policy metadata for speech and narrative requests
+- deterministic memory and relationship state that remains separate from provider outputs
+
+These fields must remain optional and must never replace the deterministic progression contract.
