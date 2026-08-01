@@ -12,6 +12,9 @@ export function createAriaStatusMessage(
     | { kind: 'objective-completed'; label: string }
     | { kind: 'paused' }
     | { kind: 'resumed' }
+    | { kind: 'same-board-restarted' }
+    | { kind: 'new-board-generated' }
+    | { kind: 'campaign-puzzle-restored' }
     | { kind: 'level-complete' }
     | { kind: 'out-of-moves' },
 ): string {
@@ -28,6 +31,12 @@ export function createAriaStatusMessage(
       return 'Game paused.';
     case 'resumed':
       return 'Game resumed.';
+    case 'same-board-restarted':
+      return 'Same board restarted.';
+    case 'new-board-generated':
+      return 'New board generated.';
+    case 'campaign-puzzle-restored':
+      return 'Campaign puzzle restored with the same level and board.';
     case 'level-complete':
       return 'Level complete.';
     case 'out-of-moves':

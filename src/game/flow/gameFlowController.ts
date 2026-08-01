@@ -1,3 +1,5 @@
+import { isValidLevelRunDescriptor, type LevelRunDescriptor } from '../content/levelRun';
+
 export type GameFlowNodeId =
   | 'main-menu'
   | 'multiverse-map'
@@ -78,6 +80,7 @@ export interface GameFlowState {
   currentNodeId: GameFlowNodeId;
   storyFlags: readonly StoryFlag[];
   chapterStatus: Record<string, ChapterStatusRecord>;
+  activeLevelRun: LevelRunDescriptor | null;
   latestPuzzleResult: PuzzleResultRecord | null;
   hasContinuableSession: boolean;
 }
@@ -86,6 +89,7 @@ export interface GameFlowController {
   getState(): GameFlowState;
   advanceTo(nodeId: GameFlowNodeId): StoryChoiceResult;
   chooseStoryOption(choiceId: string): StoryChoiceResult;
+  recordActiveLevelRun(run: LevelRunDescriptor): GameFlowState;
   recordPuzzleResult(result: PuzzleResultRecord): GameFlowState;
   getConsequenceNode(): GameFlowNodeId | null;
   resetProgress(): GameFlowState;
@@ -110,6 +114,7 @@ export function createInitialGameFlowState(): GameFlowState {
     currentNodeId: 'main-menu',
     storyFlags: [],
     chapterStatus: {},
+    activeLevelRun: null,
     latestPuzzleResult: null,
     hasContinuableSession: false,
   };
@@ -152,6 +157,7 @@ function cloneState(state: GameFlowState): GameFlowState {
     chapterStatus: Object.fromEntries(
       Object.entries(state.chapterStatus).map(([id, status]) => [id, { ...status }]),
     ),
+    activeLevelRun: state.activeLevelRun ? { ...state.activeLevelRun } : null,
     latestPuzzleResult: state.latestPuzzleResult ? { ...state.latestPuzzleResult } : null,
   };
 }
@@ -263,6 +269,7 @@ function createResumeFallbackState(state: GameFlowState): GameFlowState {
     currentNodeId: 'main-menu',
     storyFlags,
     chapterStatus,
+    activeLevelRun: null,
     latestPuzzleResult: null,
     hasContinuableSession: false,
   };
@@ -353,6 +360,13 @@ export function validateAndNormalizeGameFlowState(
   ) {
     return { ok: false, state: null };
   }
+  if (
+    state.activeLevelRun !== null &&
+    state.activeLevelRun !== undefined &&
+    !isValidLevelRunDescriptor(state.activeLevelRun)
+  ) {
+    return { ok: false, state: null };
+  }
 
   const currentNodeId = state.currentNodeId as GameFlowNodeId;
   const storyFlags = [...state.storyFlags];
@@ -363,6 +377,7 @@ export function validateAndNormalizeGameFlowState(
     latestPuzzleResultInput === undefined || latestPuzzleResultInput === null
       ? null
       : { ...latestPuzzleResultInput };
+  const activeLevelRun = state.activeLevelRun ? { ...state.activeLevelRun } : null;
 
   const hasContinuableSession = deriveHasContinuableSession(
     currentNodeId,
@@ -380,6 +395,9 @@ export function validateAndNormalizeGameFlowState(
       return { ok: false, state: null };
     }
   }
+  if (currentNodeId !== 'puzzle' && activeLevelRun !== null) {
+    return { ok: false, state: null };
+  }
   if (currentNodeId === 'fantasy-consequence') {
     if (!latestPuzzleResult || storyFlags.length !== 1) {
       return { ok: false, state: null };
@@ -395,6 +413,7 @@ export function validateAndNormalizeGameFlowState(
       currentNodeId,
       storyFlags,
       chapterStatus,
+      activeLevelRun,
       latestPuzzleResult,
       hasContinuableSession,
     },
@@ -451,6 +470,7 @@ export function resolveGameFlowResumeState(
       state: {
         ...normalizedState,
         currentNodeId: 'puzzle',
+        activeLevelRun: normalizedState.activeLevelRun,
         latestPuzzleResult: null,
         hasContinuableSession: true,
       },
@@ -472,6 +492,7 @@ export function resolveGameFlowResumeState(
       state: {
         ...normalizedState,
         currentNodeId: 'puzzle',
+        activeLevelRun: normalizedState.activeLevelRun,
         latestPuzzleResult: null,
         hasContinuableSession: true,
       },
@@ -608,6 +629,9 @@ export function createGameFlowController(
       if (nodeId === 'fantasy-consequence') {
         nextState.hasContinuableSession = false;
       }
+      if (state.currentNodeId === 'puzzle' && nodeId !== 'puzzle') {
+        nextState.activeLevelRun = null;
+      }
       state = nextState;
       notifyStateChanged(cloneState(state));
       return { ok: true, state: cloneState(state) };
@@ -635,8 +659,19 @@ export function createGameFlowController(
       notifyStateChanged(cloneState(state));
       return { ok: true, state: cloneState(state) };
     },
+    recordActiveLevelRun(run: LevelRunDescriptor): GameFlowState {
+      if (state.currentNodeId !== 'puzzle' || !isValidLevelRunDescriptor(run)) {
+        return cloneState(state);
+      }
+      const nextState = cloneState(state);
+      nextState.activeLevelRun = { ...run };
+      state = nextState;
+      notifyStateChanged(cloneState(state));
+      return cloneState(state);
+    },
     recordPuzzleResult(result: PuzzleResultRecord): GameFlowState {
       const nextState = cloneState(state);
+      nextState.activeLevelRun = null;
       nextState.latestPuzzleResult = result;
       nextState.hasContinuableSession = true;
       const chapterId = definition.chapters[0]?.id ?? 'fantasy-chapter';

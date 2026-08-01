@@ -5,7 +5,7 @@ import { type PlaybackSettings } from './playback/ResolutionPlaybackController';
 import { type PlaybackMode } from './playback/playbackTypes';
 import { type PuzzleLayout } from './puzzleLayout';
 
-type ButtonKey = 'restart' | 'menu' | 'mode' | 'motion' | 'hint' | 'pause';
+type ButtonKey = 'restart' | 'new-board' | 'menu' | 'mode' | 'motion' | 'hint' | 'pause';
 
 interface ButtonEntry {
   key: ButtonKey;
@@ -41,6 +41,7 @@ export class HudView {
   private readonly pendingResolvers = new Set<() => void>();
   private layout: PuzzleLayout | null = null;
   private onRestart: (() => void) | null = null;
+  private onNewBoard: (() => void) | null = null;
   private onBackToMenu: (() => void) | null = null;
   private onCyclePlaybackMode: (() => void) | null = null;
   private onToggleReducedMotion: (() => void) | null = null;
@@ -77,7 +78,8 @@ export class HudView {
     ]);
     this.root.setDepth(200);
 
-    this.buttons.push(this.createButton('restart', 'Restart'));
+    this.buttons.push(this.createButton('restart', 'Restart Same Board'));
+    this.buttons.push(this.createButton('new-board', 'New Board'));
     this.buttons.push(this.createButton('menu', 'Back to Menu'));
     this.buttons.push(this.createButton('mode', 'Mode'));
     this.buttons.push(this.createButton('motion', 'Motion'));
@@ -94,6 +96,7 @@ export class HudView {
 
   public setCallbacks(callbacks: {
     onRestart: () => void;
+    onNewBoard: () => void;
     onBackToMenu: () => void;
     onCyclePlaybackMode: () => void;
     onToggleReducedMotion: () => void;
@@ -103,6 +106,7 @@ export class HudView {
     onResetSettings: () => void;
   }): void {
     this.onRestart = callbacks.onRestart;
+    this.onNewBoard = callbacks.onNewBoard;
     this.onBackToMenu = callbacks.onBackToMenu;
     this.onCyclePlaybackMode = callbacks.onCyclePlaybackMode;
     this.onToggleReducedMotion = callbacks.onToggleReducedMotion;
@@ -120,6 +124,7 @@ export class HudView {
     reducedMotion: boolean;
     hintsEnabled: boolean;
     paused: boolean;
+    showNewBoard: boolean;
     hasError?: boolean;
   }): void {
     const { layout, viewModel, summary } = input;
@@ -212,7 +217,7 @@ export class HudView {
       }
     }
 
-    const showSummary = layout.footerRect.height > 124;
+    const showSummary = false;
     this.summaryText.setVisible(showSummary);
     if (showSummary) {
       this.summaryText.setText(summary);
@@ -233,7 +238,26 @@ export class HudView {
         (layout.footerRect.width - horizontalPadding * 2 - buttonGap * (columns - 1)) / columns,
       ),
     );
-    this.buttons.forEach((button, index) => {
+    const visibleButtons = this.buttons.filter((button) => button.key !== 'new-board');
+    this.buttons.forEach((button) => {
+      const visible =
+        visibleButtons.includes(button) || (button.key === 'new-board' && input.showNewBoard);
+      button.background.setVisible(visible);
+      button.text.setVisible(visible);
+    });
+    const newBoardButton = this.buttons.find((button) => button.key === 'new-board');
+    if (newBoardButton && input.showNewBoard) {
+      const width = Math.min(132, layout.footerRect.width * 0.4);
+      const x = layout.footerRect.x + layout.footerRect.width - width / 2 - 8;
+      const y = layout.footerRect.y - 24;
+      newBoardButton.background.setPosition(x, y).setSize(width, 44);
+      newBoardButton.text
+        .setPosition(x, y)
+        .setFontSize(12)
+        .setWordWrapWidth(width - 8);
+      newBoardButton.text.setText('New Board');
+    }
+    visibleButtons.forEach((button, index) => {
       const column = index % columns;
       const row = Math.floor(index / columns);
       const x = layout.footerRect.x + horizontalPadding + column * (buttonWidth + buttonGap);
@@ -242,6 +266,8 @@ export class HudView {
       button.background.setSize(buttonWidth, buttonHeight);
       button.text.setPosition(x + buttonWidth / 2, y + buttonHeight / 2);
       button.text.setFontSize(buttonWidth < 110 ? 12 : 14);
+      button.text.setWordWrapWidth(buttonWidth - 8);
+      button.text.setAlign('center');
       button.text.setText(
         this.getButtonLabel(
           button.key,
@@ -435,6 +461,11 @@ export class HudView {
         return;
       }
 
+      if (key === 'new-board') {
+        this.onNewBoard?.();
+        return;
+      }
+
       if (key === 'mode') {
         this.onCyclePlaybackMode?.();
         return;
@@ -488,7 +519,9 @@ export class HudView {
   ): string {
     switch (key) {
       case 'restart':
-        return 'Restart';
+        return 'Restart Same Board';
+      case 'new-board':
+        return 'New Board';
       case 'menu':
         return 'Back to Menu';
       case 'mode':

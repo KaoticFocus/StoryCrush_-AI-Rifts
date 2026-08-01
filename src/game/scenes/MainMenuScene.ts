@@ -1,6 +1,7 @@
 /* global KeyboardEvent */
 import Phaser from 'phaser';
 import { PuzzleScene } from './PuzzleScene';
+import { PuzzleLabScene } from './PuzzleLabScene';
 import { MultiverseMapScene } from './MultiverseMapScene';
 import { ChapterIntroScene } from './ChapterIntroScene';
 import { DialogueScene } from './DialogueScene';
@@ -17,12 +18,14 @@ import {
   getSharedGameFlowPersistenceCoordinator,
   getSharedPersistenceStatus,
 } from '../flow/gameFlowPersistenceCoordinator';
-import { getPlayableLevelIds, getPlayableLevelContent } from '../content/levelCatalog';
 import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusBridge';
+import { createBrowserSeedProvider } from '../presentation/browserSeedProvider';
+import { type PuzzleLaunchContext } from '../content/levelRun';
 
 export class MainMenuScene extends Phaser.Scene {
   public static readonly key = 'MainMenuScene';
   private readonly flowController = getSharedGameFlowController();
+  private readonly seedProvider = createBrowserSeedProvider();
 
   private persistenceStatusText: Phaser.GameObjects.Text | null = null;
   private confirmationContainer: Phaser.GameObjects.Container | null = null;
@@ -72,7 +75,16 @@ export class MainMenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     playPuzzleButton.on('pointerdown', () => {
-      this.scene.start(PuzzleScene.key, { campaignMode: false, levelId: 'archive-stabilization' });
+      const query = new window.URLSearchParams(window.location.search);
+      if (query.get('e2e') === '1' && (query.get('fixture') || query.get('scenario'))) {
+        const context: PuzzleLaunchContext = {
+          mode: 'browser-fixture',
+          fixtureId: query.get('fixture') ?? query.get('scenario') ?? 'fixture',
+        };
+        this.scene.start(PuzzleScene.key, context);
+        return;
+      }
+      this.scene.start(PuzzleLabScene.key);
     });
 
     const newGameButton = this.add
@@ -124,17 +136,6 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add.circle(width / 2, height * 0.78, 12, 0x22c55e);
-
-    const levels = getPlayableLevelIds();
-    this.add
-      .text(width / 2, height * 0.76, 'Fantasy levels available: ' + levels.join(', '), {
-        fontFamily: 'monospace',
-        fontSize: '16px',
-        color: '#cbd5e1',
-        align: 'center',
-        wordWrap: { width: width * 0.9 },
-      })
-      .setOrigin(0.5);
 
     this.registerKeyboardControls();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -293,10 +294,18 @@ export class MainMenuScene extends Phaser.Scene {
       );
     }
     if (sceneForNode) {
-      this.scene.start(
-        sceneForNode,
-        resolved.reason === 'puzzle' ? { campaignMode: true } : undefined,
-      );
+      if (resolved.reason === 'puzzle') {
+        const run = resolved.state.activeLevelRun ?? {
+          levelId: 'archive-stabilization',
+          seed: this.seedProvider.nextSeed(),
+        };
+        this.flowController.recordActiveLevelRun(run);
+        const context: PuzzleLaunchContext = { mode: 'campaign', run };
+        this.announce('Campaign puzzle restored. The same board has been reconstructed.');
+        this.scene.start(sceneForNode, context);
+        return;
+      }
+      this.scene.start(sceneForNode);
       return;
     }
 

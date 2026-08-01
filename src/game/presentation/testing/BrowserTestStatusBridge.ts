@@ -11,6 +11,17 @@ export interface BrowserTestStatus {
   scenarioId: string;
   scenarioFeatures: string;
   fixtureId: string;
+  levelId: string;
+  levelTitle: string;
+  seed: number;
+  initialBoardHash: string;
+  currentBoardHash: string;
+  launchMode: string;
+  restartCount: number;
+  newBoardCount: number;
+  moveLimit: number;
+  objectiveSummary: string;
+  allowedPieceTypes: string;
   levelStatus: string;
   playbackState: BrowserPlaybackState;
   playbackSequence: number;
@@ -128,21 +139,23 @@ export function syncBrowserTestSceneFromGame(): void {
     const mappedScene =
       sceneKey === 'MainMenuScene'
         ? 'main-menu'
-        : sceneKey === 'PuzzleScene'
-          ? 'puzzle'
-          : sceneKey === 'MultiverseMapScene'
-            ? 'multiverse-map'
-            : sceneKey === 'ChapterIntroScene'
-              ? 'chapter-intro'
-              : sceneKey === 'DialogueScene'
-                ? 'dialogue'
-                : sceneKey === 'StoryChoiceScene'
-                  ? 'story-choice'
-                  : sceneKey === 'ResultsScene'
-                    ? 'results'
-                    : sceneKey === 'ConsequenceScene'
-                      ? 'consequence'
-                      : sceneKey;
+        : sceneKey === 'PuzzleLabScene'
+          ? 'puzzle-lab'
+          : sceneKey === 'PuzzleScene'
+            ? 'puzzle'
+            : sceneKey === 'MultiverseMapScene'
+              ? 'multiverse-map'
+              : sceneKey === 'ChapterIntroScene'
+                ? 'chapter-intro'
+                : sceneKey === 'DialogueScene'
+                  ? 'dialogue'
+                  : sceneKey === 'StoryChoiceScene'
+                    ? 'story-choice'
+                    : sceneKey === 'ResultsScene'
+                      ? 'results'
+                      : sceneKey === 'ConsequenceScene'
+                        ? 'consequence'
+                        : sceneKey;
     element.setAttribute('data-scene', mappedScene);
   }
 }

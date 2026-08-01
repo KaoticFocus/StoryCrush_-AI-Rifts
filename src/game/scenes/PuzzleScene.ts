@@ -1,6 +1,6 @@
 /* global performance, Performance */
 import Phaser from 'phaser';
-import { type Board, type BoardCoordinate } from '../board';
+import { findPlayableSwaps, type Board, type BoardCoordinate } from '../board';
 import {
   createBrowserFixtureSession,
   getBrowserFixture,
@@ -11,12 +11,18 @@ import {
   type BrowserScenarioDefinition,
 } from '../content/testing/browserScenarios';
 import {
-  createDefaultSeedProvider,
   createGeneratedLevelSession,
   getPlayableLevelContent,
+  getObjectiveSummary,
   type PlayableLevelContent,
   type SeedProvider,
 } from '../content/levelCatalog';
+import {
+  isPuzzleLaunchContext,
+  type LevelRunDescriptor,
+  type PuzzleLaunchContext,
+} from '../content/levelRun';
+import { createBrowserSeedProvider } from '../presentation/browserSeedProvider';
 import { createPrototypeLevelSession, prototypeLevelDefinition } from '../content/prototypeLevel';
 import { BoardView } from '../presentation/BoardView';
 import { createBoardViewModel } from '../presentation/boardViewModel';
@@ -121,14 +127,14 @@ export class PuzzleScene extends Phaser.Scene {
   private commandTrace: string[] = [];
   private readonly ariaAnnouncer = new AriaStatusAnnouncer();
   private readonly flowController = getSharedGameFlowController();
-  private readonly seedProvider: SeedProvider = createDefaultSeedProvider();
+  private readonly seedProvider: SeedProvider = createBrowserSeedProvider();
   private campaignMode = false;
-  private launchContext:
-    | { mode: 'campaign'; levelId: string; seed: number }
-    | { mode: 'puzzle-lab'; levelId: string; seed: number }
-    | { mode: 'browser-fixture'; fixtureId: string }
-    | null = null;
+  private campaignRun: LevelRunDescriptor | null = null;
+  private launchContext: PuzzleLaunchContext | null = null;
   private currentLevelContent: PlayableLevelContent | null = null;
+  private initialBoardHash = '';
+  private restartCount = 0;
+  private newBoardCount = 0;
   private performanceMeasurement: AnimationFrameMeasurement | null = null;
   private performanceResourcesBefore: PerformanceResourceSnapshot | null = null;
   private performanceSample: PerformanceSample | null = null;
@@ -142,27 +148,35 @@ export class PuzzleScene extends Phaser.Scene {
   }
 
   public create(): void {
-    const launchContext = this.scene.settings.data as
-      | { campaignMode?: boolean; levelId?: string; seed?: number; mode?: string; fixtureId?: string }
-      | undefined;
-    this.campaignMode = launchContext?.campaignMode ?? false;
-    if (this.campaignMode) {
-      this.flowController.advanceTo('puzzle');
-    }
-    this.launchContext = this.resolveLaunchContext(launchContext);
-    this.currentLevelContent = this.launchContext?.mode === 'browser-fixture'
-      ? null
-      : getPlayableLevelContent(this.launchContext?.levelId ?? 'archive-stabilization');
+    const requestedContext = this.scene.settings.data as unknown;
+    const typedRequestedContext = isPuzzleLaunchContext(requestedContext) ? requestedContext : null;
+    this.campaignMode = typedRequestedContext?.mode === 'campaign';
+    this.campaignRun =
+      typedRequestedContext?.mode === 'campaign' ? typedRequestedContext.run : null;
+    this.browserScenario = this.getBrowserScenarioFromUrl();
+    this.browserFixture = this.getBrowserFixtureFromUrl();
+    this.launchContext = this.resolveLaunchContext(requestedContext);
+    this.currentLevelContent =
+      this.launchContext?.mode === 'browser-fixture'
+        ? null
+        : getPlayableLevelContent(this.launchContext?.run.levelId);
     this.cameras.main.setBackgroundColor('#020617');
     this.initializePresentationSettings();
     this.sceneGeneration += 1;
     this.statusBridge = new BrowserTestStatusBridge();
     this.diagnosticsState = this.isPerformanceDiagnosticsEnabled() ? 'initializing' : 'disabled';
     markBrowserTestScene('puzzle');
-    this.browserScenario = this.getBrowserScenarioFromUrl();
-    this.browserFixture = this.getBrowserFixtureFromUrl();
 
     try {
+      if (!this.launchContext) {
+        throw new TypeError('Invalid or missing puzzle launch context.');
+      }
+      if (this.campaignMode && this.campaignRun) {
+        if (this.flowController.getState().currentNodeId !== 'puzzle') {
+          this.flowController.advanceTo('puzzle');
+        }
+        this.flowController.recordActiveLevelRun(this.campaignRun);
+      }
       this.controller = new PuzzleSessionController(
         this.browserFixture?.definition ?? this.getLaunchDefinition(),
         () => {
@@ -172,7 +186,8 @@ export class PuzzleScene extends Phaser.Scene {
           if (this.launchContext?.mode === 'browser-fixture') {
             return createPrototypeLevelSession().state;
           }
-          const levelContent = this.currentLevelContent ?? getPlayableLevelContent('archive-stabilization');
+          const levelContent =
+            this.currentLevelContent ?? getPlayableLevelContent('archive-stabilization');
           if (!levelContent) {
             return createPrototypeLevelSession().state;
           }
@@ -185,6 +200,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.playbackController = new ResolutionPlaybackController(this.createPlaybackAdapter());
       this.playbackController.setMode(this.playbackMode);
       this.playbackController.setReducedMotion(this.reducedMotion);
+      this.initialBoardHash = getBoardHash(this.controller.getState().board);
 
       this.boardView.setCellSelectedHandler((coordinate) => {
         this.handleCellSelection(coordinate);
@@ -193,6 +209,9 @@ export class PuzzleScene extends Phaser.Scene {
       this.hudView.setCallbacks({
         onRestart: () => {
           this.restartSession();
+        },
+        onNewBoard: () => {
+          this.generateNewBoard();
         },
         onBackToMenu: () => {
           this.returnToMenu();
@@ -289,38 +308,25 @@ export class PuzzleScene extends Phaser.Scene {
     }
   }
 
-  private resolveLaunchContext(launchContext: { campaignMode?: boolean; levelId?: string; seed?: number; mode?: string; fixtureId?: string } | undefined):
-    | { mode: 'campaign'; levelId: string; seed: number }
-    | { mode: 'puzzle-lab'; levelId: string; seed: number }
-    | { mode: 'browser-fixture'; fixtureId: string }
-    | null {
+  private resolveLaunchContext(launchContext: unknown): PuzzleLaunchContext | null {
     if (this.browserFixture) {
       return { mode: 'browser-fixture', fixtureId: this.browserFixture.id };
     }
-    if (launchContext?.mode === 'browser-fixture' && launchContext.fixtureId) {
-      return { mode: 'browser-fixture', fixtureId: launchContext.fixtureId };
-    }
-    const requestedLevelId = launchContext?.levelId ?? 'archive-stabilization';
-    const fallbackLevel = getPlayableLevelContent(requestedLevelId) ?? getPlayableLevelContent('archive-stabilization');
-    if (!fallbackLevel) {
-      return null;
-    }
-    const seed = launchContext?.seed ?? this.seedProvider.nextSeed();
-    return {
-      mode: launchContext?.campaignMode ? 'campaign' : 'puzzle-lab',
-      levelId: fallbackLevel.id,
-      seed,
-    };
+    return isPuzzleLaunchContext(launchContext) ? launchContext : null;
   }
 
   private getLaunchDefinition(): import('../level').LevelDefinition {
-    const levelContent = this.currentLevelContent ?? getPlayableLevelContent('archive-stabilization');
-    return levelContent?.definition ?? prototypeLevelDefinition;
+    const levelContent =
+      this.currentLevelContent ?? getPlayableLevelContent('archive-stabilization');
+    const definition = levelContent?.definition ?? prototypeLevelDefinition;
+    return this.launchContext && this.launchContext.mode !== 'browser-fixture'
+      ? { ...definition, seed: this.launchContext.run.seed }
+      : definition;
   }
 
   private resolveSeedForRestart(levelContent: PlayableLevelContent): number {
     if (this.launchContext?.mode === 'campaign' || this.launchContext?.mode === 'puzzle-lab') {
-      return this.launchContext.seed;
+      return this.launchContext.run.seed;
     }
     return levelContent.definition.seed;
   }
@@ -383,6 +389,7 @@ export class PuzzleScene extends Phaser.Scene {
       reducedMotion: this.reducedMotion,
       hintsEnabled: this.settingsController?.getSnapshot().hintsEnabled ?? true,
       paused: this.presentationState.paused,
+      showNewBoard: this.launchContext?.mode === 'puzzle-lab',
       hasError: this.hasError,
     });
   }
@@ -500,6 +507,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.playbackController?.cancel({ restoreInput: false });
       this.cancelHudPlaybackEffects();
       this.controller.restart();
+      this.restartCount += 1;
       this.displayBoardOverride = null;
       this.hudStateOverride = null;
       this.selectedCoordinate = null;
@@ -507,7 +515,8 @@ export class PuzzleScene extends Phaser.Scene {
       this.presentationState.playbackActive = false;
       this.setInputLocked(false);
       this.hasError = false;
-      this.summaryMessage = 'Prototype level restarted with the same deterministic seed.';
+      this.summaryMessage = 'Same level and board restarted.';
+      this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'same-board-restarted' }));
       this.renderScene();
       this.publishBrowserStatus('idle');
     } catch (error) {
@@ -515,6 +524,40 @@ export class PuzzleScene extends Phaser.Scene {
       this.hasError = true;
       this.summaryMessage = 'Restart failed. Return to the menu and try again.';
       this.renderErrorState(this.summaryMessage);
+    }
+  }
+
+  private generateNewBoard(): void {
+    if (this.launchContext?.mode !== 'puzzle-lab' || !this.currentLevelContent) return;
+    try {
+      const seed = getBrowserTestOptions().e2eEnabled
+        ? this.launchContext.run.seed + 1
+        : this.seedProvider.nextSeed();
+      this.launchContext = {
+        mode: 'puzzle-lab',
+        run: { levelId: this.currentLevelContent.id, seed },
+      };
+      this.controller = new PuzzleSessionController(
+        this.getLaunchDefinition(),
+        () => createGeneratedLevelSession({ content: this.currentLevelContent!, seed }).state,
+      );
+      this.newBoardCount += 1;
+      this.initialBoardHash = getBoardHash(this.controller.getState().board);
+      this.displayBoardOverride = null;
+      this.hudStateOverride = null;
+      this.selectedCoordinate = null;
+      this.rejectedCoordinates = [];
+      this.presentationState.playbackActive = false;
+      this.setInputLocked(false);
+      this.hasError = false;
+      this.summaryMessage = 'A new board was generated for this level.';
+      this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'new-board-generated' }));
+      this.renderScene();
+      this.publishBrowserStatus('idle');
+    } catch (error) {
+      console.error('Failed to generate a new puzzle board', error);
+      this.hasError = true;
+      this.renderErrorState('New board generation failed. Restart or return to the menu.');
     }
   }
 
@@ -1033,6 +1076,17 @@ export class PuzzleScene extends Phaser.Scene {
         scenarioId: this.browserScenario?.id ?? '',
         scenarioFeatures: this.browserScenario?.expectedFeatures.join(',') ?? '',
         fixtureId: this.browserFixture?.id ?? 'prototype',
+        levelId: '',
+        levelTitle: '',
+        seed: -1,
+        initialBoardHash: '',
+        currentBoardHash: '',
+        launchMode: this.campaignMode ? 'campaign' : (this.launchContext?.mode ?? 'invalid'),
+        restartCount: this.restartCount,
+        newBoardCount: this.newBoardCount,
+        moveLimit: 0,
+        objectiveSummary: '',
+        allowedPieceTypes: '',
         levelStatus: 'inactive',
         playbackState,
         playbackSequence: this.playbackSequence,
@@ -1096,7 +1150,7 @@ export class PuzzleScene extends Phaser.Scene {
     });
     const expectedRenderedHash = getBoardHash(renderedBoard);
     const actualRenderedHash = this.boardView?.getRenderedBoardHash() ?? 'unavailable';
-    const expectedMove = this.browserFixture?.expectedMove;
+    const expectedMove = this.browserFixture?.expectedMove ?? findPlayableSwaps(state.board)[0];
     if (this.playbackStateTrace.at(-1) !== playbackState) {
       this.playbackStateTrace.push(playbackState);
     }
@@ -1111,6 +1165,10 @@ export class PuzzleScene extends Phaser.Scene {
       .flat()
       .filter((piece) => piece.kind !== 'standard').length;
     const resources = this.getPerformanceResources();
+    const run =
+      this.campaignRun ??
+      (this.launchContext?.mode === 'puzzle-lab' ? this.launchContext.run : null);
+    const definition = this.controller.getDefinition();
     return {
       diagnosticsState: this.diagnosticsState,
       diagnosticsError: this.diagnosticsError,
@@ -1118,6 +1176,19 @@ export class PuzzleScene extends Phaser.Scene {
       scenarioId: this.browserScenario?.id ?? '',
       scenarioFeatures: this.browserScenario?.expectedFeatures.join(',') ?? '',
       fixtureId: this.browserFixture?.id ?? 'prototype',
+      levelId: run?.levelId ?? definition.id,
+      levelTitle: this.currentLevelContent?.title ?? definition.id,
+      seed: run?.seed ?? definition.seed,
+      initialBoardHash: this.initialBoardHash,
+      currentBoardHash: getBoardHash(state.board),
+      launchMode: this.campaignMode ? 'campaign' : (this.launchContext?.mode ?? 'invalid'),
+      restartCount: this.restartCount,
+      newBoardCount: this.newBoardCount,
+      moveLimit: definition.moveLimit,
+      objectiveSummary: this.currentLevelContent
+        ? getObjectiveSummary(this.currentLevelContent)
+        : definition.objectives.map((objective) => objective.id).join(','),
+      allowedPieceTypes: definition.allowedRefillPieceTypes.join(','),
       levelStatus: state.status,
       playbackState,
       playbackSequence: this.playbackSequence,
@@ -1405,7 +1476,11 @@ export class PuzzleScene extends Phaser.Scene {
       if (event.key.toLowerCase() === 'h' && !event.repeat) this.requestHint();
     };
     this.menuKeyHandler = (event) => {
-      if (event.key.toLowerCase() === 'm' && !event.repeat) this.returnToMenu();
+      if (event.repeat) return;
+      const key = event.key.toLowerCase();
+      if (key === 'm') this.returnToMenu();
+      if (key === 'r') this.restartSession();
+      if (key === 'b') this.generateNewBoard();
     };
     document.addEventListener('keydown', this.escapeKeyHandler);
     document.addEventListener('keydown', this.hintKeyHandler);

@@ -118,6 +118,7 @@ describe('game flow controller', () => {
       chapterStatus: {
         'fantasy-chapter': { status: 'in-progress' },
       },
+      activeLevelRun: null,
       latestPuzzleResult: null,
       hasContinuableSession: true,
     };
@@ -128,5 +129,30 @@ describe('game flow controller', () => {
     expect(resolved.state.currentNodeId).toBe('puzzle');
     expect(resolved.state.latestPuzzleResult).toBeNull();
     expect(resolved.state.storyFlags).toEqual(['FANTASY_ARCHIVE_STABILIZED']);
+  });
+
+  it('records only valid active campaign runs and clears them with the result', () => {
+    const controller = createGameFlowController(createPrototypeCampaignDefinition());
+    controller.advanceTo('multiverse-map');
+    controller.advanceTo('fantasy-chapter-intro');
+    controller.advanceTo('fantasy-dialogue');
+    controller.chooseStoryOption('fantasy-stabilize');
+    controller.advanceTo('fantasy-choice');
+    controller.advanceTo('puzzle');
+
+    controller.recordActiveLevelRun({ levelId: 'archive-stabilization', seed: 1807 });
+    expect(controller.getState().activeLevelRun).toEqual({
+      levelId: 'archive-stabilization',
+      seed: 1807,
+    });
+
+    controller.recordActiveLevelRun({ levelId: 'unknown', seed: -1 });
+    expect(controller.getState().activeLevelRun).toEqual({
+      levelId: 'archive-stabilization',
+      seed: 1807,
+    });
+
+    controller.recordPuzzleResult({ outcome: 'won', score: 1200, movesRemaining: 7 });
+    expect(controller.getState().activeLevelRun).toBeNull();
   });
 });
