@@ -112,7 +112,12 @@ export function calculatePuzzleLayout(input: {
     cellSize,
     boardRect: createRectangle(boardX, boardY, boardWidth, boardHeight),
     hudRect: createRectangle(hudX, padding, width - hudX - padding, height - padding * 2),
-    footerRect: createRectangle(padding, boardY + boardHeight + gutter, boardWidth, footerHeight),
+    footerRect: createRectangle(
+      padding,
+      boardY + boardHeight + gutter,
+      width - padding * 2,
+      footerHeight,
+    ),
   };
 }
 

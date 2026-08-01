@@ -14,6 +14,7 @@ export interface ObjectiveViewModel {
 }
 
 export interface LevelViewModel {
+  titleText: string;
   scoreText: string;
   movesText: string;
   statusText: string;
@@ -99,6 +100,7 @@ export function createLevelViewModel(
   });
 
   return {
+    titleText: definition.id.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
     scoreText: `Score ${state.score}`,
     movesText: `Moves ${state.movesRemaining}`,
     statusText: getLevelStatusLabel(state.status),

@@ -181,7 +181,7 @@ test('cancels and confirms future-save replacement without losing the old payloa
     JSON.parse(window.localStorage.getItem('storycrush.game-flow') ?? 'null'),
   );
   expect(replacement).toMatchObject({
-    schemaVersion: 2,
+    schemaVersion: 3,
     state: {
       currentNodeId: 'multiverse-map',
       storyFlags: [],

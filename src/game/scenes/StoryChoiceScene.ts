@@ -5,10 +5,13 @@ import {
   createPrototypeCampaignDefinition,
 } from '../flow/gameFlowController';
 import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusBridge';
+import { createBrowserSeedProvider } from '../presentation/browserSeedProvider';
+import { type PuzzleLaunchContext } from '../content/levelRun';
 
 export class StoryChoiceScene extends Phaser.Scene {
   public static readonly key = 'StoryChoiceScene';
   private readonly flowController = getSharedGameFlowController();
+  private readonly seedProvider = createBrowserSeedProvider();
 
   public constructor() {
     super(StoryChoiceScene.key);
@@ -60,7 +63,10 @@ export class StoryChoiceScene extends Phaser.Scene {
         if (!result.ok) return;
         transitionLocked = true;
         this.flowController.advanceTo('puzzle');
-        this.scene.start(PuzzleScene.key, { campaignMode: true });
+        const run = { levelId: 'archive-stabilization', seed: this.seedProvider.nextSeed() };
+        this.flowController.recordActiveLevelRun(run);
+        const context: PuzzleLaunchContext = { mode: 'campaign', run };
+        this.scene.start(PuzzleScene.key, context);
       });
     });
   }

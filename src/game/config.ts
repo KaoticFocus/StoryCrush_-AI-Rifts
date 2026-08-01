@@ -6,6 +6,7 @@ import { ChapterIntroScene } from './scenes/ChapterIntroScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { StoryChoiceScene } from './scenes/StoryChoiceScene';
 import { PuzzleScene } from './scenes/PuzzleScene';
+import { PuzzleLabScene } from './scenes/PuzzleLabScene';
 import { ResultsScene } from './scenes/ResultsScene';
 import { ConsequenceScene } from './scenes/ConsequenceScene';
 import { getBrowserTestOptions } from './presentation/testing/browserTestOptions';
@@ -25,6 +26,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     ChapterIntroScene,
     DialogueScene,
     StoryChoiceScene,
+    PuzzleLabScene,
     PuzzleScene,
     ResultsScene,
     ConsequenceScene,

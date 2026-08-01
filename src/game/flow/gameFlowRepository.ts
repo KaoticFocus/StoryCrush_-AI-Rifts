@@ -32,10 +32,20 @@ type PersistedGameFlowState = Omit<GameFlowState, 'latestPuzzleResult'> & {
   latestPuzzleResult?: GameFlowState['latestPuzzleResult'];
 };
 
+type PersistedGameFlowStateV2 = Omit<GameFlowState, 'activeLevelRun' | 'latestPuzzleResult'> & {
+  latestPuzzleResult?: GameFlowState['latestPuzzleResult'];
+};
+
+export interface PersistedGameFlowEnvelopeV3 {
+  schemaVersion: 3;
+  savedAtEpochMs: number;
+  state: PersistedGameFlowState;
+}
+
 export interface PersistedGameFlowEnvelopeV2 {
   schemaVersion: 2;
   savedAtEpochMs: number;
-  state: PersistedGameFlowState;
+  state: PersistedGameFlowStateV2;
 }
 
 export interface PersistedGameFlowEnvelopeV1 {
@@ -43,7 +53,8 @@ export interface PersistedGameFlowEnvelopeV1 {
   state: GameFlowState;
 }
 
-export type PersistedGameFlowEnvelope = PersistedGameFlowEnvelopeV2 | PersistedGameFlowEnvelopeV1;
+export type PersistedGameFlowEnvelope =
+  PersistedGameFlowEnvelopeV3 | PersistedGameFlowEnvelopeV2 | PersistedGameFlowEnvelopeV1;
 
 export interface GameFlowPersistenceResult {
   ok: boolean;
@@ -57,12 +68,12 @@ export interface GameFlowPersistenceResult {
     | 'unsupported-version'
     | 'corrupt-cleared';
   state: GameFlowState;
-  migratedFrom?: 1;
+  migratedFrom?: 1 | 2;
   preservedPayload?: string | null;
 }
 
 export const GAME_FLOW_STORAGE_KEY = 'storycrush.game-flow';
-export const GAME_FLOW_SCHEMA_VERSION = 2;
+export const GAME_FLOW_SCHEMA_VERSION = 3;
 
 function cloneState(state: GameFlowState): GameFlowState {
   return {
@@ -71,6 +82,7 @@ function cloneState(state: GameFlowState): GameFlowState {
     chapterStatus: Object.fromEntries(
       Object.entries(state.chapterStatus).map(([id, chapter]) => [id, { ...chapter }]),
     ),
+    activeLevelRun: state.activeLevelRun ? { ...state.activeLevelRun } : null,
     latestPuzzleResult: state.latestPuzzleResult ? { ...state.latestPuzzleResult } : null,
   };
 }
@@ -82,6 +94,7 @@ function createPersistableState(state: GameFlowState): PersistedGameFlowState {
     chapterStatus: Object.fromEntries(
       Object.entries(state.chapterStatus).map(([id, chapter]) => [id, { ...chapter }]),
     ),
+    activeLevelRun: state.activeLevelRun ? { ...state.activeLevelRun } : null,
     hasContinuableSession: state.hasContinuableSession,
   };
 
@@ -199,9 +212,9 @@ export function createGameFlowRepository(
   const now = options?.now ?? Date.now;
   const definition = options?.definition ?? createPrototypeCampaignDefinition();
   function readEnvelope(): {
-    envelope: (Omit<PersistedGameFlowEnvelopeV2, 'state'> & { state: GameFlowState }) | null;
+    envelope: (Omit<PersistedGameFlowEnvelopeV3, 'state'> & { state: GameFlowState }) | null;
     status: GameFlowPersistenceResult['status'];
-    migratedFrom?: 1;
+    migratedFrom?: 1 | 2;
     preservedPayload?: string | null;
   } {
     const readResult = storage.getItem(GAME_FLOW_STORAGE_KEY);
@@ -233,15 +246,16 @@ export function createGameFlowRepository(
         return { envelope: null, status: 'unsupported-version', preservedPayload: payload };
       }
 
-      if (parsed.schemaVersion === 1) {
+      if (parsed.schemaVersion === 1 || parsed.schemaVersion === 2) {
         const migrationResult = validateAndNormalizeGameFlowState(
           {
             currentNodeId: parsed.state.currentNodeId as GameFlowState['currentNodeId'],
             storyFlags: Array.isArray(parsed.state.storyFlags) ? parsed.state.storyFlags : [],
             chapterStatus: (parsed.state.chapterStatus as GameFlowState['chapterStatus']) ?? {},
+            activeLevelRun: null,
             latestPuzzleResult: parsed.state.latestPuzzleResult ?? null,
             hasContinuableSession: Boolean(parsed.state.hasContinuableSession),
-          } as GameFlowState,
+          },
           definition,
         );
 
@@ -256,7 +270,7 @@ export function createGameFlowRepository(
             state: migrationResult.state,
           },
           status: 'restored',
-          migratedFrom: 1,
+          migratedFrom: parsed.schemaVersion,
           preservedPayload: payload,
         };
       }
@@ -300,7 +314,7 @@ export function createGameFlowRepository(
       }
 
       const state = controller.getState();
-      const envelope: PersistedGameFlowEnvelopeV2 = {
+      const envelope: PersistedGameFlowEnvelopeV3 = {
         schemaVersion: GAME_FLOW_SCHEMA_VERSION,
         savedAtEpochMs: now(),
         state: createPersistableState(state),
@@ -336,6 +350,26 @@ export function createGameFlowRepository(
 
       try {
         controller.restoreState(envelope.state);
+        if (migratedFrom !== undefined) {
+          const migratedEnvelope: PersistedGameFlowEnvelopeV3 = {
+            schemaVersion: GAME_FLOW_SCHEMA_VERSION,
+            savedAtEpochMs: envelope.savedAtEpochMs,
+            state: createPersistableState(controller.getState()),
+          };
+          const writeResult = storage.setItem(
+            GAME_FLOW_STORAGE_KEY,
+            JSON.stringify(migratedEnvelope),
+          );
+          if (!writeResult.ok) {
+            return {
+              ok: false,
+              status: 'storage-unavailable',
+              state: controller.getState(),
+              migratedFrom,
+              preservedPayload,
+            };
+          }
+        }
         return {
           ok: true,
           status: 'restored',

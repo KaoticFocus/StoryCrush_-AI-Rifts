@@ -141,7 +141,7 @@ describe('game flow repository', () => {
     expect(storage.getItem('storycrush.game-flow').value).toBeNull();
   });
 
-  it('writes schema version 2 and preserves the migrated state payload', () => {
+  it('writes schema version 3 and preserves the migrated state payload', () => {
     const storage = createInMemoryGameFlowStorage();
     const repository = createGameFlowRepository(storage, { now: () => 1700 });
     const controller = createGameFlowController(createPrototypeCampaignDefinition());
@@ -159,7 +159,7 @@ describe('game flow repository', () => {
     expect(saveResult.ok).toBe(true);
 
     const payload = storage.getItem('storycrush.game-flow').value;
-    expect(payload).toContain('"schemaVersion":2');
+    expect(payload).toContain('"schemaVersion":3');
     expect(payload).toContain('"savedAtEpochMs":1700');
     expect(payload).toContain('"FANTASY_ARCHIVE_STABILIZED"');
   });
@@ -263,7 +263,7 @@ describe('game flow repository', () => {
     });
 
     expect(replacement.status).toBe('saved');
-    expect(storage.getItem('storycrush.game-flow').value).toContain('"schemaVersion":2');
+    expect(storage.getItem('storycrush.game-flow').value).toContain('"schemaVersion":3');
     expect(storage.getItem('storycrush.game-flow').value).toContain(
       '"currentNodeId":"multiverse-map"',
     );
@@ -389,6 +389,7 @@ describe('game flow repository', () => {
       currentNodeId: 'results',
       storyFlags: ['FANTASY_ARCHIVE_STABILIZED', 'FANTASY_FRACTURE_EXPLOITED'],
       chapterStatus: {},
+      activeLevelRun: null,
       latestPuzzleResult: {
         outcome: 'won',
         score: '1200' as unknown as number,
@@ -407,5 +408,59 @@ describe('game flow repository', () => {
     expect(result.ok).toBe(false);
     expect(result.status).toBe('corrupt-cleared');
     expect(storage.getItem('storycrush.game-flow').value).toBeNull();
+  });
+
+  it('migrates schema version 2 without fabricating an active level run', () => {
+    const { repository, storage } = createStorageHarness();
+    storage.setItem(
+      'storycrush.game-flow',
+      JSON.stringify({
+        schemaVersion: 2,
+        savedAtEpochMs: 1,
+        state: {
+          currentNodeId: 'puzzle',
+          storyFlags: ['FANTASY_ARCHIVE_STABILIZED'],
+          chapterStatus: { 'fantasy-chapter': { status: 'in-progress' } },
+          latestPuzzleResult: null,
+          hasContinuableSession: true,
+        },
+      }),
+    );
+
+    const controller = createGameFlowController(createPrototypeCampaignDefinition());
+    const result = repository.restore(controller);
+
+    expect(result).toMatchObject({ ok: true, status: 'restored', migratedFrom: 2 });
+    expect(controller.getState().activeLevelRun).toBeNull();
+    expect(JSON.parse(storage.getItem('storycrush.game-flow').value ?? 'null')).toMatchObject({
+      schemaVersion: 3,
+      state: { activeLevelRun: null },
+    });
+  });
+
+  it.each([
+    { levelId: 'unknown-level', seed: 1807 },
+    { levelId: 'archive-stabilization', seed: -1 },
+    { levelId: 'archive-stabilization', seed: 1.5 },
+  ])('rejects invalid persisted active run $levelId/$seed', (activeLevelRun) => {
+    const { repository, storage } = createStorageHarness();
+    storage.setItem(
+      'storycrush.game-flow',
+      JSON.stringify({
+        schemaVersion: 3,
+        savedAtEpochMs: 1,
+        state: {
+          currentNodeId: 'puzzle',
+          storyFlags: ['FANTASY_ARCHIVE_STABILIZED'],
+          chapterStatus: { 'fantasy-chapter': { status: 'in-progress' } },
+          activeLevelRun,
+          latestPuzzleResult: null,
+          hasContinuableSession: true,
+        },
+      }),
+    );
+
+    const controller = createGameFlowController(createPrototypeCampaignDefinition());
+    expect(repository.restore(controller).status).toBe('corrupt-cleared');
   });
 });

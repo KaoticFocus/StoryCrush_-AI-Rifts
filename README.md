@@ -332,6 +332,7 @@ docs/
 - [docs/roadmap.md](docs/roadmap.md)
 - [docs/content-model.md](docs/content-model.md)
 - [docs/known-issues.md](docs/known-issues.md)
+- [docs/ai-voice-roadmap.md](docs/ai-voice-roadmap.md)
 - [docs/release-regression-matrix.md](docs/release-regression-matrix.md)
 - [docs/prototype-release-checklist.md](docs/prototype-release-checklist.md)
 - [docs/release-candidate-handoff.md](docs/release-candidate-handoff.md)

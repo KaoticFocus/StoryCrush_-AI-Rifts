@@ -33,6 +33,10 @@
 
 ## Phase 0B - Foundation Scaffold
 
+### AI and Voice Roadmap Note
+
+The project will continue to prioritize deterministic gameplay and authored narrative content. AI providers are planned as optional overlays only, with ElevenLabs voice support prioritized before OpenAI narrative integration. Full sequencing and scope boundaries are documented in [ai-voice-roadmap.md](ai-voice-roadmap.md).
+
 ### Objective
 
 Create the smallest reliable TypeScript + Phaser + Vite foundation with automated verification.

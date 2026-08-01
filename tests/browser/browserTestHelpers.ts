@@ -6,6 +6,8 @@ export interface E2EPageOptions {
   scenario?: string;
   debugPerformance?: boolean;
   safeAreaTest?: boolean;
+  level?: string;
+  seed?: number;
 }
 
 export const statusSelector = '#storycrush-test-status';
@@ -16,6 +18,8 @@ export function buildE2EUrl(options: E2EPageOptions = {}): string {
   if (options.safeAreaTest) query.set('safeAreaTest', '1');
   if (options.fixture) query.set('fixture', options.fixture);
   if (options.scenario) query.set('scenario', options.scenario);
+  if (options.level) query.set('level', options.level);
+  if (options.seed !== undefined) query.set('seed', String(options.seed));
   return `/?${query.toString()}`;
 }
 
@@ -27,6 +31,7 @@ export async function waitForSceneReady(
   page: Page,
   scene:
     | 'main-menu'
+    | 'puzzle-lab'
     | 'puzzle'
     | 'multiverse-map'
     | 'chapter-intro'
