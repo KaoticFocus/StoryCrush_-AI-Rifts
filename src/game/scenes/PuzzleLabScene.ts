@@ -1,4 +1,4 @@
-/* global KeyboardEvent */
+/* global HTMLButtonElement, HTMLDivElement, KeyboardEvent */
 import Phaser from 'phaser';
 import {
   getObjectiveSummary,
@@ -14,6 +14,8 @@ import { PuzzleScene } from './PuzzleScene';
 export class PuzzleLabScene extends Phaser.Scene {
   public static readonly key = 'PuzzleLabScene';
   private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
+  private resizeHandler: (() => void) | null = null;
+  private levelControls: HTMLDivElement | null = null;
   private readonly seedProvider = createBrowserSeedProvider();
 
   public constructor() {
@@ -37,6 +39,7 @@ export class PuzzleLabScene extends Phaser.Scene {
     playableLevelCatalog.forEach((content, index) => {
       this.createLevelCard(content, index, portrait);
     });
+    this.createLevelControls(portrait);
 
     this.add
       .text(width / 2, height - 20, 'Back to Main Menu', {
@@ -61,9 +64,51 @@ export class PuzzleLabScene extends Phaser.Scene {
       if (content) this.launchLevel(content);
     };
     document.addEventListener('keydown', this.keydownHandler);
+    this.resizeHandler = () => this.layoutLevelControls(this.scale.width < this.scale.height);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (this.keydownHandler) document.removeEventListener('keydown', this.keydownHandler);
       this.keydownHandler = null;
+      if (this.resizeHandler) this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler);
+      this.resizeHandler = null;
+      this.levelControls?.remove();
+      this.levelControls = null;
+    });
+  }
+
+  private createLevelControls(portrait: boolean): void {
+    this.levelControls?.remove();
+    const controls = document.createElement('div');
+    controls.className = 'puzzle-lab-level-controls';
+    controls.setAttribute('aria-label', 'Puzzle Lab levels');
+    playableLevelCatalog.forEach((content) => {
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.className = 'puzzle-lab-level-control';
+      control.setAttribute('aria-label', `Play ${content.title}`);
+      control.addEventListener('click', () => this.launchLevel(content));
+      controls.append(control);
+    });
+    document.getElementById('game-root')?.append(controls);
+    this.levelControls = controls;
+    this.layoutLevelControls(portrait);
+  }
+
+  private layoutLevelControls(portrait: boolean): void {
+    if (!this.levelControls) return;
+    const { width, height } = this.scale;
+    const margin = portrait ? 16 : 20;
+    const gap = portrait ? 10 : 14;
+    const cardWidth = portrait ? width - margin * 2 : (width - margin * 2 - gap * 2) / 3;
+    const cardHeight = portrait ? (height - 116 - gap * 2) / 3 : height - 112;
+    Array.from(this.levelControls.children).forEach((element, index) => {
+      const control = element as HTMLButtonElement;
+      const x = portrait ? width / 2 : margin + cardWidth / 2 + index * (cardWidth + gap);
+      const y = portrait ? 64 + cardHeight / 2 + index * (cardHeight + gap) : 58 + cardHeight / 2;
+      control.style.left = `${((x - cardWidth / 2) / width) * 100}%`;
+      control.style.top = `${((y - cardHeight / 2) / height) * 100}%`;
+      control.style.width = `${(cardWidth / width) * 100}%`;
+      control.style.height = `${(cardHeight / height) * 100}%`;
     });
   }
 

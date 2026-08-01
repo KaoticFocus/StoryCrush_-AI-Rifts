@@ -37,6 +37,17 @@ async function clickSceneButton(page: Page, xRatio: number, yRatio: number): Pro
   await canvas.click({ position: { x: bounds.width * xRatio, y: bounds.height * yRatio } });
 }
 
+function collectBrowserErrors(page: Page): { assertNone(): void } {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  return { assertNone: () => expect(errors).toEqual([]) };
+}
+
+const levelControls = (page: Page) => page.getByRole('button', { name: /^Play / });
+
 async function submitExpectedMove(page: Page): Promise<void> {
   const status = getTestStatus(page);
   const from = (await status.getAttribute('data-expected-move-from'))?.split(':').map(Number);
@@ -64,6 +75,118 @@ async function submitExpectedMove(page: Page): Promise<void> {
   await click(from);
   await click(to);
 }
+
+test('single click opens Puzzle Lab selector without launching a level', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await page.goto(buildE2EUrl());
+  await waitForSceneReady(page, 'main-menu');
+  const canvas = page.locator('canvas');
+  const bounds = await canvas.boundingBox();
+  if (!bounds) throw new Error('Expected Phaser canvas bounds');
+
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down();
+  await expect(getTestStatus(page)).toHaveAttribute('data-scene', 'main-menu');
+  await page.mouse.up();
+
+  await waitForSceneReady(page, 'puzzle-lab');
+  await expect(levelControls(page)).toHaveCount(3);
+  await expect(getTestStatus(page)).toHaveAttribute('data-scene', 'puzzle-lab');
+  await page.getByRole('button', { name: 'Play Moonwell Recovery' }).click();
+  await expect(await waitForSceneReady(page, 'puzzle')).toHaveAttribute(
+    'data-level-id',
+    'moonwell-recovery',
+  );
+  errors.assertNone();
+});
+
+test('Puzzle Lab level controls expose names and ordered Tab focus', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await page.goto(buildE2EUrl());
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle-lab');
+
+  await expect(levelControls(page)).toHaveCount(3);
+  await expect(levelControls(page).nth(0)).toHaveAccessibleName('Play Archive Stabilization');
+  await expect(levelControls(page).nth(1)).toHaveAccessibleName('Play Moonwell Recovery');
+  await expect(levelControls(page).nth(2)).toHaveAccessibleName('Play Rootbound Seal');
+  for (const level of levels) {
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: `Play ${level.title}` })).toBeFocused();
+  }
+  errors.assertNone();
+});
+
+test('Puzzle Lab Enter, Space, and pointer controls share level routing', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await page.goto(buildE2EUrl());
+  await waitForSceneReady(page, 'main-menu');
+  const activateLevel = async (method: 'Enter' | 'Space' | 'pointer') => {
+    await clickSceneButton(page, 0.5, 0.5);
+    await waitForSceneReady(page, 'puzzle-lab');
+    const moonwell = page.getByRole('button', { name: 'Play Moonwell Recovery' });
+    if (method === 'pointer') {
+      await moonwell.click();
+    } else {
+      await moonwell.focus();
+      await page.keyboard.press(method);
+    }
+    await expect(await waitForSceneReady(page, 'puzzle')).toHaveAttribute(
+      'data-level-id',
+      'moonwell-recovery',
+    );
+    await expect(getTestStatus(page)).toHaveAttribute('data-launch-mode', 'puzzle-lab');
+  };
+
+  for (const method of ['Enter', 'Space', 'pointer'] as const) {
+    await activateLevel(method);
+    if (method !== 'pointer') {
+      await clickSceneButton(page, 0.86, 0.12);
+      await waitForSceneReady(page, 'main-menu');
+    }
+  }
+  errors.assertNone();
+});
+
+test('Puzzle Lab controls clean up and remain singular after returning', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await page.goto(buildE2EUrl());
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle-lab');
+  await expect(levelControls(page)).toHaveCount(3);
+
+  await page.keyboard.press('Escape');
+  await waitForSceneReady(page, 'main-menu');
+  await expect(levelControls(page)).toHaveCount(0);
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle-lab');
+  await expect(levelControls(page)).toHaveCount(3);
+  errors.assertNone();
+});
+
+test('Puzzle Lab run says Back to Menu and returns to Main Menu', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await page.goto(buildE2EUrl());
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle-lab');
+  await page.getByRole('button', { name: 'Play Archive Stabilization' }).click();
+  await waitForSceneReady(page, 'puzzle');
+
+  const labels = await page.evaluate(() => {
+    const scene = window.__storyCrushGame?.scene.getScene('PuzzleScene');
+    return scene?.children.list
+      .map((child) => ('text' in child ? String(child.text) : ''))
+      .filter(Boolean);
+  });
+  expect(labels).toContain('Back to Menu');
+  expect(labels).not.toContain('Back to Map');
+  await clickSceneButton(page, 0.86, 0.12);
+  await waitForSceneReady(page, 'main-menu');
+  errors.assertNone();
+});
 
 test('selects and plays every Fantasy level with visible run details', async ({ page }) => {
   await page.goto(buildE2EUrl());

@@ -274,16 +274,21 @@ export class PuzzleScene extends Phaser.Scene {
 
       this.renderScene();
       this.add
-        .text(this.scale.width * 0.86, this.scale.height * 0.12, 'Back to Map', {
-          fontFamily: 'monospace',
-          fontSize: '16px',
-          color: '#f8fafc',
-          backgroundColor: '#0f766e',
-          padding: { x: 10, y: 6 },
-        })
+        .text(
+          this.scale.width * 0.86,
+          this.scale.height * 0.12,
+          this.campaignMode ? 'Back to Map' : 'Back to Menu',
+          {
+            fontFamily: 'monospace',
+            fontSize: '16px',
+            color: '#f8fafc',
+            backgroundColor: '#0f766e',
+            padding: { x: 10, y: 6 },
+          },
+        )
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
+        .on('pointerup', () => {
           if (this.campaignMode) {
             this.flowController.advanceTo('multiverse-map');
             this.scene.start(MultiverseMapScene.key);

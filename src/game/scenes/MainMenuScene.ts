@@ -74,7 +74,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
-    playPuzzleButton.on('pointerdown', () => {
+    playPuzzleButton.on('pointerup', () => {
       const query = new window.URLSearchParams(window.location.search);
       if (query.get('e2e') === '1' && (query.get('fixture') || query.get('scenario'))) {
         const context: PuzzleLaunchContext = {
