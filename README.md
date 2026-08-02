@@ -89,6 +89,14 @@ npm run test:release
 npm run test:release:full
 ```
 
+Local ports (strict; no silent fallback):
+
+```text
+Manual Vite development: http://127.0.0.1:5180
+Playwright development server: http://127.0.0.1:4180
+Vite / Playwright production preview: http://127.0.0.1:4181
+```
+
 ## Play The Prototype
 
 Run the app locally:
@@ -98,7 +106,7 @@ npm install
 npm run dev
 ```
 
-Then open the app and follow this temporary flow:
+Open `http://127.0.0.1:5180`, then follow this temporary flow:
 
 - Main menu
 - Select `Play Prototype`

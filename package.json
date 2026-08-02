@@ -5,9 +5,9 @@
   "type": "module",
   "description": "StoryCrush: AI Rifts foundation scaffold (Phase 0B)",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 127.0.0.1 --port 5180 --strictPort",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host 127.0.0.1 --port 4181 --strictPort",
     "test": "vitest",
     "test:run": "vitest run",
     "test:browser": "playwright test",
