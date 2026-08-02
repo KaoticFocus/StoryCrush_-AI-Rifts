@@ -55,9 +55,9 @@ Helper location: `tests/unit/game/content/levelBalanceProbe.ts`.
 
 | Level                 | Wins | Failures | Median score | Score range  | Median moves used | Median moves left on win | Collection complete | Specials created | Specials activated | Cascade steps |
 | --------------------- | ---: | -------: | -----------: | ------------ | ----------------: | -----------------------: | ------------------: | ---------------: | -----------------: | ------------: |
-| Archive Stabilization |   16 |        5 |        2,670 | 1,290–3,640  |                10 |                      5.5 |               21/21 |               75 |                 54 |           560 |
-| Moonwell Recovery     |   21 |        0 |        4,290 | 3,500–7,450  |                 6 |                        6 |               21/21 |              117 |                 81 |           502 |
-| Rootbound Seal        |   18 |        3 |        5,220 | 3,800–12,950 |                 7 |                        3 |               21/21 |              146 |                108 |           617 |
+| Archive Stabilization |   16 |        5 |        2,680 | 1,290–3,640  |                10 |                        5 |               21/21 |               77 |                 55 |           575 |
+| Moonwell Recovery     |   21 |        0 |        4,290 | 3,500–7,450  |                 6 |                        6 |               21/21 |              116 |                 81 |           502 |
+| Rootbound Seal        |   17 |        4 |        5,210 | 2,820–12,950 |                 8 |                        3 |               21/21 |              142 |                103 |           651 |
 
 ### Move-limit decision
 

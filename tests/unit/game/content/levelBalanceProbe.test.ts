@@ -96,6 +96,50 @@ describe('phase 3A.1 longer-level balance catalog', () => {
       expect(summary.wins).toBeGreaterThan(0);
     }
 
+    const byId = Object.fromEntries(first.summaries.map((summary) => [summary.levelId, summary]));
+    expect(byId['archive-stabilization']).toMatchObject({
+      wins: 16,
+      failures: 5,
+      unfinished: 0,
+      medianScore: 2680,
+      minScore: 1290,
+      maxScore: 3640,
+      medianMovesUsed: 10,
+      medianMovesRemainingOnWin: 5,
+      collectionCompleteCount: 21,
+      specialsCreated: 77,
+      specialsActivated: 55,
+      cascadeSteps: 575,
+    });
+    expect(byId['moonwell-recovery']).toMatchObject({
+      wins: 21,
+      failures: 0,
+      unfinished: 0,
+      medianScore: 4290,
+      minScore: 3500,
+      maxScore: 7450,
+      medianMovesUsed: 6,
+      medianMovesRemainingOnWin: 6,
+      collectionCompleteCount: 21,
+      specialsCreated: 116,
+      specialsActivated: 81,
+      cascadeSteps: 502,
+    });
+    expect(byId['rootbound-seal']).toMatchObject({
+      wins: 17,
+      failures: 4,
+      unfinished: 0,
+      medianScore: 5210,
+      minScore: 2820,
+      maxScore: 12950,
+      medianMovesUsed: 8,
+      medianMovesRemainingOnWin: 3,
+      collectionCompleteCount: 21,
+      specialsCreated: 142,
+      specialsActivated: 103,
+      cascadeSteps: 651,
+    });
+
     const archive = getCatalogContentOrThrow('archive-stabilization');
     const again = runBalanceProbeForSeed(archive, 1807);
     expect(again).toEqual(
