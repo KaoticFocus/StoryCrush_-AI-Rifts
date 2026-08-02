@@ -9,7 +9,7 @@ import {
   hasValidScoringSwap,
 } from '../../../src/game/board/validMoves';
 import {
-  areaClearPiece,
+  crossClearPiece,
   boardFromPieces,
   lineClearPiece,
   standardBoard,
@@ -121,7 +121,7 @@ describe('valid move enumeration', () => {
     ]);
 
     const specialBoard = boardFromPieces([
-      [lineClearPiece('ruby', 'horizontal'), areaClearPiece('topaz')],
+      [lineClearPiece('ruby', 'horizontal'), crossClearPiece('topaz')],
       [standardPiece('emerald'), standardPiece('amethyst')],
     ]);
 

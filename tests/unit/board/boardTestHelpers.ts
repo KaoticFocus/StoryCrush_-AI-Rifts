@@ -1,6 +1,6 @@
 import { Board } from '../../../src/game/board/Board';
 import {
-  createAreaClearPiece,
+  createCrossClearPiece,
   createLineClearPiece,
   createStandardPiece,
   createWildcardPiece,
@@ -27,8 +27,8 @@ export function wildcardPiece(pieceType: PieceType) {
   return createWildcardPiece(pieceType);
 }
 
-export function areaClearPiece(pieceType: PieceType) {
-  return createAreaClearPiece(pieceType);
+export function crossClearPiece(pieceType: PieceType) {
+  return createCrossClearPiece(pieceType);
 }
 
 export function boardFromPieces(grid: readonly (readonly BoardPiece[])[]): Board {

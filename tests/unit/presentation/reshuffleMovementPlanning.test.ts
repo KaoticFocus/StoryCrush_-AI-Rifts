@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BoardDomainError } from '../../../src/game/board';
 import { planReshuffleMovements } from '../../../src/game/presentation/playback/reshuffleMovementPlanning';
 import {
-  areaClearPiece,
+  crossClearPiece,
   boardFromPieces,
   lineClearPiece,
   standardPiece,
@@ -51,14 +51,14 @@ describe('planReshuffleMovements', () => {
     expect(plan.stationary).toEqual([]);
   });
 
-  it('supports mixed exact piece identities including area-clear and orientation-sensitive specials', () => {
+  it('supports mixed exact piece identities including cross-clear and orientation-sensitive specials', () => {
     const originalBoard = boardFromPieces([
-      [areaClearPiece('amethyst'), lineClearPiece('ruby', 'vertical')],
+      [crossClearPiece('amethyst'), lineClearPiece('ruby', 'vertical')],
       [wildcardPiece('ruby'), standardPiece('pearl')],
     ]);
     const reshuffledBoard = boardFromPieces([
       [standardPiece('pearl'), wildcardPiece('ruby')],
-      [lineClearPiece('ruby', 'vertical'), areaClearPiece('amethyst')],
+      [lineClearPiece('ruby', 'vertical'), crossClearPiece('amethyst')],
     ]);
 
     const plan = planReshuffleMovements({ originalBoard, reshuffledBoard });

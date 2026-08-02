@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveCascade } from '../../../src/game/board/resolveCascade';
 import {
-  areaClearPiece,
+  crossClearPiece,
   boardFromPieces,
   lineClearPiece,
   standardPiece,
@@ -95,7 +95,7 @@ describe('resolveCascade Phase 1F activation integration', () => {
   it('supports wildcard plus non-wildcard special direct combination and chain trigger discovery', () => {
     const board = boardFromPieces([
       [wildcardPiece('ruby'), lineClearPiece('sapphire', 'vertical')],
-      [areaClearPiece('sapphire'), standardPiece('topaz')],
+      [crossClearPiece('sapphire'), standardPiece('topaz')],
     ]);
 
     const result = resolveCascade({

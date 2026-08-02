@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { determineWildcardTarget } from '../../../src/game/board/wildcardTargeting';
-import { standardPiece, wildcardPiece, lineClearPiece, areaClearPiece } from './boardTestHelpers';
+import { standardPiece, wildcardPiece, lineClearPiece, crossClearPiece } from './boardTestHelpers';
 
 describe('determineWildcardTarget', () => {
   it('uses wildcard stored type for matched activation', () => {
@@ -38,7 +38,7 @@ describe('determineWildcardTarget', () => {
       determineWildcardTarget({
         wildcardPiece: wildcardPiece('ruby'),
         reason: 'direct-swap',
-        swapCounterpartPiece: areaClearPiece('amethyst'),
+        swapCounterpartPiece: crossClearPiece('amethyst'),
       }),
     ).toEqual({ mode: 'piece-type', pieceType: 'amethyst' });
   });

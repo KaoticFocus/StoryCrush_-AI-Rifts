@@ -81,7 +81,7 @@ describe('browser fixtures', () => {
       const kinds = lineAreaResult.resolution.steps.flatMap((step) =>
         step.activationEvents.map((activation) => activation.piece.kind),
       );
-      expect(kinds).toEqual(expect.arrayContaining(['line-clear', 'area-clear']));
+      expect(kinds).toEqual(expect.arrayContaining(['line-clear', 'cross-clear']));
     }
 
     const wildcardResult = applyLevelMove({

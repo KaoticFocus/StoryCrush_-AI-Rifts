@@ -5,7 +5,7 @@ import {
   resolveSpecialActivations,
 } from '../../../src/game/board/specialActivation';
 import {
-  areaClearPiece,
+  crossClearPiece,
   boardFromPieces,
   lineClearPiece,
   standardPiece,
@@ -46,9 +46,9 @@ describe('special activation effects', () => {
     ]);
   });
 
-  it('area-clear clips edges and corners in row-major order', () => {
+  it('cross-clear covers full row then column with center once', () => {
     const board = boardFromPieces([
-      [areaClearPiece('ruby'), standardPiece('sapphire'), standardPiece('emerald')],
+      [crossClearPiece('ruby'), standardPiece('sapphire'), standardPiece('emerald')],
       [standardPiece('topaz'), standardPiece('amethyst'), standardPiece('pearl')],
       [standardPiece('ruby'), standardPiece('sapphire'), standardPiece('emerald')],
     ]);
@@ -57,15 +57,16 @@ describe('special activation effects', () => {
     expect(result).toEqual([
       { row: 0, column: 0 },
       { row: 0, column: 1 },
+      { row: 0, column: 2 },
       { row: 1, column: 0 },
-      { row: 1, column: 1 },
+      { row: 2, column: 0 },
     ]);
   });
 
   it('wildcard clears target type and includes itself', () => {
     const board = boardFromPieces([
       [wildcardPiece('ruby'), standardPiece('sapphire'), lineClearPiece('ruby', 'vertical')],
-      [standardPiece('ruby'), areaClearPiece('emerald'), standardPiece('topaz')],
+      [standardPiece('ruby'), crossClearPiece('emerald'), standardPiece('topaz')],
     ]);
 
     const result = getSpecialActivationEffect({
@@ -80,9 +81,10 @@ describe('special activation effects', () => {
 
 describe('resolveSpecialActivations', () => {
   it('activates matched specials in row-major order and discovers chain triggers', () => {
+    // Cross at (0,2) clears row 0 + column 2, chaining into the wildcard at (1,2).
     const board = boardFromPieces([
-      [lineClearPiece('ruby', 'horizontal'), standardPiece('sapphire'), areaClearPiece('emerald')],
-      [standardPiece('ruby'), wildcardPiece('ruby'), standardPiece('topaz')],
+      [lineClearPiece('ruby', 'horizontal'), standardPiece('sapphire'), crossClearPiece('emerald')],
+      [standardPiece('ruby'), standardPiece('topaz'), wildcardPiece('ruby')],
     ]);
 
     const result = resolveSpecialActivations({
@@ -96,10 +98,10 @@ describe('resolveSpecialActivations', () => {
     expect(result.events.map((event) => event.coordinate)).toEqual([
       { row: 0, column: 2 },
       { row: 0, column: 0 },
-      { row: 1, column: 1 },
+      { row: 1, column: 2 },
     ]);
 
-    expect(result.events[0].newlyTriggeredSpecialCoordinates).toEqual([{ row: 1, column: 1 }]);
+    expect(result.events[0].newlyTriggeredSpecialCoordinates).toEqual([{ row: 1, column: 2 }]);
     expect(new Set(coordsToKeys(result.affectedCoordinates)).size).toBe(
       result.affectedCoordinates.length,
     );

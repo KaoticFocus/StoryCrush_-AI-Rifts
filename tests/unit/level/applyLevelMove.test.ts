@@ -21,7 +21,7 @@ function baseDefinition(overrides?: Partial<LevelDefinition>): LevelDefinition {
     scoring: {
       pointsPerRemovedPiece: 10,
       lineClearActivationBonus: 40,
-      areaClearActivationBonus: 50,
+      crossClearActivationBonus: 50,
       wildcardActivationBonus: 60,
       cascadeMultiplierIncrement: 1,
     },

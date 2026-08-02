@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveCascade } from '../../../src/game/board/resolveCascade';
 import { createPieceCollectionEvents } from '../../../src/game/level';
 import {
-  areaClearPiece,
+  crossClearPiece,
   boardFromPieces,
   lineClearPiece,
   standardBoard,
@@ -60,7 +60,7 @@ describe('createPieceCollectionEvents', () => {
     const resolution = validResolution({
       board: boardFromPieces([
         [wildcardPiece('ruby'), lineClearPiece('sapphire', 'vertical')],
-        [areaClearPiece('sapphire'), standardPiece('topaz')],
+        [crossClearPiece('sapphire'), standardPiece('topaz')],
       ]),
       first: { row: 0, column: 0 },
       second: { row: 0, column: 1 },

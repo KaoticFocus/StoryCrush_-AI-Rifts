@@ -30,7 +30,8 @@ describe('special piece planning', () => {
     expect(result.specialCreations[0].specialPiece).toEqual({
       kind: 'line-clear',
       pieceType: 'ruby',
-      orientation: 'horizontal',
+      // Horizontal four creates a vertical-clearing special.
+      orientation: 'vertical',
     });
   });
 
@@ -50,7 +51,7 @@ describe('special piece planning', () => {
     expect(gridToKey(board)).toBe(before);
     expect(result.groups[0].shape).toBe('t-shape');
     expect(result.specialCreations[0].creationCoordinate).toEqual({ row: 1, column: 2 });
-    expect(result.specialCreations[0].specialPiece.kind).toBe('area-clear');
+    expect(result.specialCreations[0].specialPiece.kind).toBe('cross-clear');
     expect(roundTrip).toEqual(result);
   });
 });

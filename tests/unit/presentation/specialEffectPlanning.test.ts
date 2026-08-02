@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSpecialEffectPresentation } from '../../../src/game/presentation/playback/specialEffectPlanning';
-import { areaClearPiece, lineClearPiece, wildcardPiece } from '../board/boardTestHelpers';
+import { crossClearPiece, lineClearPiece, wildcardPiece } from '../board/boardTestHelpers';
 
 describe('buildSpecialEffectPresentation', () => {
   it('builds horizontal line-clear branches from the source coordinate', () => {
@@ -68,59 +68,76 @@ describe('buildSpecialEffectPresentation', () => {
     ]);
   });
 
-  it('builds area-clear rings for center and clipped edge effects', () => {
+  it('builds cross-clear row/column branches and distance rings', () => {
     const centerPlan = buildSpecialEffectPresentation({
       dimensions: { rows: 5, columns: 5 },
       event: {
         index: 1,
         coordinate: { row: 2, column: 2 },
-        piece: areaClearPiece('emerald'),
+        piece: crossClearPiece('emerald'),
         reason: 'matched',
         affectedCoordinates: [
-          { row: 1, column: 1 },
-          { row: 1, column: 2 },
-          { row: 1, column: 3 },
+          { row: 2, column: 0 },
           { row: 2, column: 1 },
           { row: 2, column: 2 },
           { row: 2, column: 3 },
-          { row: 3, column: 1 },
+          { row: 2, column: 4 },
+          { row: 0, column: 2 },
+          { row: 1, column: 2 },
           { row: 3, column: 2 },
-          { row: 3, column: 3 },
+          { row: 4, column: 2 },
         ],
         newlyTriggeredSpecialCoordinates: [],
       },
     });
-    expect(centerPlan.kind).toBe('area-clear');
-    if (centerPlan.kind !== 'area-clear') {
+    expect(centerPlan.kind).toBe('cross-clear');
+    if (centerPlan.kind !== 'cross-clear') {
       return;
     }
     expect(centerPlan.rings[0]).toEqual([{ row: 2, column: 2 }]);
+    expect(centerPlan.rowBranch).toEqual([
+      { row: 2, column: 0 },
+      { row: 2, column: 1 },
+      { row: 2, column: 2 },
+      { row: 2, column: 3 },
+      { row: 2, column: 4 },
+    ]);
+    expect(centerPlan.columnBranch).toEqual([
+      { row: 0, column: 2 },
+      { row: 1, column: 2 },
+      { row: 3, column: 2 },
+      { row: 4, column: 2 },
+    ]);
 
     const edgePlan = buildSpecialEffectPresentation({
       dimensions: { rows: 3, columns: 3 },
       event: {
         index: 2,
         coordinate: { row: 0, column: 0 },
-        piece: areaClearPiece('emerald'),
+        piece: crossClearPiece('emerald'),
         reason: 'matched',
         affectedCoordinates: [
           { row: 0, column: 0 },
           { row: 0, column: 1 },
+          { row: 0, column: 2 },
           { row: 1, column: 0 },
-          { row: 1, column: 1 },
+          { row: 2, column: 0 },
         ],
         newlyTriggeredSpecialCoordinates: [],
       },
     });
-    expect(edgePlan.kind).toBe('area-clear');
-    if (edgePlan.kind !== 'area-clear') {
+    expect(edgePlan.kind).toBe('cross-clear');
+    if (edgePlan.kind !== 'cross-clear') {
       return;
     }
-    expect(edgePlan.rings.flat()).toEqual([
+    expect(edgePlan.rowBranch).toEqual([
       { row: 0, column: 0 },
       { row: 0, column: 1 },
+      { row: 0, column: 2 },
+    ]);
+    expect(edgePlan.columnBranch).toEqual([
       { row: 1, column: 0 },
-      { row: 1, column: 1 },
+      { row: 2, column: 0 },
     ]);
   });
 
