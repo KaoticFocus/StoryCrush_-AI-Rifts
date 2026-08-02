@@ -209,7 +209,7 @@ export function getSpecialEffectDuration(input: {
     input.kind === 'line-clear-horizontal' || input.kind === 'line-clear-vertical'
       ? durations.lineClearBeamBase +
         Math.max(0, input.affectedCount - 1) * durations.lineClearBeamPerCell
-      : input.kind === 'area-clear'
+      : input.kind === 'cross-clear'
         ? durations.areaShockwave
         : input.kind === 'wildcard-full-board'
           ? durations.wildcardFullBoardWave

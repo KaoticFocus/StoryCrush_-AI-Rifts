@@ -10,7 +10,7 @@ export interface PieceAppearance {
   overlay:
     | { kind: 'none' }
     | { kind: 'line-clear'; orientation: MatchOrientation }
-    | { kind: 'area-clear' }
+    | { kind: 'cross-clear' }
     | { kind: 'wildcard' };
 }
 
@@ -76,25 +76,26 @@ export function getPieceAppearance(piece: BoardPiece): PieceAppearance {
   const standardAppearance = standardAppearances[piece.pieceType];
 
   if (piece.kind === 'line-clear') {
+    const lineLabel = piece.orientation === 'horizontal' ? 'rune wave' : 'arcane pillar';
     return {
       ...standardAppearance,
-      label: `${pieceTypeLabels[piece.pieceType]} line clear`,
+      label: `${pieceTypeLabels[piece.pieceType]} ${lineLabel}`,
       overlay: { kind: 'line-clear', orientation: piece.orientation },
     };
   }
 
-  if (piece.kind === 'area-clear') {
+  if (piece.kind === 'cross-clear') {
     return {
       ...standardAppearance,
-      label: `${pieceTypeLabels[piece.pieceType]} area clear`,
-      overlay: { kind: 'area-clear' },
+      label: `${pieceTypeLabels[piece.pieceType]} sigil cross`,
+      overlay: { kind: 'cross-clear' },
     };
   }
 
   if (piece.kind === 'wildcard') {
     return {
       ...standardAppearance,
-      label: `${pieceTypeLabels[piece.pieceType]} wildcard`,
+      label: `${pieceTypeLabels[piece.pieceType]} lightning core`,
       overlay: { kind: 'wildcard' },
     };
   }

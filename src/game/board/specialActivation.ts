@@ -56,8 +56,8 @@ function cloneSpecialPiece(piece: SpecialBoardPiece): SpecialBoardPiece {
   switch (piece.kind) {
     case 'line-clear':
       return { kind: 'line-clear', pieceType: piece.pieceType, orientation: piece.orientation };
-    case 'area-clear':
-      return { kind: 'area-clear', pieceType: piece.pieceType };
+    case 'cross-clear':
+      return { kind: 'cross-clear', pieceType: piece.pieceType };
     case 'wildcard':
       return { kind: 'wildcard', pieceType: piece.pieceType };
   }
@@ -181,23 +181,18 @@ export function getSpecialActivationEffect(input: {
     return affected;
   }
 
-  if (piece.kind === 'area-clear') {
+  if (piece.kind === 'cross-clear') {
+    // Full row + full column; center counted once. Row L→R, then column T→B.
     const affected: BoardCoordinate[] = [];
-
-    for (let row = coordinate.row - 1; row <= coordinate.row + 1; row += 1) {
-      if (row < 0 || row >= rows) {
+    for (let column = 0; column < columns; column += 1) {
+      affected.push({ row: coordinate.row, column });
+    }
+    for (let row = 0; row < rows; row += 1) {
+      if (row === coordinate.row) {
         continue;
       }
-
-      for (let column = coordinate.column - 1; column <= coordinate.column + 1; column += 1) {
-        if (column < 0 || column >= columns) {
-          continue;
-        }
-
-        affected.push({ row, column });
-      }
+      affected.push({ row, column: coordinate.column });
     }
-
     return affected;
   }
 

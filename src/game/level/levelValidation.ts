@@ -13,7 +13,7 @@ import {
 export const DEFAULT_SCORING_RULES: ScoringRules = {
   pointsPerRemovedPiece: 10,
   lineClearActivationBonus: 40,
-  areaClearActivationBonus: 50,
+  crossClearActivationBonus: 50,
   wildcardActivationBonus: 60,
   cascadeMultiplierIncrement: 1,
 };
@@ -111,9 +111,17 @@ export function validateScoringRules(rules: ScoringRules): ScoringRules {
     'lineClearActivationBonus',
     'invalid-scoring-rules',
   );
+  const crossClearActivationBonus =
+    rules.crossClearActivationBonus ?? rules.areaClearActivationBonus;
+  if (crossClearActivationBonus === undefined) {
+    throw new BoardDomainError(
+      'invalid-scoring-rules',
+      'crossClearActivationBonus (or legacy areaClearActivationBonus) is required',
+    );
+  }
   assertSafeNonNegativeInteger(
-    rules.areaClearActivationBonus,
-    'areaClearActivationBonus',
+    crossClearActivationBonus,
+    'crossClearActivationBonus',
     'invalid-scoring-rules',
   );
   assertSafeNonNegativeInteger(
@@ -130,7 +138,7 @@ export function validateScoringRules(rules: ScoringRules): ScoringRules {
   return {
     pointsPerRemovedPiece: rules.pointsPerRemovedPiece,
     lineClearActivationBonus: rules.lineClearActivationBonus,
-    areaClearActivationBonus: rules.areaClearActivationBonus,
+    crossClearActivationBonus,
     wildcardActivationBonus: rules.wildcardActivationBonus,
     cascadeMultiplierIncrement: rules.cascadeMultiplierIncrement,
   };

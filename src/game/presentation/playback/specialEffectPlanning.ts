@@ -4,7 +4,7 @@ import { type SpecialActivationEvent } from '../../board/boardTypes';
 export type SpecialEffectKind =
   | 'line-clear-horizontal'
   | 'line-clear-vertical'
-  | 'area-clear'
+  | 'cross-clear'
   | 'wildcard-target'
   | 'wildcard-full-board';
 
@@ -24,9 +24,12 @@ export interface LineClearEffectPlan extends SpecialEffectBasePlan {
   forwardBranch: BoardCoordinate[];
 }
 
-export interface AreaClearEffectPlan extends SpecialEffectBasePlan {
-  kind: 'area-clear';
+export interface CrossClearEffectPlan extends SpecialEffectBasePlan {
+  kind: 'cross-clear';
+  /** Distance-ordered batches for timed flash (source-centered). */
   rings: BoardCoordinate[][];
+  rowBranch: BoardCoordinate[];
+  columnBranch: BoardCoordinate[];
 }
 
 export interface WildcardTargetEffectPlan extends SpecialEffectBasePlan {
@@ -42,7 +45,7 @@ export interface WildcardFullBoardEffectPlan extends SpecialEffectBasePlan {
 
 export type SpecialEffectPresentationPlan =
   | LineClearEffectPlan
-  | AreaClearEffectPlan
+  | CrossClearEffectPlan
   | WildcardTargetEffectPlan
   | WildcardFullBoardEffectPlan;
 
@@ -181,15 +184,23 @@ export function buildSpecialEffectPresentation(input: {
     };
   }
 
-  if (input.event.piece.kind === 'area-clear') {
+  if (input.event.piece.kind === 'cross-clear') {
+    const rowBranch = affectedCoordinates
+      .filter((coordinate) => coordinate.row === source.row)
+      .map(cloneCoordinate);
+    const columnBranch = affectedCoordinates
+      .filter((coordinate) => coordinate.column === source.column && coordinate.row !== source.row)
+      .map(cloneCoordinate);
     return {
-      kind: 'area-clear',
+      kind: 'cross-clear',
       source,
       affectedCoordinates,
       newlyTriggeredCoordinates,
       activationIndex: input.event.index,
       activationReason: input.event.reason,
       rings: createDistanceBatches(affectedCoordinates, source),
+      rowBranch,
+      columnBranch,
     };
   }
 

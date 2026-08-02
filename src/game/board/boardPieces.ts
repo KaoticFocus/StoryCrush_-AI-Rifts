@@ -1,7 +1,7 @@
 import { MatchOrientation, PieceType, SpecialPieceCreationPlan } from './boardTypes';
 import {
-  AreaClearBoardPiece,
   BoardPiece,
+  CrossClearBoardPiece,
   LineClearBoardPiece,
   SpecialBoardPiece,
   StandardBoardPiece,
@@ -11,7 +11,7 @@ import { BoardDomainError } from './errors';
 import { DEFAULT_PIECE_TYPES } from './boardTypes';
 
 const pieceTypeSet = new Set<PieceType>(DEFAULT_PIECE_TYPES);
-const pieceKinds = new Set(['standard', 'line-clear', 'wildcard', 'area-clear'] as const);
+const canonicalPieceKinds = new Set(['standard', 'line-clear', 'wildcard', 'cross-clear'] as const);
 const orientationSet = new Set<MatchOrientation>(['horizontal', 'vertical']);
 
 function assertValidPieceType(pieceType: string): asserts pieceType is PieceType {
@@ -69,10 +69,13 @@ export function createWildcardPiece(pieceType: PieceType): WildcardBoardPiece {
   return { kind: 'wildcard', pieceType };
 }
 
-export function createAreaClearPiece(pieceType: PieceType): AreaClearBoardPiece {
+export function createCrossClearPiece(pieceType: PieceType): CrossClearBoardPiece {
   assertValidPieceType(pieceType);
-  return { kind: 'area-clear', pieceType };
+  return { kind: 'cross-clear', pieceType };
 }
+
+/** @deprecated Use createCrossClearPiece. */
+export const createAreaClearPiece = createCrossClearPiece;
 
 export function isStandardPiece(piece: BoardPiece): piece is StandardBoardPiece {
   return piece.kind === 'standard';
@@ -86,9 +89,12 @@ export function isWildcardPiece(piece: BoardPiece): piece is WildcardBoardPiece 
   return piece.kind === 'wildcard';
 }
 
-export function isAreaClearPiece(piece: BoardPiece): piece is AreaClearBoardPiece {
-  return piece.kind === 'area-clear';
+export function isCrossClearPiece(piece: BoardPiece): piece is CrossClearBoardPiece {
+  return piece.kind === 'cross-clear';
 }
+
+/** @deprecated Use isCrossClearPiece. */
+export const isAreaClearPiece = isCrossClearPiece;
 
 export function isSpecialPiece(piece: BoardPiece): piece is SpecialBoardPiece {
   return piece.kind !== 'standard';
@@ -101,7 +107,7 @@ export function getPieceType(piece: BoardPiece): PieceType {
 function assertValidBoardPiece(value: unknown): asserts value is BoardPiece {
   assertObject(value);
   const kind = value.kind;
-  if (typeof kind !== 'string' || !pieceKinds.has(kind as BoardPiece['kind'])) {
+  if (typeof kind !== 'string' || !canonicalPieceKinds.has(kind as BoardPiece['kind'])) {
     throw new BoardDomainError(
       'invalid-board-piece',
       `invalid board piece kind: ${JSON.stringify(kind)}`,
@@ -131,7 +137,7 @@ function assertValidBoardPiece(value: unknown): asserts value is BoardPiece {
     return;
   }
 
-  if (kind === 'wildcard' || kind === 'area-clear') {
+  if (kind === 'wildcard' || kind === 'cross-clear') {
     return;
   }
 
@@ -149,14 +155,20 @@ export function cloneBoardPiece(piece: BoardPiece): BoardPiece {
       return { kind: 'line-clear', pieceType: piece.pieceType, orientation: piece.orientation };
     case 'wildcard':
       return { kind: 'wildcard', pieceType: piece.pieceType };
-    case 'area-clear':
-      return { kind: 'area-clear', pieceType: piece.pieceType };
+    case 'cross-clear':
+      return { kind: 'cross-clear', pieceType: piece.pieceType };
   }
 }
 
 export function normalizeBoardPiece(value: unknown): BoardPiece {
-  assertValidBoardPiece(value);
-  return cloneBoardPiece(value);
+  assertObject(value);
+  // Legacy persisted discriminant: area-clear → cross-clear (decode-only migrate).
+  const migrated =
+    value.kind === 'area-clear'
+      ? ({ ...value, kind: 'cross-clear' } as Record<string, unknown>)
+      : value;
+  assertValidBoardPiece(migrated);
+  return cloneBoardPiece(migrated);
 }
 
 export function createBoardPieceFromPlan(plan: SpecialPieceCreationPlan): SpecialBoardPiece {
@@ -179,8 +191,8 @@ export function createBoardPieceFromPlan(plan: SpecialPieceCreationPlan): Specia
       return createLineClearPiece(plan.sourcePieceType, specialPiece.orientation);
     case 'wildcard':
       return createWildcardPiece(plan.sourcePieceType);
-    case 'area-clear':
-      return createAreaClearPiece(plan.sourcePieceType);
+    case 'cross-clear':
+      return createCrossClearPiece(plan.sourcePieceType);
     default:
       throw new BoardDomainError(
         'invalid-special-piece',

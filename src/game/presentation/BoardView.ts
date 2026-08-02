@@ -676,8 +676,8 @@ export class BoardView {
         case 'line-clear-vertical':
           await this.playLineClearEffect(command.effectPlan, settings, duration);
           break;
-        case 'area-clear':
-          await this.playAreaClearEffect(command.effectPlan, settings, duration);
+        case 'cross-clear':
+          await this.playCrossClearEffect(command.effectPlan, settings, duration);
           break;
         case 'wildcard-target':
           await this.playWildcardTargetEffect(command.effectPlan, settings, duration);
@@ -1273,8 +1273,8 @@ export class BoardView {
     );
   }
 
-  private async playAreaClearEffect(
-    plan: Extract<SpecialEffectPresentationPlan, { kind: 'area-clear' }>,
+  private async playCrossClearEffect(
+    plan: Extract<SpecialEffectPresentationPlan, { kind: 'cross-clear' }>,
     settings: PlaybackSettings,
     duration: number,
   ): Promise<void> {
@@ -1283,11 +1283,10 @@ export class BoardView {
       return;
     }
 
-    const source = this.getCellCenter(plan.source);
-    const shockwave = this.scene.add.graphics();
-    this.effectLayer.add(shockwave);
-    this.transientObjects.add(shockwave);
-    const state = { radius: 0, alpha: 0.9 };
+    const beams = this.scene.add.graphics();
+    this.effectLayer.add(beams);
+    this.transientObjects.add(beams);
+    const state = { alpha: 0.95, width: 6 };
 
     for (const [ringIndex, ring] of plan.rings.entries()) {
       const delay = Math.round((duration * ringIndex) / Math.max(1, plan.rings.length));
@@ -1296,29 +1295,60 @@ export class BoardView {
       });
     }
 
+    const drawCross = () => {
+      beams.clear();
+      beams.lineStyle(state.width, 0xfca5a5, state.alpha);
+      const rowCells = plan.rowBranch.map((coordinate) => this.getCellCenter(coordinate));
+      if (rowCells.length > 0) {
+        beams.beginPath();
+        beams.moveTo(rowCells[0].x, rowCells[0].y);
+        for (const cell of rowCells.slice(1)) {
+          beams.lineTo(cell.x, cell.y);
+        }
+        beams.strokePath();
+      }
+      const columnCells = [
+        ...plan.rowBranch.filter(
+          (coordinate) =>
+            coordinate.row === plan.source.row && coordinate.column === plan.source.column,
+        ),
+        ...plan.columnBranch,
+      ]
+        .sort((left, right) => left.row - right.row)
+        .map((coordinate) => this.getCellCenter(coordinate));
+      if (columnCells.length > 0) {
+        beams.beginPath();
+        beams.moveTo(columnCells[0].x, columnCells[0].y);
+        for (const cell of columnCells.slice(1)) {
+          beams.lineTo(cell.x, cell.y);
+        }
+        beams.strokePath();
+      }
+      const source = this.getCellCenter(plan.source);
+      beams.fillStyle(0xfef2f2, Math.max(0, state.alpha * 0.35));
+      beams.fillCircle(source.x, source.y, Math.max(5, this.layout!.cellSize * 0.18));
+    };
+
     await this.runTimedTransition(
       duration,
       () => {
+        drawCross();
         this.trackTween(
           this.scene.tweens.add({
             targets: state,
-            radius: this.layout!.cellSize * 1.45,
             alpha: 0,
+            width: 2,
             duration,
             ease: 'Sine.easeOut',
             onUpdate: () => {
-              shockwave.clear();
-              shockwave.lineStyle(4, 0xfca5a5, state.alpha);
-              shockwave.strokeCircle(source.x, source.y, state.radius);
-              shockwave.fillStyle(0xfef2f2, Math.max(0, state.alpha * 0.18));
-              shockwave.fillCircle(source.x, source.y, Math.max(6, state.radius * 0.2));
+              drawCross();
             },
           }),
         );
       },
       () => {
-        this.transientObjects.delete(shockwave);
-        shockwave.destroy();
+        this.transientObjects.delete(beams);
+        beams.destroy();
       },
     );
   }
@@ -1645,9 +1675,15 @@ export class BoardView {
           graphics.strokePath();
         }
         return;
-      case 'area-clear':
-        graphics.strokeCircle(center.x, center.y, radius * 0.55);
-        graphics.strokeCircle(center.x, center.y, radius * 0.8);
+      case 'cross-clear':
+        // Plus-sign silhouette distinct from line-clear and wildcard rings.
+        graphics.beginPath();
+        graphics.moveTo(center.x - radius * 0.85, center.y);
+        graphics.lineTo(center.x + radius * 0.85, center.y);
+        graphics.moveTo(center.x, center.y - radius * 0.85);
+        graphics.lineTo(center.x, center.y + radius * 0.85);
+        graphics.strokePath();
+        graphics.strokeCircle(center.x, center.y, radius * 0.28);
         return;
       case 'wildcard':
         graphics.strokeCircle(center.x, center.y, radius * 0.78);
