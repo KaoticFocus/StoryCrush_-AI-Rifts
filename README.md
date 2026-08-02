@@ -134,7 +134,7 @@ Cancellation behavior:
 - Restart, menu exit, resize, shutdown, and playback failure cancel active tweens and rebuild from the authoritative controller state.
 - Terminal states remain input-locked after playback completes.
 
-The prototype level uses an 8 x 8 board, 15 moves, a score target, and a Ruby collection target.
+Fantasy Puzzle Lab levels use 8 x 8 boards with first-pass score goals of 2,500 / 3,500 / 5,000 plus unchanged piece-collection targets. See `docs/level-balance-baseline.md`.
 
 ## Verification Command
 

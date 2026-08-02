@@ -16,6 +16,7 @@ export class PuzzleLabScene extends Phaser.Scene {
   private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
   private resizeHandler: (() => void) | null = null;
   private levelControls: HTMLDivElement | null = null;
+  private launchInFlight = false;
   private readonly seedProvider = createBrowserSeedProvider();
 
   public constructor() {
@@ -23,6 +24,7 @@ export class PuzzleLabScene extends Phaser.Scene {
   }
 
   public create(): void {
+    this.launchInFlight = false;
     markBrowserTestScene('puzzle-lab');
     const { width, height } = this.scale;
     const portrait = width < height;
@@ -173,6 +175,10 @@ export class PuzzleLabScene extends Phaser.Scene {
   }
 
   private launchLevel(content: PlayableLevelContent): void {
+    // DOM semantic controls sit above the Phaser cards. A single gesture can deliver both a
+    // button click and a canvas pointerup; guard so PuzzleScene is not started twice.
+    if (this.launchInFlight) return;
+    this.launchInFlight = true;
     const context: PuzzleLaunchContext = {
       mode: 'puzzle-lab',
       run: { levelId: content.id, seed: this.seedProvider.nextSeed() },

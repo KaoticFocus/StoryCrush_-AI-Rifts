@@ -72,7 +72,7 @@ export const playableLevelCatalog: readonly PlayableLevelContent[] = validatePla
       moveLimit: 15,
       allowedRefillPieceTypes: ['ruby', 'sapphire', 'emerald', 'topaz', 'amethyst', 'pearl'],
       objectives: [
-        { id: 'score-target', kind: 'score', targetScore: 600 },
+        { id: 'score-target', kind: 'score', targetScore: 2500 },
         { id: 'collect-ruby', kind: 'collect-piece', pieceType: 'ruby', targetCount: 10 },
       ],
       scoring: DEFAULT_SCORING_RULES,
@@ -87,7 +87,7 @@ export const playableLevelCatalog: readonly PlayableLevelContent[] = validatePla
       moveLimit: 12,
       allowedRefillPieceTypes: ['sapphire', 'emerald', 'topaz', 'amethyst', 'pearl'],
       objectives: [
-        { id: 'score-target', kind: 'score', targetScore: 700 },
+        { id: 'score-target', kind: 'score', targetScore: 3500 },
         { id: 'collect-sapphire', kind: 'collect-piece', pieceType: 'sapphire', targetCount: 8 },
       ],
       scoring: DEFAULT_SCORING_RULES,
@@ -102,7 +102,7 @@ export const playableLevelCatalog: readonly PlayableLevelContent[] = validatePla
       moveLimit: 10,
       allowedRefillPieceTypes: ['ruby', 'emerald', 'topaz', 'amethyst', 'pearl'],
       objectives: [
-        { id: 'score-target', kind: 'score', targetScore: 900 },
+        { id: 'score-target', kind: 'score', targetScore: 5000 },
         { id: 'collect-emerald', kind: 'collect-piece', pieceType: 'emerald', targetCount: 9 },
       ],
       scoring: DEFAULT_SCORING_RULES,

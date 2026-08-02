@@ -21,7 +21,10 @@ describe('level catalog', () => {
     const archive = getPlayableLevelContent('archive-stabilization');
     expect(archive?.title).toBe('Archive Stabilization');
     expect(archive?.definition.moveLimit).toBe(15);
-    expect(archive?.definition.objectives).toHaveLength(2);
+    expect(archive?.definition.objectives).toEqual([
+      { id: 'score-target', kind: 'score', targetScore: 2500 },
+      { id: 'collect-ruby', kind: 'collect-piece', pieceType: 'ruby', targetCount: 10 },
+    ]);
 
     expect(getPlayableLevelContent('missing-level')).toBeNull();
   });
