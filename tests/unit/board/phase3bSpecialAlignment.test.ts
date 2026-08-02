@@ -139,4 +139,33 @@ describe('Phase 3B special-rule alignment', () => {
     const second = planSpecialPieceCreations({ matches, swap });
     expect(second).toEqual(first);
   });
+
+  it.each([
+    { length: 5, creationColumn: 2 },
+    { length: 6, creationColumn: 2 },
+    { length: 7, creationColumn: 3 },
+    { length: 8, creationColumn: 3 },
+  ] as const)(
+    'classifies a horizontal straight-$length as straight-5-plus wildcard fallback',
+    ({ length, creationColumn }) => {
+      const row = Array.from({ length }, () => 'ruby' as const);
+      const board = standardBoard([row]);
+      const snapshot = Array.from({ length }, (_, column) => board.getPieceAt({ row: 0, column }));
+
+      const result = planSpecialPieceCreations({ matches: findMatchRuns(board) });
+
+      expect(result.groups).toHaveLength(1);
+      expect(result.groups[0].shape).toBe('straight-5-plus');
+      expect(result.specialCreations).toHaveLength(1);
+
+      const creation = result.specialCreations[0];
+      expect(creation.specialPiece).toEqual({ kind: 'wildcard', pieceType: 'ruby' });
+      expect(creation.creationCoordinate).toEqual({ row: 0, column: creationColumn });
+      expect(creation.consumedCoordinates).toHaveLength(length - 1);
+
+      for (let column = 0; column < length; column += 1) {
+        expect(board.getPieceAt({ row: 0, column })).toEqual(snapshot[column]);
+      }
+    },
+  );
 });

@@ -179,6 +179,7 @@
 ## Remaining Confirmed Limitations
 
 - Phase 3A.1 longer Fantasy score goals (2,500 / 3,500 / 5,000) remain provisional. Phase 3B aligns special rules (perpendicular line clears, full `cross-clear`) without retuning those goals; human playtesting and a separate rebalance PR are still required.
+- Distinct enhanced six-plus behavior remains reserved; current six-plus straight runs intentionally use the existing wildcard fallback.
 - Only score and collection objectives are implemented.
 - No blockers or hazards are implemented.
 - No timed levels are implemented.

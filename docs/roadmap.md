@@ -36,9 +36,11 @@
   with unchanged collection targets and scoring rules. Values remain provisional playtest targets.
 - Phase 3B is the current special-rule alignment pass on the existing Phase 1D–1H engine:
   perpendicular straight-four line clears, full row+column `cross-clear` for T/L/cross matches,
-  preserved wildcard type-targeting, legacy `area-clear` decode compatibility, and Fantasy
-  presentation labels. Level goals and scoring constants are unchanged; a separate rebalance PR
-  should follow human playtesting. Combination _expansion_ remains later scope.
+  preserved wildcard type-targeting for straight five-or-more (`straight-5-plus`, including
+  current six/seven/eight fallback), legacy `area-clear` decode compatibility, and Fantasy
+  presentation labels. A distinct enhanced six-plus effect remains reserved. Level goals and
+  scoring constants are unchanged; a separate rebalance PR should follow human playtesting.
+  Combination _expansion_ remains later scope.
   (Distinct from any later data-driven content work also informally called “3B” in older notes.)
   AI and voice remain later optional overlays and do not affect balance authority.
   See [level-balance-baseline.md](level-balance-baseline.md) and
