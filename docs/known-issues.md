@@ -149,7 +149,7 @@
 
 7. Distinct special-effect presentation exists
 
-- Scope: directional line-clear beams, area-clear shockwave, wildcard target marking, and full-board wildcard wave.
+- Scope: directional line-clear beams, cross-clear sigil beams, wildcard target marking, and full-board wildcard wave.
 
 8. Individual reshuffle animation exists
 
@@ -178,7 +178,7 @@
 
 ## Remaining Confirmed Limitations
 
-- Phase 3A.1 longer Fantasy score goals (2,500 / 3,500 / 5,000) are provisional until human playtesting and the future special-rule alignment pass are complete.
+- Phase 3A.1 longer Fantasy score goals (2,500 / 3,500 / 5,000) remain provisional. Phase 3B aligns special rules (perpendicular line clears, full `cross-clear`) without retuning those goals; human playtesting and a separate rebalance PR are still required.
 - Only score and collection objectives are implemented.
 - No blockers or hazards are implemented.
 - No timed levels are implemented.
