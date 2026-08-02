@@ -178,6 +178,7 @@
 
 ## Remaining Confirmed Limitations
 
+- Phase 3A.1 longer Fantasy score goals (2,500 / 3,500 / 5,000) are provisional until human playtesting and the future special-rule alignment pass are complete.
 - Only score and collection objectives are implemented.
 - No blockers or hazards are implemented.
 - No timed levels are implemented.

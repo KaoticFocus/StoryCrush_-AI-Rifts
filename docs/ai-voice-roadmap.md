@@ -53,6 +53,10 @@ The following remain explicitly out of scope for this roadmap phase:
 
 Deliver fresh boards during ordinary play, explicit fixed seeds only for tests or diagnostics, multiple Fantasy level configurations, and data-selected levels instead of one hardcoded prototype.
 
+### Phase 3A.1 — Longer Fantasy Level Goals
+
+Lengthen the three Fantasy score goals as first-pass playtest values while reusing the existing special-piece engine. Special-rule alignment and genre presentation remain a later dedicated phase.
+
 ### Phase 3B — Data-Driven Content and Event Contracts
 
 Deliver typed data for universes, chapters, levels, characters, dialogue, choices, Rifts, objectives, destinations, voice-profile metadata, authored subtitles, fallback lines, event priorities, and AI-eligibility flags.

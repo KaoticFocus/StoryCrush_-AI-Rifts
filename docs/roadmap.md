@@ -30,6 +30,16 @@
   puzzle-lab isolation, and the menu-to-map-to-story-to-puzzle-to-results-to-consequence loop.
   Phase 2B adds durable browser persistence with restore-on-startup, continue-state availability,
   migration-tolerant storage handling, shared coordinator lifecycle, and persistence-coordinator auto-save behavior.
+- Phase 3A is complete and merged: fresh boards, three Fantasy levels, Puzzle Lab selection,
+  schema-v3 active-run persistence, and accessibility/lifecycle audit corrections.
+- Phase 3A.1 is the current longer-level balance pass: first-pass score goals of 2,500 / 3,500 / 5,000
+  with unchanged collection targets and scoring rules. Values are provisional playtest targets.
+  Existing special-piece architecture from Phase 1D–1H must be reused; the next dedicated gameplay
+  phase is special-rule alignment and genre-specific presentation, not a duplicate special system.
+  Later balance must account for higher score output from aligned specials and combinations.
+  AI and voice remain later optional overlays and do not affect balance authority.
+  See [level-balance-baseline.md](level-balance-baseline.md) and
+  [special-pieces-and-level-balance.md](special-pieces-and-level-balance.md).
 
 ## Phase 0B - Foundation Scaffold
 
