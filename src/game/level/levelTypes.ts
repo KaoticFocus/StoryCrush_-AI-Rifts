@@ -37,9 +37,16 @@ export interface ScoringRules {
   /**
    * @deprecated Alias for crossClearActivationBonus. Accepted on input for compatibility;
    * validateScoringRules normalizes to crossClearActivationBonus.
+   * Rejected when present alongside a different crossClearActivationBonus.
    */
   areaClearActivationBonus?: number;
 }
+
+/** Compatibility input for validateScoringRules (canonical and/or legacy cross bonus). */
+export type ScoringRulesValidationInput = Omit<ScoringRules, 'crossClearActivationBonus'> & {
+  crossClearActivationBonus?: number;
+  areaClearActivationBonus?: number;
+};
 
 export interface LevelReshuffleRules {
   maxRandomAttempts?: number;

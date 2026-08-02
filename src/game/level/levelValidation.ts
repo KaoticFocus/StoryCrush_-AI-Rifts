@@ -7,6 +7,7 @@ import {
   LevelObjectiveDefinition,
   LevelSessionState,
   ScoringRules,
+  ScoringRulesValidationInput,
   ScoreObjectiveDefinition,
 } from './levelTypes';
 
@@ -100,7 +101,7 @@ function validateObjective(objective: LevelObjectiveDefinition, index: number): 
   );
 }
 
-export function validateScoringRules(rules: ScoringRules): ScoringRules {
+export function validateScoringRules(rules: ScoringRulesValidationInput): ScoringRules {
   assertSafePositiveInteger(
     rules.pointsPerRemovedPiece,
     'pointsPerRemovedPiece',
@@ -111,8 +112,15 @@ export function validateScoringRules(rules: ScoringRules): ScoringRules {
     'lineClearActivationBonus',
     'invalid-scoring-rules',
   );
-  const crossClearActivationBonus =
-    rules.crossClearActivationBonus ?? rules.areaClearActivationBonus;
+  const canonical = rules.crossClearActivationBonus;
+  const legacy = rules.areaClearActivationBonus;
+  if (canonical !== undefined && legacy !== undefined && canonical !== legacy) {
+    throw new BoardDomainError(
+      'invalid-scoring-rules',
+      `conflicting cross-clear activation bonuses: crossClearActivationBonus=${String(canonical)} and areaClearActivationBonus=${String(legacy)}`,
+    );
+  }
+  const crossClearActivationBonus = canonical ?? legacy;
   if (crossClearActivationBonus === undefined) {
     throw new BoardDomainError(
       'invalid-scoring-rules',

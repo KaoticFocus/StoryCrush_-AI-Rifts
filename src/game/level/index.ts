@@ -32,6 +32,7 @@ export type {
   ScoreEvent,
   ScoreObjectiveDefinition,
   ScoringRules,
+  ScoringRulesValidationInput,
   SpecialActivationScoreEvent,
   TerminalLevelMoveResult,
 } from './levelTypes';

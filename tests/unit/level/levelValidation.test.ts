@@ -120,4 +120,56 @@ describe('validateScoringRules', () => {
       }),
     ).toThrowError(BoardDomainError);
   });
+
+  it('accepts canonical-only, legacy-only, and equal alias scoring inputs', () => {
+    const canonicalOnly = validateScoringRules({ ...DEFAULT_SCORING_RULES });
+    expect(canonicalOnly).toEqual(DEFAULT_SCORING_RULES);
+    expect(canonicalOnly).not.toHaveProperty('areaClearActivationBonus');
+
+    const legacyOnly = validateScoringRules({
+      pointsPerRemovedPiece: 10,
+      lineClearActivationBonus: 40,
+      wildcardActivationBonus: 60,
+      cascadeMultiplierIncrement: 1,
+      areaClearActivationBonus: 50,
+    });
+    expect(legacyOnly).toEqual(DEFAULT_SCORING_RULES);
+    expect(legacyOnly).not.toHaveProperty('areaClearActivationBonus');
+
+    const bothEqual = validateScoringRules({
+      ...DEFAULT_SCORING_RULES,
+      areaClearActivationBonus: 50,
+    });
+    expect(bothEqual).toEqual(DEFAULT_SCORING_RULES);
+    expect(bothEqual).not.toHaveProperty('areaClearActivationBonus');
+  });
+
+  it('rejects conflicting and missing cross-clear activation bonuses', () => {
+    expect(() =>
+      validateScoringRules({
+        ...DEFAULT_SCORING_RULES,
+        crossClearActivationBonus: 50,
+        areaClearActivationBonus: 99,
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: 'invalid-scoring-rules',
+        message: expect.stringContaining('conflicting cross-clear activation bonuses'),
+      }),
+    );
+
+    expect(() =>
+      validateScoringRules({
+        pointsPerRemovedPiece: 10,
+        lineClearActivationBonus: 40,
+        wildcardActivationBonus: 60,
+        cascadeMultiplierIncrement: 1,
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: 'invalid-scoring-rules',
+        message: expect.stringContaining('crossClearActivationBonus'),
+      }),
+    );
+  });
 });
