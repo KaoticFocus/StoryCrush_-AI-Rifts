@@ -51,13 +51,11 @@ function collectBrowserErrors(page: Page): { assertNone(): void } {
 
 const levelControls = (page: Page) => page.getByRole('button', { name: /^Play / });
 
-async function submitExpectedMove(page: Page): Promise<void> {
+async function pieceCenterOnCanvas(
+  page: Page,
+  coordinate: readonly [number, number],
+): Promise<{ x: number; y: number; clientX: number; clientY: number }> {
   const status = getTestStatus(page);
-  const from = (await status.getAttribute('data-expected-move-from'))?.split(':').map(Number);
-  const to = (await status.getAttribute('data-expected-move-to'))?.split(':').map(Number);
-  if (!from || !to || from.length !== 2 || to.length !== 2) {
-    throw new Error('Expected generated board move diagnostics');
-  }
   const numberAttribute = async (name: string) => Number(await status.getAttribute(`data-${name}`));
   const logicalWidth = await numberAttribute('logical-canvas-width');
   const logicalHeight = await numberAttribute('logical-canvas-height');
@@ -67,16 +65,51 @@ async function submitExpectedMove(page: Page): Promise<void> {
   const canvas = page.locator('canvas');
   const bounds = await canvas.boundingBox();
   if (!bounds) throw new Error('Expected Phaser canvas bounds');
-  const click = async ([row, column]: number[]) => {
-    await canvas.click({
-      position: {
-        x: ((boardX + column * cellSize + cellSize / 2) / logicalWidth) * bounds.width,
-        y: ((boardY + row * cellSize + cellSize / 2) / logicalHeight) * bounds.height,
-      },
-    });
-  };
-  await click(from);
-  await click(to);
+  const [row, column] = coordinate;
+  const x = ((boardX + column * cellSize + cellSize / 2) / logicalWidth) * bounds.width;
+  const y = ((boardY + row * cellSize + cellSize / 2) / logicalHeight) * bounds.height;
+  return { x, y, clientX: bounds.x + x, clientY: bounds.y + y };
+}
+
+async function assertCanvasOwnsPieceCenter(page: Page, coordinate: readonly [number, number]) {
+  const point = await pieceCenterOnCanvas(page, coordinate);
+  const top = await page.evaluate(
+    ({ x, y }) => {
+      const el = document.elementFromPoint(x, y);
+      return {
+        tag: el?.tagName ?? 'none',
+        id: el?.id ?? '',
+        className: typeof el?.className === 'string' ? el.className : '',
+      };
+    },
+    { x: point.clientX, y: point.clientY },
+  );
+  expect(
+    top,
+    `piece center ${coordinate.join(':')} intercepted by ${JSON.stringify(top)}`,
+  ).toMatchObject({ tag: 'CANVAS' });
+  return point;
+}
+
+async function submitExpectedMove(page: Page): Promise<void> {
+  const status = getTestStatus(page);
+  const from = (await status.getAttribute('data-expected-move-from'))?.split(':').map(Number);
+  const to = (await status.getAttribute('data-expected-move-to'))?.split(':').map(Number);
+  if (!from || !to || from.length !== 2 || to.length !== 2) {
+    throw new Error('Expected generated board move diagnostics');
+  }
+  const canvas = page.locator('canvas');
+  const fromPoint = await assertCanvasOwnsPieceCenter(page, from as [number, number]);
+  await canvas.click({ position: { x: fromPoint.x, y: fromPoint.y } });
+  await expect(status).toHaveAttribute('data-selected-coordinate', `${from[0]}:${from[1]}`);
+  const toPoint = await assertCanvasOwnsPieceCenter(page, to as [number, number]);
+  const movesBefore = await status.getAttribute('data-moves-remaining');
+  const hashBefore = await status.getAttribute('data-current-board-hash');
+  await canvas.click({ position: { x: toPoint.x, y: toPoint.y } });
+  await expect(status).toHaveAttribute('data-last-move-accepted', 'true');
+  await expect(status).toHaveAttribute('data-playback-state', 'idle');
+  await expect(status).not.toHaveAttribute('data-moves-remaining', movesBefore ?? '');
+  await expect(status).not.toHaveAttribute('data-current-board-hash', hashBefore ?? '');
 }
 
 test('single click opens Puzzle Lab selector without launching a level', async ({ page }) => {
@@ -260,6 +293,41 @@ test('selects and plays every Fantasy level with visible run details', async ({ 
     await page.keyboard.press('m');
     await waitForSceneReady(page, 'main-menu');
   }
+});
+
+test('Puzzle Lab pointer path selects pieces and accepts a real swap', async ({
+  page,
+}, testInfo) => {
+  testInfo.setTimeout(60_000);
+  const errors = collectBrowserErrors(page);
+  // Normal catalog launch — not a fixture deep-link — reproduces production Lab entry.
+  await page.goto(buildE2EUrl());
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle-lab');
+  await page.getByRole('button', { name: 'Play Archive Stabilization' }).click();
+  const status = await waitForSceneReady(page, 'puzzle');
+  await expect(status).toHaveAttribute('data-level-id', 'archive-stabilization');
+  await expect(status).toHaveAttribute('data-level-status', 'active');
+
+  const movesAtStart = await status.getAttribute('data-moves-remaining');
+  await submitExpectedMove(page);
+  await expect(status).not.toHaveAttribute('data-moves-remaining', movesAtStart ?? '');
+
+  await page.keyboard.press('r');
+  await expect(status).toHaveAttribute('data-restart-count', '1');
+  await expect(status).toHaveAttribute('data-playback-state', 'idle');
+  await submitExpectedMove(page);
+
+  await page.keyboard.press('b');
+  await expect(status).toHaveAttribute('data-new-board-count', '1');
+  await expect(status).toHaveAttribute('data-level-id', 'archive-stabilization');
+  await expect(status).toHaveAttribute('data-playback-state', 'idle');
+  await submitExpectedMove(page);
+
+  await page.keyboard.press('m');
+  await waitForSceneReady(page, 'main-menu');
+  errors.assertNone();
 });
 
 test('longer level goals render and survive restart, new board, and campaign restore', async ({

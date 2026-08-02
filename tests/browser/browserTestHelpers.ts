@@ -1,4 +1,4 @@
-/* global URLSearchParams */
+/* global URLSearchParams, process */
 import { expect, type Locator, type Page } from '@playwright/test';
 
 export interface E2EPageOptions {
@@ -11,6 +11,11 @@ export interface E2EPageOptions {
 }
 
 export const statusSelector = '#storycrush-test-status';
+
+/** Base URL actually used by Playwright (local webServer or PLAYWRIGHT_BASE_URL). */
+export function getBrowserBaseURL(): string {
+  return process.env.PLAYWRIGHT_BASE_URL?.trim() || 'http://127.0.0.1:4173';
+}
 
 export function buildE2EUrl(options: E2EPageOptions = {}): string {
   const query = new URLSearchParams([['e2e', '1']]);

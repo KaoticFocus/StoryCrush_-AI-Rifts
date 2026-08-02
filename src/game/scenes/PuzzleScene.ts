@@ -160,6 +160,14 @@ export class PuzzleScene extends Phaser.Scene {
       this.launchContext?.mode === 'browser-fixture'
         ? null
         : getPlayableLevelContent(this.launchContext?.run.levelId);
+    // Scene instances are reused; always clear presentation/input latches on (re)entry.
+    this.presentationState = createPuzzlePresentationState();
+    this.inputLocked = false;
+    this.hasError = false;
+    this.selectedCoordinate = null;
+    this.rejectedCoordinates = [];
+    this.displayBoardOverride = null;
+    this.hudStateOverride = null;
     this.cameras.main.setBackgroundColor('#020617');
     this.initializePresentationSettings();
     this.sceneGeneration += 1;
