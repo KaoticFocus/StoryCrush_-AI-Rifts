@@ -45,9 +45,11 @@
 - Phase RH-0 is the active draft foundation for deterministic **Rift Hunger** / Rift Erosion:
   optional threat definition and session state, accepted-move countdown, telegraph-locked
   orthogonal row-major spread targeting, hunger / contained / overwhelmed status, objective-win
-  priority over pending spread, and a pure protection contract. No Phaser threat UI, cleansing,
-  catalog pressure level, or boss behavior yet. Corruption is a cell overlay; pieces are unchanged.
-  Existing Fantasy levels remain threat-free. Product direction:
+  priority over pending spread, full definition/state/board relationship validation at runtime
+  boundaries, and a pure protection contract that rejects false containment. No Phaser threat UI,
+  cleansing, catalog pressure level, or boss behavior yet (RH-1+). Corruption is a cell overlay;
+  pieces are unchanged. Existing Fantasy levels remain threat-free. Persistence stays schema v3
+  descriptor-only. Product direction:
   [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
   AI and voice remain later optional overlays and do not affect balance or threat authority.
 

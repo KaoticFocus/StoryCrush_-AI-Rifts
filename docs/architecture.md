@@ -650,13 +650,16 @@ Contract highlights:
 - Corruption is a **cell overlay**; the underlying board piece is unchanged in RH-0.
 - Source cells begin corrupted and do **not** increase `hungerCurrent`.
 - Countdown advances only on accepted authoritative moves (once per move; cascades do not add turns).
-- Threatened cell is telegraph-locked until spread or ineligibility (corrupted/protected).
-- Spread targeting uses orthogonal frontier, excluding corrupted and protected cells, in stable row-major order.
+- Threatened cell is telegraph-locked until spread; it must remain a member of the eligible orthogonal frontier.
+- `validateRiftHungerStateRelationship` enforces definition/state/board invariants at level-session boundaries and inside `advanceRiftHungerForAcceptedMove` (entry and return). Malformed OOB, diagonal, disconnected, or non-frontier telegraphs are rejected rather than silently repaired.
+- State `sourceCells` must match definition sources; every source must remain in `corruptedCells`.
+- Status invariants: `active` requires a frontier telegraph and countdown in `1..spreadInterval`; `contained` requires null telegraph, countdown `0`, and no remaining uncorrupted orthogonal frontier; `overwhelmed` requires null telegraph, countdown `0`, and `hungerCurrent >= hungerMaximum`. Initially contained boards use countdown `0`.
+- Spread targeting uses orthogonal frontier, excluding corrupted and protected cells, in stable row-major order. After a spread, the next telegraph is chosen from post-tick protection eligibility.
 - Completing all objectives on the same accepted move wins **before** pending threat advancement.
 - Overwhelm fails the level when objectives remain incomplete; move exhaustion is evaluated after threat processing.
-- Protection uses accepted-move remaining cycles (no timers). Special-creation wiring is deferred.
-- Phaser telegraph/HUD/corruption presentation, cleansing, catalog pressure levels, and bosses are out of RH-0.
-- Persistence: schema v3 still stores only `LevelRunDescriptor`; mid-level threat state is not saved.
+- Protection uses accepted-move remaining cycles (no timers). `addOrRefreshRiftHungerProtection` validates relationships, rejects protecting corrupted cells, retargets immediately when protecting the current telegraph (countdown unchanged), and rejects final-frontier protection that would create false containment until pause/reactivation semantics exist. Special-creation wiring is deferred.
+- Phaser telegraph/HUD/corruption presentation, cleansing, catalog pressure levels, and bosses are out of RH-0 (RH-1+).
+- Persistence: schema v3 still stores only `LevelRunDescriptor`; mid-level threat state is not saved. Existing Fantasy catalog levels remain threat-free.
 
 Product direction: [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
 
