@@ -30,10 +30,23 @@ export type LevelObjectiveDefinition = ScoreObjectiveDefinition | CollectPieceOb
 export interface ScoringRules {
   pointsPerRemovedPiece: number;
   lineClearActivationBonus: number;
-  areaClearActivationBonus: number;
+  /** Activation bonus for T/L/cross shaped specials (canonical cross-clear). */
+  crossClearActivationBonus: number;
   wildcardActivationBonus: number;
   cascadeMultiplierIncrement: number;
+  /**
+   * @deprecated Alias for crossClearActivationBonus. Accepted on input for compatibility;
+   * validateScoringRules normalizes to crossClearActivationBonus.
+   * Rejected when present alongside a different crossClearActivationBonus.
+   */
+  areaClearActivationBonus?: number;
 }
+
+/** Compatibility input for validateScoringRules (canonical and/or legacy cross bonus). */
+export type ScoringRulesValidationInput = Omit<ScoringRules, 'crossClearActivationBonus'> & {
+  crossClearActivationBonus?: number;
+  areaClearActivationBonus?: number;
+};
 
 export interface LevelReshuffleRules {
   maxRandomAttempts?: number;
@@ -81,7 +94,7 @@ export interface SpecialActivationScoreEvent {
   kind: 'special-activation';
   stepIndex: number;
   activationIndex: number;
-  specialKind: 'line-clear' | 'area-clear' | 'wildcard';
+  specialKind: 'line-clear' | 'cross-clear' | 'wildcard';
   activationReason: SpecialActivationReason;
   baseBonus: number;
   multiplier: number;

@@ -32,11 +32,16 @@
   migration-tolerant storage handling, shared coordinator lifecycle, and persistence-coordinator auto-save behavior.
 - Phase 3A is complete and merged: fresh boards, three Fantasy levels, Puzzle Lab selection,
   schema-v3 active-run persistence, and accessibility/lifecycle audit corrections.
-- Phase 3A.1 is the current longer-level balance pass: first-pass score goals of 2,500 / 3,500 / 5,000
-  with unchanged collection targets and scoring rules. Values are provisional playtest targets.
-  Existing special-piece architecture from Phase 1D–1H must be reused; the next dedicated gameplay
-  phase is special-rule alignment and genre-specific presentation, not a duplicate special system.
-  Later balance must account for higher score output from aligned specials and combinations.
+- Phase 3A.1 longer-level balance is merged: first-pass score goals of 2,500 / 3,500 / 5,000
+  with unchanged collection targets and scoring rules. Values remain provisional playtest targets.
+- Phase 3B is the current special-rule alignment pass on the existing Phase 1D–1H engine:
+  perpendicular straight-four line clears, full row+column `cross-clear` for T/L/cross matches,
+  preserved wildcard type-targeting for straight five-or-more (`straight-5-plus`, including
+  current six/seven/eight fallback), legacy `area-clear` decode compatibility, and Fantasy
+  presentation labels. A distinct enhanced six-plus effect remains reserved. Level goals and
+  scoring constants are unchanged; a separate rebalance PR should follow human playtesting.
+  Combination _expansion_ remains later scope.
+  (Distinct from any later data-driven content work also informally called “3B” in older notes.)
   AI and voice remain later optional overlays and do not affect balance authority.
   See [level-balance-baseline.md](level-balance-baseline.md) and
   [special-pieces-and-level-balance.md](special-pieces-and-level-balance.md).

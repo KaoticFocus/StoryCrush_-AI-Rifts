@@ -35,12 +35,14 @@ export { planSpecialPieceCreations, selectSpecialCreationCoordinate } from './sp
 export { SeededRandom } from './seededRandom';
 export {
   createAreaClearPiece,
+  createCrossClearPiece,
   createBoardPieceFromPlan,
   createLineClearPiece,
   createStandardPiece,
   createWildcardPiece,
   getPieceType,
   isAreaClearPiece,
+  isCrossClearPiece,
   isLineClearPiece,
   isSpecialPiece,
   isStandardPiece,
@@ -79,6 +81,7 @@ export {
   type LineClearBoardPiece,
   type WildcardBoardPiece,
   type AreaClearBoardPiece,
+  type CrossClearBoardPiece,
   type SpecialBoardPiece,
   type PieceInventory,
   type PieceInventoryKey,

@@ -21,9 +21,9 @@ function formatScoreLabel(event: ScoreEvent): string {
   const baseLabel =
     event.specialKind === 'line-clear'
       ? 'Line Clear'
-      : event.specialKind === 'area-clear'
-        ? 'Area Clear'
-        : 'Wildcard';
+      : event.specialKind === 'cross-clear'
+        ? 'Sigil Cross'
+        : 'Lightning Core';
 
   return event.multiplier > 1
     ? `+${event.awardedPoints} ${baseLabel} ×${event.multiplier}`

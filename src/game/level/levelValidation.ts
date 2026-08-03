@@ -7,13 +7,14 @@ import {
   LevelObjectiveDefinition,
   LevelSessionState,
   ScoringRules,
+  ScoringRulesValidationInput,
   ScoreObjectiveDefinition,
 } from './levelTypes';
 
 export const DEFAULT_SCORING_RULES: ScoringRules = {
   pointsPerRemovedPiece: 10,
   lineClearActivationBonus: 40,
-  areaClearActivationBonus: 50,
+  crossClearActivationBonus: 50,
   wildcardActivationBonus: 60,
   cascadeMultiplierIncrement: 1,
 };
@@ -100,7 +101,7 @@ function validateObjective(objective: LevelObjectiveDefinition, index: number): 
   );
 }
 
-export function validateScoringRules(rules: ScoringRules): ScoringRules {
+export function validateScoringRules(rules: ScoringRulesValidationInput): ScoringRules {
   assertSafePositiveInteger(
     rules.pointsPerRemovedPiece,
     'pointsPerRemovedPiece',
@@ -111,9 +112,24 @@ export function validateScoringRules(rules: ScoringRules): ScoringRules {
     'lineClearActivationBonus',
     'invalid-scoring-rules',
   );
+  const canonical = rules.crossClearActivationBonus;
+  const legacy = rules.areaClearActivationBonus;
+  if (canonical !== undefined && legacy !== undefined && canonical !== legacy) {
+    throw new BoardDomainError(
+      'invalid-scoring-rules',
+      `conflicting cross-clear activation bonuses: crossClearActivationBonus=${String(canonical)} and areaClearActivationBonus=${String(legacy)}`,
+    );
+  }
+  const crossClearActivationBonus = canonical ?? legacy;
+  if (crossClearActivationBonus === undefined) {
+    throw new BoardDomainError(
+      'invalid-scoring-rules',
+      'crossClearActivationBonus (or legacy areaClearActivationBonus) is required',
+    );
+  }
   assertSafeNonNegativeInteger(
-    rules.areaClearActivationBonus,
-    'areaClearActivationBonus',
+    crossClearActivationBonus,
+    'crossClearActivationBonus',
     'invalid-scoring-rules',
   );
   assertSafeNonNegativeInteger(
@@ -130,7 +146,7 @@ export function validateScoringRules(rules: ScoringRules): ScoringRules {
   return {
     pointsPerRemovedPiece: rules.pointsPerRemovedPiece,
     lineClearActivationBonus: rules.lineClearActivationBonus,
-    areaClearActivationBonus: rules.areaClearActivationBonus,
+    crossClearActivationBonus,
     wildcardActivationBonus: rules.wildcardActivationBonus,
     cascadeMultiplierIncrement: rules.cascadeMultiplierIncrement,
   };

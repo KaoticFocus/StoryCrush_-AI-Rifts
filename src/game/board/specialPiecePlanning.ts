@@ -63,10 +63,17 @@ function determineSpecialPiece(
   }
 
   if (shape === 'straight-4') {
+    // Stored orientation is the cleared line (perpendicular to the creating match).
+    if (!primaryOrientation) {
+      throw new BoardDomainError(
+        'invalid-special-piece-plan',
+        'straight-4 matches require a primary orientation',
+      );
+    }
     return {
       kind: 'line-clear',
       pieceType: group.pieceType,
-      orientation: primaryOrientation,
+      orientation: primaryOrientation === 'horizontal' ? 'vertical' : 'horizontal',
     };
   }
 
@@ -79,7 +86,7 @@ function determineSpecialPiece(
 
   if (shape === 'l-shape' || shape === 't-shape' || shape === 'cross-shape') {
     return {
-      kind: 'area-clear',
+      kind: 'cross-clear',
       pieceType: group.pieceType,
     };
   }
@@ -96,7 +103,7 @@ function determineSpecialPiece(
     group.runs.some((run) => run.orientation === 'vertical')
   ) {
     return {
-      kind: 'area-clear',
+      kind: 'cross-clear',
       pieceType: group.pieceType,
     };
   }
@@ -106,7 +113,7 @@ function determineSpecialPiece(
     return {
       kind: 'line-clear',
       pieceType: group.pieceType,
-      orientation: lineRun.orientation,
+      orientation: lineRun.orientation === 'horizontal' ? 'vertical' : 'horizontal',
     };
   }
 

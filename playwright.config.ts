@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const preview = process.env.PLAYWRIGHT_PREVIEW === '1';
 const externalBaseURL = process.env.PLAYWRIGHT_BASE_URL?.trim();
-const port = preview ? 4174 : 4173;
+const port = preview ? 4181 : 4180;
 const baseURL = externalBaseURL || `http://127.0.0.1:${port}`;
 
 export default defineConfig({
@@ -28,9 +28,10 @@ export default defineConfig({
   webServer: externalBaseURL
     ? undefined
     : {
+        // Explicit ports: package.json manual `dev` uses 5180; Playwright must stay on 4180/4181.
         command: preview
-          ? 'npm run build && npm run preview -- --host 127.0.0.1 --port 4174'
-          : 'npm run dev -- --host 127.0.0.1 --port 4173',
+          ? 'npm run build && npm run preview -- --host 127.0.0.1 --port 4181 --strictPort'
+          : 'npm run dev -- --host 127.0.0.1 --port 4180 --strictPort',
         url: `http://127.0.0.1:${port}`,
         reuseExistingServer: true,
       },

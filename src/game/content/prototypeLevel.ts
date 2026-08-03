@@ -1,6 +1,6 @@
 import {
   Board,
-  createAreaClearPiece,
+  createCrossClearPiece,
   createLineClearPiece,
   createWildcardPiece,
   type BoardPiece,
@@ -82,7 +82,7 @@ const prototypeGrid: BoardPiece[][] = [
     { kind: 'standard', pieceType: 'amethyst' },
     { kind: 'standard', pieceType: 'pearl' },
     createLineClearPiece('ruby', 'horizontal'),
-    createAreaClearPiece('sapphire'),
+    createCrossClearPiece('sapphire'),
   ],
   [
     { kind: 'standard', pieceType: 'sapphire' },

@@ -14,6 +14,12 @@ export const BALANCE_PROBE_SEEDS: readonly number[] = [
   3001, 3109, 3203, 3307, 3401,
 ];
 
+export interface BalanceProbeSpecialCounts {
+  lineClear: number;
+  crossClear: number;
+  wildcard: number;
+}
+
 export interface BalanceProbeRunResult {
   levelId: string;
   seed: number;
@@ -26,6 +32,8 @@ export interface BalanceProbeRunResult {
   scoreComplete: boolean;
   specialsCreated: number;
   specialsActivated: number;
+  specialsCreatedByKind: BalanceProbeSpecialCounts;
+  specialsActivatedByKind: BalanceProbeSpecialCounts;
   cascadeSteps: number;
 }
 
@@ -43,12 +51,35 @@ export interface BalanceProbeLevelSummary {
   collectionCompleteCount: number;
   specialsCreated: number;
   specialsActivated: number;
+  specialsCreatedByKind: BalanceProbeSpecialCounts;
+  specialsActivatedByKind: BalanceProbeSpecialCounts;
   cascadeSteps: number;
   medianScore: number;
   minScore: number;
   maxScore: number;
   medianMovesUsed: number;
   medianMovesRemainingOnWin: number | null;
+}
+
+function emptySpecialCounts(): BalanceProbeSpecialCounts {
+  return { lineClear: 0, crossClear: 0, wildcard: 0 };
+}
+
+function addSpecialCounts(
+  target: BalanceProbeSpecialCounts,
+  addition: BalanceProbeSpecialCounts,
+): BalanceProbeSpecialCounts {
+  return {
+    lineClear: target.lineClear + addition.lineClear,
+    crossClear: target.crossClear + addition.crossClear,
+    wildcard: target.wildcard + addition.wildcard,
+  };
+}
+
+function countCreatedKind(kind: string, counts: BalanceProbeSpecialCounts): void {
+  if (kind === 'line-clear') counts.lineClear += 1;
+  else if (kind === 'cross-clear') counts.crossClear += 1;
+  else if (kind === 'wildcard') counts.wildcard += 1;
 }
 
 function median(values: readonly number[]): number {
@@ -159,6 +190,8 @@ export function runBalanceProbeForSeed(
   let specialsCreated = 0;
   let specialsActivated = 0;
   let cascadeSteps = 0;
+  const specialsCreatedByKind = emptySpecialCounts();
+  const specialsActivatedByKind = emptySpecialCounts();
 
   while (state.status === 'active' && state.movesRemaining > 0) {
     const choice = chooseBalanceProbeMove({ content, state });
@@ -178,6 +211,14 @@ export function runBalanceProbeForSeed(
       (sum, step) => sum + step.activationEvents.length,
       0,
     );
+    for (const step of result.resolution.steps) {
+      for (const created of step.createdSpecialPieces) {
+        countCreatedKind(created.piece.kind, specialsCreatedByKind);
+      }
+      for (const event of step.activationEvents) {
+        countCreatedKind(event.piece.kind, specialsActivatedByKind);
+      }
+    }
     cascadeSteps += result.resolution.steps.length;
     state = result.nextState;
   }
@@ -199,6 +240,8 @@ export function runBalanceProbeForSeed(
     scoreComplete: Boolean(scoreObjective?.complete),
     specialsCreated,
     specialsActivated,
+    specialsCreatedByKind,
+    specialsActivatedByKind,
     cascadeSteps,
   };
 }
@@ -228,6 +271,14 @@ export function summarizeBalanceProbeRuns(
     collectionCompleteCount: runs.filter((run) => run.collectionComplete).length,
     specialsCreated: runs.reduce((sum, run) => sum + run.specialsCreated, 0),
     specialsActivated: runs.reduce((sum, run) => sum + run.specialsActivated, 0),
+    specialsCreatedByKind: runs.reduce(
+      (sum, run) => addSpecialCounts(sum, run.specialsCreatedByKind),
+      emptySpecialCounts(),
+    ),
+    specialsActivatedByKind: runs.reduce(
+      (sum, run) => addSpecialCounts(sum, run.specialsActivatedByKind),
+      emptySpecialCounts(),
+    ),
     cascadeSteps: runs.reduce((sum, run) => sum + run.cascadeSteps, 0),
     medianScore: median(scores),
     minScore: Math.min(...scores),

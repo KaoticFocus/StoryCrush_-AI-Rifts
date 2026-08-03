@@ -24,14 +24,14 @@ function safeAdd(a: number, b: number, label: string): number {
 }
 
 function getActivationBonus(
-  kind: 'line-clear' | 'area-clear' | 'wildcard',
+  kind: 'line-clear' | 'cross-clear' | 'wildcard',
   rules: ScoringRules,
 ): number {
   switch (kind) {
     case 'line-clear':
       return rules.lineClearActivationBonus;
-    case 'area-clear':
-      return rules.areaClearActivationBonus;
+    case 'cross-clear':
+      return rules.crossClearActivationBonus;
     case 'wildcard':
       return rules.wildcardActivationBonus;
   }

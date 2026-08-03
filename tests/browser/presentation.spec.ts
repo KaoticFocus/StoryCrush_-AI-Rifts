@@ -258,7 +258,7 @@ test('wildcard pair resolves through real canvas input and chains the fixture sp
 });
 
 for (const [id, fixtureId, sourceKinds] of [
-  ['B1-FX-004', 'line-area-combination', 'line-clear,area-clear'],
+  ['B1-FX-004', 'line-area-combination', 'line-clear,cross-clear'],
   ['B1-FX-005', 'wildcard-target', 'wildcard,standard'],
 ] as const) {
   test(`${id} resolves ${fixtureId} through real canvas input`, async ({ page }) => {

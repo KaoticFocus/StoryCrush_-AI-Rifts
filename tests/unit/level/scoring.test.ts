@@ -130,7 +130,7 @@ describe('calculateResolutionScore', () => {
           ...DEFAULT_SCORING_RULES,
           pointsPerRemovedPiece: Number.MAX_SAFE_INTEGER,
           lineClearActivationBonus: Number.MAX_SAFE_INTEGER,
-          areaClearActivationBonus: Number.MAX_SAFE_INTEGER,
+          crossClearActivationBonus: Number.MAX_SAFE_INTEGER,
           wildcardActivationBonus: Number.MAX_SAFE_INTEGER,
         },
       }),

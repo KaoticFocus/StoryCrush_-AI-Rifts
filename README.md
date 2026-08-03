@@ -38,7 +38,7 @@ This foundation build currently validates:
 - Discriminated board-piece storage with defensive cloning and validation
 - Deterministic swap-resolution pipeline with activation-aware cascade history
 - Deterministic playability analysis and dead-board reshuffling with bounded search
-- Deterministic special activation effects (line-clear, area-clear, wildcard)
+- Deterministic special activation effects (line-clear, cross-clear, wildcard)
 - Deterministic direct special combinations (including wildcard combinations)
 - Deterministic special-piece placement during cascades after activation resolution
 - Deterministic score calculation from cascade history
@@ -89,6 +89,14 @@ npm run test:release
 npm run test:release:full
 ```
 
+Local ports (strict; no silent fallback):
+
+```text
+Manual Vite development: http://127.0.0.1:5180
+Playwright development server: http://127.0.0.1:4180
+Vite / Playwright production preview: http://127.0.0.1:4181
+```
+
 ## Play The Prototype
 
 Run the app locally:
@@ -98,7 +106,7 @@ npm install
 npm run dev
 ```
 
-Then open the app and follow this temporary flow:
+Open `http://127.0.0.1:5180`, then follow this temporary flow:
 
 - Main menu
 - Select `Play Prototype`
@@ -110,7 +118,7 @@ Input behavior:
 - Selecting the same cell deselects it.
 - Selecting a non-adjacent cell changes the current selection.
 - Rejected adjacent swaps animate out and back, show brief feedback, and consume no moves.
-- Accepted swaps animate through swap, match highlight, distinct line-clear/area-clear/wildcard effects, removal, special creation, gravity, refill, cascades, deterministic reshuffle movement when needed, and final authoritative synchronization.
+- Accepted swaps animate through swap, match highlight, distinct line-clear/cross-clear/wildcard effects, removal, special creation, gravity, refill, cascades, deterministic reshuffle movement when needed, and final authoritative synchronization.
 - Restart restores the same deterministic prototype level.
 
 Playback controls:
@@ -363,7 +371,7 @@ Default scoring rules:
 
 - `pointsPerRemovedPiece`: 10
 - `lineClearActivationBonus`: 40
-- `areaClearActivationBonus`: 50
+- `crossClearActivationBonus`: 50
 - `wildcardActivationBonus`: 60
 - `cascadeMultiplierIncrement`: 1
 

@@ -14,7 +14,7 @@ export const statusSelector = '#storycrush-test-status';
 
 /** Base URL actually used by Playwright (local webServer or PLAYWRIGHT_BASE_URL). */
 export function getBrowserBaseURL(): string {
-  return process.env.PLAYWRIGHT_BASE_URL?.trim() || 'http://127.0.0.1:4173';
+  return process.env.PLAYWRIGHT_BASE_URL?.trim() || 'http://127.0.0.1:4180';
 }
 
 export function buildE2EUrl(options: E2EPageOptions = {}): string {

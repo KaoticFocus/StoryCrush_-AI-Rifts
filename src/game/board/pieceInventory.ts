@@ -2,7 +2,7 @@ import { Board } from './Board';
 import { BoardPiece, ExactPieceInventory, MatchOrientation, PieceType } from './boardTypes';
 import {
   cloneBoardPiece,
-  createAreaClearPiece,
+  createCrossClearPiece,
   createLineClearPiece,
   createStandardPiece,
   createWildcardPiece,
@@ -27,8 +27,8 @@ export function getPieceInventoryKey(piece: BoardPiece): string {
       return `line-clear:${piece.pieceType}:${piece.orientation}`;
     case 'wildcard':
       return `wildcard:${piece.pieceType}`;
-    case 'area-clear':
-      return `area-clear:${piece.pieceType}`;
+    case 'cross-clear':
+      return `cross-clear:${piece.pieceType}`;
   }
 }
 
@@ -50,7 +50,7 @@ export function createEmptyPieceInventory(): ExactPieceInventory {
   }
 
   for (const pieceType of pieceTypes) {
-    inventory[`area-clear:${pieceType}`] = 0;
+    inventory[`cross-clear:${pieceType}`] = 0;
   }
 
   return inventory;
@@ -90,8 +90,11 @@ export function parsePieceInventoryKey(key: string): BoardPiece {
       return createLineClearPiece(assertPieceType(pieceType), orientation);
     case 'wildcard':
       return createWildcardPiece(assertPieceType(pieceType));
+    case 'cross-clear':
+      return createCrossClearPiece(assertPieceType(pieceType));
     case 'area-clear':
-      return createAreaClearPiece(assertPieceType(pieceType));
+      // Legacy inventory key → canonical cross-clear.
+      return createCrossClearPiece(assertPieceType(pieceType));
     default:
       throw new BoardDomainError('invalid-board-piece', `invalid inventory key: ${key}`);
   }

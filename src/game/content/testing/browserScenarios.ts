@@ -23,7 +23,7 @@ export type BrowserScenarioId =
   | 'multi-cascade'
   | 'horizontal-line-clear'
   | 'vertical-line-clear'
-  | 'area-clear'
+  | 'cross-clear'
   | 'wildcard-target'
   | 'wildcard-pair'
   | 'activation-chain'
@@ -97,12 +97,12 @@ const scenarios: Record<BrowserScenarioId, BrowserScenarioDefinition> = {
     expectedAction: { kind: 'swap', ...lineAreaMove },
     expectedFeatures: ['line-clear', 'orientation'],
   },
-  'area-clear': {
-    id: 'area-clear',
+  'cross-clear': {
+    id: 'cross-clear',
     fixtureId: 'line-area-combination',
-    description: 'Direct area-clear activation.',
+    description: 'Direct cross-clear activation.',
     expectedAction: { kind: 'swap', ...lineAreaMove },
-    expectedFeatures: ['area-clear', 'special-activation'],
+    expectedFeatures: ['cross-clear', 'special-activation'],
   },
   'wildcard-target': {
     id: 'wildcard-target',

@@ -37,12 +37,15 @@ export interface WildcardBoardPiece {
   pieceType: PieceType;
 }
 
-export interface AreaClearBoardPiece {
-  kind: 'area-clear';
+export interface CrossClearBoardPiece {
+  kind: 'cross-clear';
   pieceType: PieceType;
 }
 
-export type SpecialBoardPiece = LineClearBoardPiece | WildcardBoardPiece | AreaClearBoardPiece;
+/** @deprecated Legacy persisted kind; normalize to CrossClearBoardPiece. */
+export type AreaClearBoardPiece = CrossClearBoardPiece;
+
+export type SpecialBoardPiece = LineClearBoardPiece | WildcardBoardPiece | CrossClearBoardPiece;
 
 export type BoardPiece = StandardBoardPiece | SpecialBoardPiece;
 
@@ -276,7 +279,7 @@ export interface ClassifiedMatchGroup {
   maximumRunLength: number;
 }
 
-export type SpecialPieceKind = 'line-clear' | 'wildcard' | 'area-clear';
+export type SpecialPieceKind = 'line-clear' | 'wildcard' | 'cross-clear';
 
 export interface PlannedSpecialPiece {
   kind: SpecialPieceKind;

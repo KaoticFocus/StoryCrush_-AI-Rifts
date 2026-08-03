@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Board } from '../../../src/game/board/Board';
 import { validatePlayableSwap } from '../../../src/game/board/playableSwapValidation';
 import {
-  areaClearPiece,
+  crossClearPiece,
   lineClearPiece,
   standardPiece,
   standardBoard,
@@ -83,7 +83,7 @@ describe('validatePlayableSwap', () => {
 
   it('accepts special combinations and rejects non-wildcard special plus standard without match', () => {
     const specialCombo = Board.fromGrid([
-      [lineClearPiece('ruby', 'horizontal'), areaClearPiece('topaz')],
+      [lineClearPiece('ruby', 'horizontal'), crossClearPiece('topaz')],
       [standardPiece('emerald'), standardPiece('amethyst')],
     ]);
 

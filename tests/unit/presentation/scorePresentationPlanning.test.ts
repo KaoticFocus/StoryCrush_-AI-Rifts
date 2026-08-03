@@ -140,7 +140,7 @@ describe('buildScorePresentationPlan', () => {
     const plan = buildScorePresentationPlan(result);
 
     expect(plan.entries.some((entry) => entry.label.includes('Match'))).toBe(true);
-    expect(plan.entries.some((entry) => entry.label.includes('Wildcard'))).toBe(true);
+    expect(plan.entries.some((entry) => entry.label.includes('Lightning Core'))).toBe(true);
     expect(JSON.parse(JSON.stringify(result.scoreCalculation.events))).toEqual(before);
   });
 });
