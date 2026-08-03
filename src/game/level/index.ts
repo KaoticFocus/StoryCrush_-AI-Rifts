@@ -29,6 +29,7 @@ export {
   compareCoordinates as compareRiftHungerCoordinates,
   validateRiftHungerDefinition,
   validateRiftHungerState,
+  validateRiftHungerStateRelationship,
 } from './riftHungerValidation';
 export type {
   AcceptedLevelMoveResult,

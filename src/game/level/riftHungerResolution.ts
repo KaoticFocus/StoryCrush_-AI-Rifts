@@ -11,37 +11,38 @@ import {
   cloneRiftHungerState,
   compareCoordinates,
   coordinateKey,
+  listEligibleFrontierCells,
+  selectThreatenedCell,
   validateRiftHungerDefinition,
+  validateRiftHungerStateRelationship,
 } from './riftHungerValidation';
-import { selectThreatenedCell, tickRiftHungerProtection } from './riftHungerState';
+import { tickRiftHungerProtection } from './riftHungerState';
 
-function ensureTelegraphStillEligible(input: {
+function isEligibleFrontierMember(input: {
+  coordinate: BoardCoordinate;
   state: RiftHungerState;
   dimensions: BoardDimensions;
-}): BoardCoordinate | null {
-  const threatened = input.state.threatenedCell;
-  if (!threatened) {
-    return selectThreatenedCell({
+}): boolean {
+  const frontier = listEligibleFrontierCells({
+    dimensions: input.dimensions,
+    corruptedCells: input.state.corruptedCells,
+    protectedCells: input.state.protectedCells,
+  });
+  const key = coordinateKey(input.coordinate);
+  return frontier.some((cell) => coordinateKey(cell) === key);
+}
+
+function hasUncorruptedOrthogonalFrontier(input: {
+  state: RiftHungerState;
+  dimensions: BoardDimensions;
+}): boolean {
+  return (
+    listEligibleFrontierCells({
       dimensions: input.dimensions,
       corruptedCells: input.state.corruptedCells,
-      protectedCells: input.state.protectedCells,
-    });
-  }
-
-  const corrupted = new Set(input.state.corruptedCells.map(coordinateKey));
-  const protectedKeys = new Set(
-    input.state.protectedCells.map((entry) => coordinateKey(entry.coordinate)),
+      protectedCells: [],
+    }).length > 0
   );
-  const key = coordinateKey(threatened);
-  if (corrupted.has(key) || protectedKeys.has(key)) {
-    return selectThreatenedCell({
-      dimensions: input.dimensions,
-      corruptedCells: input.state.corruptedCells,
-      protectedCells: input.state.protectedCells,
-    });
-  }
-
-  return cloneCoordinate(threatened);
 }
 
 /**
@@ -50,7 +51,8 @@ function ensureTelegraphStillEligible(input: {
  * Cascades inside that move do not call this again.
  * Rejected/terminal requests must not call this.
  *
- * Telegraph-lock: the threatened cell is retained until spread or ineligibility.
+ * Telegraph-lock: a validated threatened cell is retained until spread or
+ * frontier ineligibility caused by protection expiry handling.
  */
 export function advanceRiftHungerForAcceptedMove(input: {
   definition: RiftHungerDefinition;
@@ -58,38 +60,40 @@ export function advanceRiftHungerForAcceptedMove(input: {
   boardDimensions: BoardDimensions;
 }): RiftHungerTransition {
   const definition = validateRiftHungerDefinition(input.definition, input.boardDimensions);
-  const previousState = cloneRiftHungerState(input.state);
+  const previousState = validateRiftHungerStateRelationship({
+    definition,
+    state: input.state,
+    boardDimensions: input.boardDimensions,
+  });
   const countdownBefore = previousState.acceptedMovesUntilSpread;
 
   if (previousState.status !== 'active') {
+    const nextState = cloneRiftHungerState(previousState);
     return {
       previousState,
-      nextState: cloneRiftHungerState(previousState),
+      nextState,
       countdownBefore,
-      countdownAfter: previousState.acceptedMovesUntilSpread,
+      countdownAfter: nextState.acceptedMovesUntilSpread,
       spreadEvent: null,
       statusBefore: previousState.status,
-      statusAfter: previousState.status,
+      statusAfter: nextState.status,
     };
   }
 
+  // Validated active state always has a locked telegraph on the eligible frontier.
   let working = cloneRiftHungerState(previousState);
-  working.threatenedCell = ensureTelegraphStillEligible({
-    state: working,
-    dimensions: input.boardDimensions,
-  });
-  if (!working.threatenedCell) {
-    working.status = 'contained';
-    working = tickRiftHungerProtection(working);
-    return {
-      previousState,
-      nextState: working,
-      countdownBefore,
-      countdownAfter: working.acceptedMovesUntilSpread,
-      spreadEvent: null,
-      statusBefore: previousState.status,
-      statusAfter: working.status,
-    };
+  if (
+    !working.threatenedCell ||
+    !isEligibleFrontierMember({
+      coordinate: working.threatenedCell,
+      state: working,
+      dimensions: input.boardDimensions,
+    })
+  ) {
+    throw new BoardDomainError(
+      'invalid-level-state',
+      'active rift hunger telegraph is not an eligible frontier cell',
+    );
   }
 
   const nextCountdown = working.acceptedMovesUntilSpread - 1;
@@ -129,6 +133,7 @@ export function advanceRiftHungerForAcceptedMove(input: {
       );
     }
 
+    // Spread uses pre-tick protection (already reflected in the locked telegraph).
     working.corruptedCells = [...working.corruptedCells, target].sort(compareCoordinates);
     working.spreadGeneration = generationAfter;
     working.hungerCurrent = hungerAfter;
@@ -137,6 +142,7 @@ export function advanceRiftHungerForAcceptedMove(input: {
       working.status = 'overwhelmed';
       working.threatenedCell = null;
       working.acceptedMovesUntilSpread = 0;
+      working = tickRiftHungerProtection(working);
       spreadEvent = {
         generation: generationAfter,
         coordinate: target,
@@ -145,17 +151,31 @@ export function advanceRiftHungerForAcceptedMove(input: {
         nextThreatenedCell: null,
       };
     } else {
+      // Tick protection, then choose the next telegraph from post-tick eligibility.
+      working = tickRiftHungerProtection(working);
       const nextThreatened = selectThreatenedCell({
         dimensions: input.boardDimensions,
         corruptedCells: working.corruptedCells,
         protectedCells: working.protectedCells,
       });
-      working.threatenedCell = nextThreatened;
       if (!nextThreatened) {
+        if (
+          hasUncorruptedOrthogonalFrontier({
+            state: working,
+            dimensions: input.boardDimensions,
+          })
+        ) {
+          throw new BoardDomainError(
+            'invalid-level-state',
+            'rift hunger cannot enter contained while uncorrupted orthogonal frontier remains',
+          );
+        }
         working.status = 'contained';
+        working.threatenedCell = null;
         working.acceptedMovesUntilSpread = 0;
       } else {
         working.status = 'active';
+        working.threatenedCell = nextThreatened;
         working.acceptedMovesUntilSpread = definition.spreadInterval;
       }
       spreadEvent = {
@@ -168,28 +188,69 @@ export function advanceRiftHungerForAcceptedMove(input: {
     }
   } else {
     working.acceptedMovesUntilSpread = nextCountdown;
-  }
+    working = tickRiftHungerProtection(working);
 
-  working = tickRiftHungerProtection(working);
-
-  // If protection tick invalidated the telegraph without a spread, retarget once.
-  if (working.status === 'active' && nextCountdown !== 0) {
-    working.threatenedCell = ensureTelegraphStillEligible({
-      state: working,
-      dimensions: input.boardDimensions,
-    });
-    if (!working.threatenedCell) {
-      working.status = 'contained';
+    // Preserve the locked telegraph when it remains eligible after the tick.
+    // Do not retarget merely because another protection entry expired.
+    if (
+      working.threatenedCell &&
+      isEligibleFrontierMember({
+        coordinate: working.threatenedCell,
+        state: working,
+        dimensions: input.boardDimensions,
+      })
+    ) {
+      // keep lock
+    } else {
+      const retarget = selectThreatenedCell({
+        dimensions: input.boardDimensions,
+        corruptedCells: working.corruptedCells,
+        protectedCells: working.protectedCells,
+      });
+      if (!retarget) {
+        if (
+          hasUncorruptedOrthogonalFrontier({
+            state: working,
+            dimensions: input.boardDimensions,
+          })
+        ) {
+          throw new BoardDomainError(
+            'invalid-level-state',
+            'rift hunger cannot enter contained while uncorrupted orthogonal frontier remains',
+          );
+        }
+        working.status = 'contained';
+        working.threatenedCell = null;
+        working.acceptedMovesUntilSpread = 0;
+      } else {
+        working.threatenedCell = retarget;
+      }
     }
   }
 
+  const nextState = validateRiftHungerStateRelationship({
+    definition,
+    state: working,
+    boardDimensions: input.boardDimensions,
+  });
+
   return {
     previousState,
-    nextState: cloneRiftHungerState(working),
+    nextState,
     countdownBefore,
-    countdownAfter: working.acceptedMovesUntilSpread,
-    spreadEvent,
+    countdownAfter: nextState.acceptedMovesUntilSpread,
+    spreadEvent: spreadEvent
+      ? {
+          generation: spreadEvent.generation,
+          coordinate: cloneCoordinate(spreadEvent.coordinate),
+          hungerBefore: spreadEvent.hungerBefore,
+          hungerAfter: spreadEvent.hungerAfter,
+          nextThreatenedCell: spreadEvent.nextThreatenedCell
+            ? cloneCoordinate(spreadEvent.nextThreatenedCell)
+            : null,
+        }
+      : null,
     statusBefore: previousState.status,
-    statusAfter: working.status,
+    statusAfter: nextState.status,
   };
 }

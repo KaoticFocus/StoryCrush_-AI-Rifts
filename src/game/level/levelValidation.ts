@@ -10,7 +10,10 @@ import {
   ScoringRulesValidationInput,
   ScoreObjectiveDefinition,
 } from './levelTypes';
-import { cloneRiftHungerState, validateRiftHungerDefinition } from './riftHungerValidation';
+import {
+  validateRiftHungerDefinition,
+  validateRiftHungerStateRelationship,
+} from './riftHungerValidation';
 
 export const DEFAULT_SCORING_RULES: ScoringRules = {
   pointsPerRemovedPiece: 10,
@@ -331,9 +334,21 @@ export function validateLevelStateRelationship(
     );
   }
 
-  if (state.threatState) {
-    // Defensive clone check — structural validation occurs at threat init/advance.
-    cloneRiftHungerState(state.threatState);
+  if (definition.threat && state.threatState) {
+    validateRiftHungerStateRelationship({
+      definition: definition.threat,
+      state: state.threatState,
+      boardDimensions: state.board.getDimensions(),
+    });
+
+    // An active session cannot carry a terminal overwhelmed threat; that pairing
+    // means prior evaluation was skipped or state was corrupted externally.
+    if (state.status === 'active' && state.threatState.status === 'overwhelmed') {
+      throw new BoardDomainError(
+        'invalid-level-state',
+        'active level session cannot carry overwhelmed rift hunger state',
+      );
+    }
   }
 }
 

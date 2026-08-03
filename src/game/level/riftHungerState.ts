@@ -1,20 +1,19 @@
 import { BoardCoordinate, BoardDimensions } from '../board/boardTypes';
 import { BoardDomainError } from '../board/errors';
+import { assertCoordinateInBounds } from '../board/boardValidation';
 import { RiftHungerDefinition, RiftHungerProtectedCell, RiftHungerState } from './riftHungerTypes';
 import {
   cloneCoordinate,
   cloneRiftHungerState,
   compareCoordinates,
   coordinateKey,
+  listEligibleFrontierCells,
+  selectThreatenedCell,
   validateRiftHungerDefinition,
+  validateRiftHungerStateRelationship,
 } from './riftHungerValidation';
 
-const ORTHOGONAL_DELTAS: ReadonlyArray<readonly [number, number]> = [
-  [-1, 0],
-  [1, 0],
-  [0, -1],
-  [0, 1],
-];
+export { listEligibleFrontierCells, selectThreatenedCell };
 
 function dedupeSortedCoordinates(coordinates: readonly BoardCoordinate[]): BoardCoordinate[] {
   const seen = new Set<string>();
@@ -30,66 +29,10 @@ function dedupeSortedCoordinates(coordinates: readonly BoardCoordinate[]): Board
   return result;
 }
 
-function isInBounds(coordinate: BoardCoordinate, dimensions: BoardDimensions): boolean {
-  return (
-    coordinate.row >= 0 &&
-    coordinate.column >= 0 &&
-    coordinate.row < dimensions.rows &&
-    coordinate.column < dimensions.columns
-  );
-}
-
-function protectedKeySet(protectedCells: readonly RiftHungerProtectedCell[]): Set<string> {
-  return new Set(protectedCells.map((entry) => coordinateKey(entry.coordinate)));
-}
-
-/**
- * Eligible orthogonal frontier in stable row-major order.
- * Excludes already corrupted and protected cells.
- */
-export function listEligibleFrontierCells(input: {
-  dimensions: BoardDimensions;
-  corruptedCells: readonly BoardCoordinate[];
-  protectedCells: readonly RiftHungerProtectedCell[];
-}): BoardCoordinate[] {
-  const corrupted = new Set(input.corruptedCells.map(coordinateKey));
-  const protectedKeys = protectedKeySet(input.protectedCells);
-  const candidates = new Map<string, BoardCoordinate>();
-
-  for (const corruptedCell of input.corruptedCells) {
-    for (const [rowDelta, columnDelta] of ORTHOGONAL_DELTAS) {
-      const candidate = {
-        row: corruptedCell.row + rowDelta,
-        column: corruptedCell.column + columnDelta,
-      };
-      if (!isInBounds(candidate, input.dimensions)) {
-        continue;
-      }
-      const key = coordinateKey(candidate);
-      if (corrupted.has(key) || protectedKeys.has(key)) {
-        continue;
-      }
-      if (!candidates.has(key)) {
-        candidates.set(key, candidate);
-      }
-    }
-  }
-
-  return [...candidates.values()].sort(compareCoordinates).map(cloneCoordinate);
-}
-
-export function selectThreatenedCell(input: {
-  dimensions: BoardDimensions;
-  corruptedCells: readonly BoardCoordinate[];
-  protectedCells: readonly RiftHungerProtectedCell[];
-}): BoardCoordinate | null {
-  const frontier = listEligibleFrontierCells(input);
-  return frontier.length > 0 ? cloneCoordinate(frontier[0]) : null;
-}
-
 /**
  * Source cells begin corrupted but do not increase hungerCurrent.
- * spreadGeneration begins at 0; countdown begins at spreadInterval.
+ * spreadGeneration begins at 0; countdown begins at spreadInterval when active.
+ * Contained initial state uses countdown 0 (no future spread possible).
  */
 export function createInitialRiftHungerState(input: {
   definition: RiftHungerDefinition;
@@ -109,21 +52,30 @@ export function createInitialRiftHungerState(input: {
     sourceCells,
     corruptedCells,
     threatenedCell,
-    acceptedMovesUntilSpread: definition.spreadInterval,
+    acceptedMovesUntilSpread: threatenedCell ? definition.spreadInterval : 0,
     spreadGeneration: 0,
     hungerCurrent: 0,
     protectedCells: [],
   };
 
-  return cloneRiftHungerState(state);
+  return validateRiftHungerStateRelationship({
+    definition,
+    state,
+    boardDimensions: input.boardDimensions,
+  });
 }
 
 /**
  * Add or refresh protection for a cell. Remaining cycles must be a positive safe integer.
  * Special-creation wiring that calls this is deferred; RH-0 exposes the pure contract only.
+ *
+ * Preserves a valid telegraph immediately when protecting the current target.
+ * Rejects final-frontier protection that would create false containment.
  */
 export function addOrRefreshRiftHungerProtection(input: {
+  definition: RiftHungerDefinition;
   state: RiftHungerState;
+  boardDimensions: BoardDimensions;
   coordinate: BoardCoordinate;
   remainingAcceptedMoves: number;
 }): RiftHungerState {
@@ -134,10 +86,26 @@ export function addOrRefreshRiftHungerProtection(input: {
     );
   }
 
-  const next = cloneRiftHungerState(input.state);
-  const key = coordinateKey(input.coordinate);
+  const definition = validateRiftHungerDefinition(input.definition, input.boardDimensions);
+  const previous = validateRiftHungerStateRelationship({
+    definition,
+    state: input.state,
+    boardDimensions: input.boardDimensions,
+  });
+
+  assertCoordinateInBounds(input.coordinate, input.boardDimensions, 'protection coordinate');
+
+  const protectKey = coordinateKey(input.coordinate);
+  if (previous.corruptedCells.some((cell) => coordinateKey(cell) === protectKey)) {
+    throw new BoardDomainError(
+      'invalid-level-state',
+      `cannot protect already corrupted cell ${protectKey}`,
+    );
+  }
+
+  const next = cloneRiftHungerState(previous);
   const existingIndex = next.protectedCells.findIndex(
-    (entry) => coordinateKey(entry.coordinate) === key,
+    (entry) => coordinateKey(entry.coordinate) === protectKey,
   );
 
   const entry: RiftHungerProtectedCell = {
@@ -152,7 +120,44 @@ export function addOrRefreshRiftHungerProtection(input: {
   }
 
   next.protectedCells.sort((a, b) => compareCoordinates(a.coordinate, b.coordinate));
-  return next;
+
+  const uncorruptedFrontier = listEligibleFrontierCells({
+    dimensions: input.boardDimensions,
+    corruptedCells: next.corruptedCells,
+    protectedCells: [],
+  });
+  const eligibleFrontier = listEligibleFrontierCells({
+    dimensions: input.boardDimensions,
+    corruptedCells: next.corruptedCells,
+    protectedCells: next.protectedCells,
+  });
+
+  if (next.status === 'active') {
+    if (eligibleFrontier.length === 0) {
+      // Temporary protection must not create false containment while cells remain.
+      if (uncorruptedFrontier.length > 0) {
+        throw new BoardDomainError(
+          'invalid-level-state',
+          'cannot protect the final eligible frontier cell while uncorrupted cells remain',
+        );
+      }
+      next.status = 'contained';
+      next.threatenedCell = null;
+      next.acceptedMovesUntilSpread = 0;
+    } else {
+      const currentThreatKey = next.threatenedCell ? coordinateKey(next.threatenedCell) : null;
+      if (currentThreatKey === protectKey) {
+        // Retarget immediately; preserve countdown; do not tick or spread.
+        next.threatenedCell = cloneCoordinate(eligibleFrontier[0]);
+      }
+    }
+  }
+
+  return validateRiftHungerStateRelationship({
+    definition,
+    state: next,
+    boardDimensions: input.boardDimensions,
+  });
 }
 
 /** Decrement protection counters after an accepted-move threat advance and drop expired entries. */
