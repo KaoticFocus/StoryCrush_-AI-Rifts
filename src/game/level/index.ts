@@ -13,6 +13,23 @@ export {
   validateLevelDefinition,
   validateScoringRules,
 } from './levelValidation';
+export {
+  addOrRefreshRiftHungerProtection,
+  createInitialRiftHungerState,
+  isCellCorrupted,
+  isCellProtected,
+  listEligibleFrontierCells,
+  selectThreatenedCell,
+  tickRiftHungerProtection,
+} from './riftHungerState';
+export { advanceRiftHungerForAcceptedMove } from './riftHungerResolution';
+export {
+  cloneCoordinate as cloneRiftHungerCoordinate,
+  cloneRiftHungerState,
+  compareCoordinates as compareRiftHungerCoordinates,
+  validateRiftHungerDefinition,
+  validateRiftHungerState,
+} from './riftHungerValidation';
 export type {
   AcceptedLevelMoveResult,
   CollectPieceObjectiveDefinition,
@@ -28,11 +45,17 @@ export type {
   PieceClearScoreEvent,
   PieceCollectionEvent,
   RejectedLevelMoveResult,
+  RiftHungerDefinition,
+  RiftHungerProtectedCell,
+  RiftHungerSpreadEvent,
+  RiftHungerSpreadPriority,
+  RiftHungerState,
+  RiftHungerStatus,
+  RiftHungerTransition,
   ScoreCalculationResult,
   ScoreEvent,
   ScoreObjectiveDefinition,
   ScoringRules,
-  ScoringRulesValidationInput,
   SpecialActivationScoreEvent,
   TerminalLevelMoveResult,
 } from './levelTypes';

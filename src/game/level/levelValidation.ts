@@ -10,6 +10,7 @@ import {
   ScoringRulesValidationInput,
   ScoreObjectiveDefinition,
 } from './levelTypes';
+import { cloneRiftHungerState, validateRiftHungerDefinition } from './riftHungerValidation';
 
 export const DEFAULT_SCORING_RULES: ScoringRules = {
   pointsPerRemovedPiece: 10,
@@ -241,6 +242,9 @@ export function validateLevelDefinition(definition: LevelDefinition): LevelDefin
     );
   }
 
+  const threat =
+    definition.threat !== undefined ? validateRiftHungerDefinition(definition.threat) : undefined;
+
   return {
     id: definition.id,
     moveLimit: definition.moveLimit,
@@ -256,6 +260,7 @@ export function validateLevelDefinition(definition: LevelDefinition): LevelDefin
           maxSearchNodes: definition.reshuffle.maxSearchNodes,
         }
       : undefined,
+    threat,
   };
 }
 
@@ -314,6 +319,22 @@ export function validateLevelStateRelationship(
       );
     }
   });
+
+  const definitionHasThreat = definition.threat !== undefined;
+  const stateHasThreat = state.threatState !== undefined;
+  if (definitionHasThreat !== stateHasThreat) {
+    throw new BoardDomainError(
+      'level-state-mismatch',
+      definitionHasThreat
+        ? 'level definition declares a threat but session state has no threatState'
+        : 'session state has threatState but level definition has no threat',
+    );
+  }
+
+  if (state.threatState) {
+    // Defensive clone check — structural validation occurs at threat init/advance.
+    cloneRiftHungerState(state.threatState);
+  }
 }
 
 export function isScoreObjective(

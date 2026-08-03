@@ -1,9 +1,11 @@
 import { type BoardCoordinate } from '../board';
 import {
   applyLevelMove,
+  cloneRiftHungerState,
   type LevelDefinition,
   type LevelMoveResult,
   type LevelSessionState,
+  validateRiftHungerDefinition,
 } from '../level';
 
 function cloneDefinition(definition: LevelDefinition): LevelDefinition {
@@ -13,6 +15,7 @@ function cloneDefinition(definition: LevelDefinition): LevelDefinition {
     objectives: definition.objectives.map((objective) => ({ ...objective })),
     scoring: { ...definition.scoring },
     reshuffle: definition.reshuffle ? { ...definition.reshuffle } : undefined,
+    threat: definition.threat ? validateRiftHungerDefinition(definition.threat) : undefined,
   };
 }
 
@@ -26,6 +29,7 @@ function cloneState(state: LevelSessionState): LevelSessionState {
     acceptedMoveCount: state.acceptedMoveCount,
     status: state.status,
     objectiveProgress: state.objectiveProgress.map((progress) => ({ ...progress })),
+    threatState: state.threatState ? cloneRiftHungerState(state.threatState) : undefined,
   };
 }
 

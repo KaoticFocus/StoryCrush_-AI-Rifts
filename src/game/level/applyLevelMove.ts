@@ -9,6 +9,7 @@ import {
   LevelDefinition,
   LevelMoveResult,
   LevelSessionState,
+  LevelStatus,
   ObjectiveProgress,
   RejectedLevelMoveResult,
   TerminalLevelMoveResult,
@@ -16,6 +17,8 @@ import {
 import { calculateResolutionScore } from './scoring';
 import { createPieceCollectionEvents } from './collectionEvents';
 import { areAllObjectivesComplete, updateObjectiveProgress } from './objectives';
+import { advanceRiftHungerForAcceptedMove } from './riftHungerResolution';
+import { cloneRiftHungerState } from './riftHungerValidation';
 import { deriveLevelSeed } from './seedDerivation';
 import { validateLevelDefinition, validateLevelStateRelationship } from './levelValidation';
 
@@ -37,6 +40,7 @@ function cloneState(state: LevelSessionState): LevelSessionState {
     acceptedMoveCount: state.acceptedMoveCount,
     status: state.status,
     objectiveProgress: cloneObjectiveProgress(state.objectiveProgress),
+    threatState: state.threatState ? cloneRiftHungerState(state.threatState) : undefined,
   };
 }
 
@@ -92,16 +96,19 @@ function rejectedResult(input: {
   };
 }
 
-function resolveNextStatus(nextProgress: readonly ObjectiveProgress[], movesRemaining: number) {
+function resolveStatusWithoutThreat(
+  nextProgress: readonly ObjectiveProgress[],
+  movesRemaining: number,
+): LevelStatus {
   if (areAllObjectivesComplete(nextProgress)) {
-    return 'won' as const;
+    return 'won';
   }
 
   if (movesRemaining === 0) {
-    return 'failed' as const;
+    return 'failed';
   }
 
-  return 'active' as const;
+  return 'active';
 }
 
 export function applyLevelMove(input: {
@@ -201,7 +208,39 @@ export function applyLevelMove(input: {
     );
   }
 
-  const resolvedStatus = resolveNextStatus(objectiveProgressResult.nextProgress, movesAfter);
+  /**
+   * RH-0 fairness order:
+   * 1) Objective completion wins before pending threat spread.
+   * 2) Otherwise advance Rift Hunger once for this accepted move.
+   * 3) Overwhelm fails before move-exhaustion failure.
+   * 4) Reshuffle only while the level remains active.
+   */
+  let resolvedStatus: LevelStatus;
+  let nextThreatState = previousState.threatState
+    ? cloneRiftHungerState(previousState.threatState)
+    : undefined;
+  let threatTransition: AcceptedLevelMoveResult['threatTransition'];
+
+  if (areAllObjectivesComplete(objectiveProgressResult.nextProgress)) {
+    resolvedStatus = 'won';
+  } else if (definition.threat && previousState.threatState) {
+    threatTransition = advanceRiftHungerForAcceptedMove({
+      definition: definition.threat,
+      state: previousState.threatState,
+      boardDimensions: resolution.finalBoard.getDimensions(),
+    });
+    nextThreatState = cloneRiftHungerState(threatTransition.nextState);
+
+    if (nextThreatState.status === 'overwhelmed') {
+      resolvedStatus = 'failed';
+    } else if (movesAfter === 0) {
+      resolvedStatus = 'failed';
+    } else {
+      resolvedStatus = 'active';
+    }
+  } else {
+    resolvedStatus = resolveStatusWithoutThreat(objectiveProgressResult.nextProgress, movesAfter);
+  }
 
   let finalBoard = resolution.finalBoard;
   let reshuffle;
@@ -232,6 +271,7 @@ export function applyLevelMove(input: {
     acceptedMoveCount: acceptedMoveCountAfter,
     status: resolvedStatus,
     objectiveProgress: cloneObjectiveProgress(objectiveProgressResult.nextProgress),
+    threatState: nextThreatState,
   };
 
   const result: AcceptedLevelMoveResult = {
@@ -256,6 +296,7 @@ export function applyLevelMove(input: {
     collectionEvents,
     objectiveUpdates: objectiveProgressResult.updates,
     reshuffle,
+    threatTransition,
   };
 
   return result;
