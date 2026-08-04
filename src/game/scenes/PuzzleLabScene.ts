@@ -7,6 +7,10 @@ import {
 } from '../content/levelCatalog';
 import { type PuzzleLaunchContext } from '../content/levelRun';
 import { createBrowserSeedProvider } from '../presentation/browserSeedProvider';
+import {
+  calculatePuzzleLabCardLayout,
+  type PuzzleLabCardBounds,
+} from '../presentation/puzzleLabCardLayout';
 import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusBridge';
 import { MainMenuScene } from './MainMenuScene';
 import { PuzzleScene } from './PuzzleScene';
@@ -38,10 +42,15 @@ export class PuzzleLabScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    playableLevelCatalog.forEach((content, index) => {
-      this.createLevelCard(content, index, portrait);
+    const cardLayout = calculatePuzzleLabCardLayout({
+      width,
+      height,
+      cardCount: playableLevelCatalog.length,
     });
-    this.createLevelControls(portrait);
+    playableLevelCatalog.forEach((content, index) => {
+      this.createLevelCard(content, index, cardLayout.cards[index], cardLayout.compact);
+    });
+    this.createLevelControls();
 
     this.add
       .text(width / 2, height - 20, 'Back to Main Menu', {
@@ -66,7 +75,7 @@ export class PuzzleLabScene extends Phaser.Scene {
       if (content) this.launchLevel(content);
     };
     document.addEventListener('keydown', this.keydownHandler);
-    this.resizeHandler = () => this.layoutLevelControls(this.scale.width < this.scale.height);
+    this.resizeHandler = () => this.layoutLevelControls();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (this.keydownHandler) document.removeEventListener('keydown', this.keydownHandler);
@@ -78,7 +87,7 @@ export class PuzzleLabScene extends Phaser.Scene {
     });
   }
 
-  private createLevelControls(portrait: boolean): void {
+  private createLevelControls(): void {
     this.levelControls?.remove();
     const controls = document.createElement('div');
     controls.className = 'puzzle-lab-level-controls';
@@ -87,41 +96,45 @@ export class PuzzleLabScene extends Phaser.Scene {
       const control = document.createElement('button');
       control.type = 'button';
       control.className = 'puzzle-lab-level-control';
-      control.setAttribute('aria-label', `Play ${content.title}`);
+      control.setAttribute(
+        'aria-label',
+        `Play ${content.title}${content.experienceKind === 'rift-erosion-lab' ? '. Experimental Rift Hunger' : ''}`,
+      );
       control.addEventListener('click', () => this.launchLevel(content));
       controls.append(control);
     });
     document.getElementById('game-root')?.append(controls);
     this.levelControls = controls;
-    this.layoutLevelControls(portrait);
+    this.layoutLevelControls();
   }
 
-  private layoutLevelControls(portrait: boolean): void {
+  private layoutLevelControls(): void {
     if (!this.levelControls) return;
     const { width, height } = this.scale;
-    const margin = portrait ? 16 : 20;
-    const gap = portrait ? 10 : 14;
-    const cardWidth = portrait ? width - margin * 2 : (width - margin * 2 - gap * 2) / 3;
-    const cardHeight = portrait ? (height - 116 - gap * 2) / 3 : height - 112;
+    const layout = calculatePuzzleLabCardLayout({
+      width,
+      height,
+      cardCount: playableLevelCatalog.length,
+    });
     Array.from(this.levelControls.children).forEach((element, index) => {
       const control = element as HTMLButtonElement;
-      const x = portrait ? width / 2 : margin + cardWidth / 2 + index * (cardWidth + gap);
-      const y = portrait ? 64 + cardHeight / 2 + index * (cardHeight + gap) : 58 + cardHeight / 2;
-      control.style.left = `${((x - cardWidth / 2) / width) * 100}%`;
-      control.style.top = `${((y - cardHeight / 2) / height) * 100}%`;
-      control.style.width = `${(cardWidth / width) * 100}%`;
-      control.style.height = `${(cardHeight / height) * 100}%`;
+      const bounds = layout.cards[index];
+      control.style.left = `${(bounds.x / width) * 100}%`;
+      control.style.top = `${(bounds.y / height) * 100}%`;
+      control.style.width = `${(bounds.width / width) * 100}%`;
+      control.style.height = `${(bounds.height / height) * 100}%`;
     });
   }
 
-  private createLevelCard(content: PlayableLevelContent, index: number, portrait: boolean): void {
-    const { width, height } = this.scale;
-    const margin = portrait ? 16 : 20;
-    const gap = portrait ? 10 : 14;
-    const cardWidth = portrait ? width - margin * 2 : (width - margin * 2 - gap * 2) / 3;
-    const cardHeight = portrait ? (height - 116 - gap * 2) / 3 : height - 112;
-    const x = portrait ? width / 2 : margin + cardWidth / 2 + index * (cardWidth + gap);
-    const y = portrait ? 64 + cardHeight / 2 + index * (cardHeight + gap) : 58 + cardHeight / 2;
+  private createLevelCard(
+    content: PlayableLevelContent,
+    index: number,
+    bounds: PuzzleLabCardBounds,
+    compact: boolean,
+  ): void {
+    const { width: cardWidth, height: cardHeight } = bounds;
+    const x = bounds.x + cardWidth / 2;
+    const y = bounds.y + cardHeight / 2;
 
     const background = this.add
       .rectangle(x, y, cardWidth, cardHeight, 0x102a36, 0.98)
@@ -130,24 +143,35 @@ export class PuzzleLabScene extends Phaser.Scene {
     const textWidth = cardWidth - 24;
     this.add.text(x - cardWidth / 2 + 12, y - cardHeight / 2 + 10, content.title, {
       fontFamily: 'monospace',
-      fontSize: portrait ? '16px' : '18px',
+      fontSize: compact ? '15px' : '18px',
       color: '#f8fafc',
       wordWrap: { width: textWidth },
     });
-    this.add.text(
-      x - cardWidth / 2 + 12,
-      y - cardHeight / 2 + (portrait ? 34 : 44),
-      content.subtitle,
-      {
+    if (!compact) {
+      this.add.text(x - cardWidth / 2 + 12, y - cardHeight / 2 + 44, content.subtitle, {
         fontFamily: 'monospace',
         fontSize: '12px',
         color: '#cbd5e1',
         wordWrap: { width: textWidth },
-      },
-    );
+      });
+    }
+    if (content.experienceKind === 'rift-erosion-lab') {
+      this.add.text(
+        x - cardWidth / 2 + 12,
+        y - cardHeight / 2 + (compact ? 36 : 88),
+        'Experimental Rift Hunger',
+        {
+          fontFamily: 'monospace',
+          fontSize: '11px',
+          color: '#fecdd3',
+          backgroundColor: '#7f1d1d',
+          padding: { x: 6, y: 3 },
+        },
+      );
+    }
     this.add.text(
       x - cardWidth / 2 + 12,
-      y + cardHeight / 2 - (portrait ? 48 : 70),
+      y + cardHeight / 2 - (compact ? 48 : 70),
       `${content.definition.moveLimit} moves\n${getObjectiveSummary(content)}`,
       {
         fontFamily: 'monospace',

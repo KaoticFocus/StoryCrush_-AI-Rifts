@@ -19,6 +19,7 @@ export interface PuzzleLayout {
   boardRect: Rectangle;
   hudRect: Rectangle;
   footerRect: Rectangle;
+  threatHudHeight: number;
 }
 
 function createRectangle(x: number, y: number, width: number, height: number): Rectangle {
@@ -30,11 +31,12 @@ function calculatePortraitLayout(
   height: number,
   rows: number,
   columns: number,
+  threatHudHeight: number,
 ): PuzzleLayout {
   const padding = Math.max(18, Math.floor(Math.min(width, height) * 0.035));
   const gutter = Math.max(14, Math.floor(padding * 0.7));
   const footerHeight = Math.max(124, Math.floor(height * 0.17));
-  const hudHeight = Math.max(136, Math.min(210, Math.floor(height * 0.24)));
+  const hudHeight = Math.max(136, Math.min(210, Math.floor(height * 0.24))) + threatHudHeight;
 
   const boardAreaHeight = height - padding * 2 - hudHeight - footerHeight - gutter * 2;
   const boardAreaWidth = width - padding * 2;
@@ -66,6 +68,7 @@ function calculatePortraitLayout(
       width - padding * 2,
       footerHeight,
     ),
+    threatHudHeight,
   };
 }
 
@@ -74,11 +77,13 @@ export function calculatePuzzleLayout(input: {
   height: number;
   rows: number;
   columns: number;
+  threatHudHeight?: number;
 }): PuzzleLayout {
   const width = Math.max(1, Math.floor(input.width));
   const height = Math.max(1, Math.floor(input.height));
   const rows = input.rows;
   const columns = input.columns;
+  const threatHudHeight = Math.max(0, Math.floor(input.threatHudHeight ?? 0));
 
   const padding = Math.max(20, Math.floor(Math.min(width, height) * 0.035));
   const gutter = Math.max(16, Math.floor(padding * 0.8));
@@ -90,7 +95,7 @@ export function calculatePuzzleLayout(input: {
   const usePortrait = width < height * 1.05;
 
   if (usePortrait) {
-    return calculatePortraitLayout(width, height, rows, columns);
+    return calculatePortraitLayout(width, height, rows, columns, threatHudHeight);
   }
 
   const cellSize = landscapeCellSize;
@@ -118,6 +123,7 @@ export function calculatePuzzleLayout(input: {
       width - padding * 2,
       footerHeight,
     ),
+    threatHudHeight,
   };
 }
 

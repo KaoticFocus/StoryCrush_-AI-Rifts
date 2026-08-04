@@ -9,6 +9,7 @@ export interface PlayableLevelContent {
   id: string;
   title: string;
   subtitle: string;
+  experienceKind: 'calm' | 'rift-erosion-lab';
   universeId: 'fantasy';
   chapterId: string;
   definition: LevelDefinition;
@@ -31,6 +32,7 @@ export function createPlayableLevelContent(input: {
   definition: LevelDefinition;
   title: string;
   subtitle: string;
+  experienceKind?: PlayableLevelContent['experienceKind'];
   boardRows?: number;
   boardColumns?: number;
 }): PlayableLevelContent {
@@ -43,6 +45,7 @@ export function createPlayableLevelContent(input: {
     id: validDefinition.id,
     title: input.title,
     subtitle: input.subtitle,
+    experienceKind: input.experienceKind ?? 'calm',
     universeId: 'fantasy',
     chapterId: 'fantasy-chapter',
     definition: validDefinition,
@@ -110,6 +113,32 @@ export const playableLevelCatalog: readonly PlayableLevelContent[] = validatePla
     },
     title: 'Rootbound Seal',
     subtitle: 'Break the seal with a compact, demanding board.',
+  }),
+  createPlayableLevelContent({
+    definition: {
+      id: 'rift-erosion-lab',
+      moveLimit: 15,
+      allowedRefillPieceTypes: ['ruby', 'sapphire', 'emerald', 'topaz', 'amethyst', 'pearl'],
+      objectives: [
+        { id: 'score-target', kind: 'score', targetScore: 2200 },
+        { id: 'collect-amethyst', kind: 'collect-piece', pieceType: 'amethyst', targetCount: 8 },
+      ],
+      scoring: DEFAULT_SCORING_RULES,
+      seed: 1810,
+      threat: {
+        kind: 'rift-hunger',
+        sourceCells: [{ row: 0, column: 0 }],
+        spreadInterval: 3,
+        hungerMaximum: 5,
+        spreadPriority: 'orthogonal-stable-coordinate',
+      },
+    },
+    title: 'Rift Erosion Lab',
+    subtitle:
+      'Experimental Rift Hunger. Match beside corrupted cells to cleanse them. Spread every 3 accepted moves.',
+    experienceKind: 'rift-erosion-lab',
+    boardRows: 8,
+    boardColumns: 8,
   }),
 ]);
 

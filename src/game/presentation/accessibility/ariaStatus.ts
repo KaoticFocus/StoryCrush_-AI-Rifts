@@ -16,7 +16,16 @@ export function createAriaStatusMessage(
     | { kind: 'new-board-generated' }
     | { kind: 'campaign-puzzle-restored' }
     | { kind: 'level-complete' }
-    | { kind: 'out-of-moves' },
+    | { kind: 'out-of-moves' }
+    | { kind: 'threat-initialized'; hunger: number; maximum: number; countdown: number }
+    | { kind: 'corrupted-cell-tapped' }
+    | { kind: 'rift-countdown'; moves: number }
+    | { kind: 'rift-spread'; coordinate: BoardCoordinate }
+    | { kind: 'rift-cleanse'; count: number }
+    | { kind: 'rift-hunger'; current: number; maximum: number }
+    | { kind: 'rift-overwhelmed' }
+    | { kind: 'rift-contained' }
+    | { kind: 'rift-restarted' },
 ): string {
   switch (input.kind) {
     case 'move-accepted':
@@ -41,6 +50,24 @@ export function createAriaStatusMessage(
       return 'Level complete.';
     case 'out-of-moves':
       return 'Out of moves.';
+    case 'threat-initialized':
+      return `Rift Hunger active. Hunger ${input.hunger} of ${input.maximum}. Spread in ${input.countdown} ${input.countdown === 1 ? 'move' : 'moves'}.`;
+    case 'corrupted-cell-tapped':
+      return 'That cell is corrupted. Match beside it to cleanse it.';
+    case 'rift-countdown':
+      return `Rift spreads in ${input.moves} ${input.moves === 1 ? 'move' : 'moves'}.`;
+    case 'rift-spread':
+      return `Rift spread to ${formatCoordinate(input.coordinate)}.`;
+    case 'rift-cleanse':
+      return `${input.count} corrupted ${input.count === 1 ? 'cell' : 'cells'} cleansed.`;
+    case 'rift-hunger':
+      return `Rift hunger ${input.current} of ${input.maximum}.`;
+    case 'rift-overwhelmed':
+      return 'Rift overwhelmed the board.';
+    case 'rift-contained':
+      return 'Rift contained.';
+    case 'rift-restarted':
+      return 'Rift Hunger level restarted.';
   }
 }
 

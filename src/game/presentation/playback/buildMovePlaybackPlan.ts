@@ -282,6 +282,58 @@ export function buildMovePlaybackPlan(
     }
   }
 
+  if (acceptedResult.threatTransition) {
+    if (acceptedResult.threatTransition.cleanseEvents.length > 0) {
+      commands.push({
+        kind: 'rift-cleanse',
+        index: commandIndex,
+        stepIndex: null,
+        events: acceptedResult.threatTransition.cleanseEvents.map((event) => ({
+          ...event,
+          coordinate: cloneCoordinate(event.coordinate),
+          triggeringStepIndexes: [...event.triggeringStepIndexes],
+          adjacentMatchedCoordinates: event.adjacentMatchedCoordinates.map(cloneCoordinate),
+        })),
+      });
+      commandIndex += 1;
+    }
+    if (acceptedResult.threatTransition.spreadEvent) {
+      const event = acceptedResult.threatTransition.spreadEvent;
+      commands.push({
+        kind: 'rift-spread',
+        index: commandIndex,
+        stepIndex: null,
+        event: {
+          ...event,
+          coordinate: cloneCoordinate(event.coordinate),
+          nextThreatenedCell: event.nextThreatenedCell
+            ? cloneCoordinate(event.nextThreatenedCell)
+            : null,
+        },
+      });
+      commandIndex += 1;
+    }
+    commands.push({
+      kind: 'rift-threat-sync',
+      index: commandIndex,
+      stepIndex: null,
+      state: {
+        ...acceptedResult.threatTransition.nextState,
+        sourceCells: acceptedResult.threatTransition.nextState.sourceCells.map(cloneCoordinate),
+        corruptedCells:
+          acceptedResult.threatTransition.nextState.corruptedCells.map(cloneCoordinate),
+        threatenedCell: acceptedResult.threatTransition.nextState.threatenedCell
+          ? cloneCoordinate(acceptedResult.threatTransition.nextState.threatenedCell)
+          : null,
+        protectedCells: acceptedResult.threatTransition.nextState.protectedCells.map((cell) => ({
+          ...cell,
+          coordinate: cloneCoordinate(cell.coordinate),
+        })),
+      },
+    });
+    commandIndex += 1;
+  }
+
   if (acceptedResult.reshuffle) {
     commands.push({
       kind: 'reshuffle-movement',
