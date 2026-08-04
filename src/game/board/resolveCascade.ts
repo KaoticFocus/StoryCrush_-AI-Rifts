@@ -14,6 +14,11 @@ import {
   SpecialPieceCreationPlan,
 } from './boardTypes';
 import { createBoardPieceFromPlan } from './boardPieces';
+import {
+  coordinateKey,
+  unavailableCoordinateKeySet,
+  validateUnavailableCoordinates,
+} from './boardAvailability';
 import { BoardDomainError } from './errors';
 import { findMatchRuns } from './matchDetection';
 import { validatePlayableSwap } from './playableSwapValidation';
@@ -25,10 +30,6 @@ import { DEFAULT_MAX_SPECIAL_ACTIVATIONS, resolveSpecialActivations } from './sp
 import { planSpecialPieceCreations } from './specialPiecePlanning';
 
 export const DEFAULT_MAX_CASCADE_STEPS = 100;
-
-function coordinateKey(coordinate: { row: number; column: number }): string {
-  return `${coordinate.row},${coordinate.column}`;
-}
 
 function compareCoordinates(
   left: { row: number; column: number },
@@ -197,7 +198,12 @@ export function resolveCascade(input: ResolveCascadeInput): CascadeResolutionRes
   const randomSource = resolveRandomSource(input);
 
   const { board, first, second, pieceTypes } = input;
-  const playableSwap = validatePlayableSwap(board, first, second);
+  const unavailableCoordinates = validateUnavailableCoordinates(
+    input.unavailableCoordinates ?? [],
+    board.getDimensions(),
+  );
+  const unavailableKeys = unavailableCoordinateKeySet(unavailableCoordinates);
+  const playableSwap = validatePlayableSwap(board, first, second, unavailableCoordinates);
 
   if (!playableSwap.isValid) {
     return {
@@ -230,7 +236,7 @@ export function resolveCascade(input: ResolveCascadeInput): CascadeResolutionRes
       );
     }
 
-    const currentMatches = findMatchRuns(currentBoard);
+    const currentMatches = findMatchRuns(currentBoard, unavailableCoordinates);
     const hasDirectTriggerStep = steps.length === 0 && initialDirectTriggers.length > 0;
     if (currentMatches.runs.length === 0 && !hasDirectTriggerStep) {
       break;
@@ -262,6 +268,7 @@ export function resolveCascade(input: ResolveCascadeInput): CascadeResolutionRes
     const activationResult = resolveSpecialActivations({
       board: boardBeforeResolution,
       initialTriggers: initialActivationTriggers,
+      unavailableCoordinates,
       maxSpecialActivations: input.maxSpecialActivations ?? DEFAULT_MAX_SPECIAL_ACTIVATIONS,
     });
 
@@ -275,7 +282,11 @@ export function resolveCascade(input: ResolveCascadeInput): CascadeResolutionRes
     );
 
     const actualRemovedCoordinates = totalAffectedCoordinates
-      .filter((coordinate) => !protectedCreationCoordinates.has(coordinateKey(coordinate)))
+      .filter(
+        (coordinate) =>
+          !protectedCreationCoordinates.has(coordinateKey(coordinate)) &&
+          !unavailableKeys.has(coordinateKey(coordinate)),
+      )
       .sort(compareCoordinates)
       .map((coordinate) => ({ ...coordinate }));
 

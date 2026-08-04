@@ -9,6 +9,11 @@ import {
   WildcardActivationTarget,
 } from './boardTypes';
 import { isSpecialPiece, isWildcardPiece } from './boardPieces';
+import {
+  coordinateKey,
+  unavailableCoordinateKeySet,
+  validateUnavailableCoordinates,
+} from './boardAvailability';
 import { BoardDomainError } from './errors';
 import { determineWildcardTarget } from './wildcardTargeting';
 
@@ -17,6 +22,7 @@ export const DEFAULT_MAX_SPECIAL_ACTIVATIONS = 256;
 interface ResolveSpecialActivationsInput {
   board: Board;
   initialTriggers: readonly SpecialActivationTrigger[];
+  unavailableCoordinates?: readonly BoardCoordinate[];
   maxSpecialActivations?: number;
 }
 
@@ -24,10 +30,6 @@ interface ActivationQueueItem {
   coordinate: BoardCoordinate;
   reason: SpecialActivationReason;
   wildcardTarget?: WildcardActivationTarget;
-}
-
-function coordinateKey(coordinate: BoardCoordinate): string {
-  return `${coordinate.row},${coordinate.column}`;
 }
 
 function compareCoordinates(left: BoardCoordinate, right: BoardCoordinate): number {
@@ -213,6 +215,9 @@ export function resolveSpecialActivations(
   const activatedKeys = new Set<string>();
   const events: SpecialActivationEvent[] = [];
   const totalAffectedMap = new Map<string, BoardCoordinate>();
+  const unavailableKeys = unavailableCoordinateKeySet(
+    validateUnavailableCoordinates(input.unavailableCoordinates ?? [], input.board.getDimensions()),
+  );
 
   const enqueue = (item: ActivationQueueItem): void => {
     const key = coordinateKey(item.coordinate);
@@ -221,6 +226,10 @@ export function resolveSpecialActivations(
         'invalid-special-activation-trigger',
         `trigger coordinate is out of bounds: row=${item.coordinate.row}, column=${item.coordinate.column}`,
       );
+    }
+
+    if (unavailableKeys.has(key)) {
+      return;
     }
 
     const boardPiece = input.board.getPieceAt(item.coordinate);
@@ -309,6 +318,10 @@ export function resolveSpecialActivations(
 
     for (const coordinate of affectedCoordinates) {
       totalAffectedMap.set(coordinateKey(coordinate), cloneCoordinate(coordinate));
+
+      if (unavailableKeys.has(coordinateKey(coordinate))) {
+        continue;
+      }
 
       const piece = input.board.getPieceAt(coordinate);
       if (!isSpecialPiece(piece)) {

@@ -8,6 +8,7 @@ export type BoardDomainErrorCode =
   | 'level-state-mismatch'
   | 'invalid-derived-seed'
   | 'invalid-board-dimensions'
+  | 'invalid-unavailable-coordinates'
   | 'coordinate-out-of-bounds'
   | 'empty-piece-types'
   | 'invalid-piece-type'

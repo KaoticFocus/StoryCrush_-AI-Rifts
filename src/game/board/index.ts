@@ -1,4 +1,10 @@
 export { Board } from './Board';
+export {
+  coordinateKey,
+  unavailableCoordinateKeySet,
+  validateUnavailableCoordinates,
+  type BoardAvailability,
+} from './boardAvailability';
 export { applyGravity } from './applyGravity';
 export { applyMatchPlanning } from './applyMatchPlanning';
 export { assertStableBoard, isDeadBoard } from './deadBoard';

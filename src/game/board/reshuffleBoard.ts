@@ -1,11 +1,17 @@
 import { Board } from './Board';
 import {
+  BoardCoordinate,
   BoardPiece,
   ExactPieceInventory,
   RandomSource,
   ReshuffleDeadBoardInput,
   ReshuffleResult,
 } from './boardTypes';
+import {
+  coordinateKey,
+  unavailableCoordinateKeySet,
+  validateUnavailableCoordinates,
+} from './boardAvailability';
 import { assertStableBoard, isDeadBoard } from './deadBoard';
 import { BoardDomainError } from './errors';
 import { findMatchRuns } from './matchDetection';
@@ -47,12 +53,21 @@ function resolveRandomSource(input: ReshuffleDeadBoardInput): RandomSource {
   return new SeededRandom(input.seed);
 }
 
-function hasImmediateMatches(board: Board): boolean {
-  return findMatchRuns(board).runs.length > 0;
+function hasImmediateMatches(
+  board: Board,
+  unavailableCoordinates: readonly BoardCoordinate[],
+): boolean {
+  return findMatchRuns(board, unavailableCoordinates).runs.length > 0;
 }
 
-function isAcceptableCandidate(board: Board): boolean {
-  return !hasImmediateMatches(board) && hasPlayableSwap(board);
+function isAcceptableCandidate(
+  board: Board,
+  unavailableCoordinates: readonly BoardCoordinate[],
+): boolean {
+  return (
+    !hasImmediateMatches(board, unavailableCoordinates) &&
+    hasPlayableSwap(board, unavailableCoordinates)
+  );
 }
 
 function flattenBoard(board: Board): BoardPiece[] {
@@ -83,16 +98,35 @@ function localCreatesRun(
   row: number,
   column: number,
   piece: BoardPiece,
+  unavailableKeys: ReadonlySet<string>,
 ): boolean {
+  if (unavailableKeys.has(coordinateKey({ row, column }))) {
+    return false;
+  }
+
+  const leftOneUnavailable = unavailableKeys.has(coordinateKey({ row, column: column - 1 }));
+  const leftTwoUnavailable = unavailableKeys.has(coordinateKey({ row, column: column - 2 }));
   const leftOne = column - 1 >= 0 ? grid[row][column - 1] : null;
   const leftTwo = column - 2 >= 0 ? grid[row][column - 2] : null;
-  if (leftOne?.pieceType === piece.pieceType && leftTwo?.pieceType === piece.pieceType) {
+  if (
+    !leftOneUnavailable &&
+    !leftTwoUnavailable &&
+    leftOne?.pieceType === piece.pieceType &&
+    leftTwo?.pieceType === piece.pieceType
+  ) {
     return true;
   }
 
+  const upOneUnavailable = unavailableKeys.has(coordinateKey({ row: row - 1, column }));
+  const upTwoUnavailable = unavailableKeys.has(coordinateKey({ row: row - 2, column }));
   const upOne = row - 1 >= 0 ? grid[row - 1][column] : null;
   const upTwo = row - 2 >= 0 ? grid[row - 2][column] : null;
-  if (upOne?.pieceType === piece.pieceType && upTwo?.pieceType === piece.pieceType) {
+  if (
+    !upOneUnavailable &&
+    !upTwoUnavailable &&
+    upOne?.pieceType === piece.pieceType &&
+    upTwo?.pieceType === piece.pieceType
+  ) {
     return true;
   }
 
@@ -130,6 +164,7 @@ function fallbackSearch(
   inventory: ExactPieceInventory,
   tieBreakOrder: readonly string[],
   maxNodes: number,
+  unavailableCoordinates: readonly BoardCoordinate[],
 ): FallbackSearchResult {
   const grid: Array<Array<BoardPiece | null>> = Array.from({ length: rows }, () =>
     Array.from({ length: columns }, () => null),
@@ -137,6 +172,7 @@ function fallbackSearch(
 
   let nodesVisited = 0;
   const totalCells = rows * columns;
+  const unavailableKeys = unavailableCoordinateKeySet(unavailableCoordinates);
 
   function search(index: number): Board | null {
     if (nodesVisited >= maxNodes) {
@@ -147,7 +183,7 @@ function fallbackSearch(
 
     if (index >= totalCells) {
       const candidate = Board.fromGrid(grid.map((row) => row.map((piece) => ({ ...piece! }))));
-      return isAcceptableCandidate(candidate) ? candidate : null;
+      return isAcceptableCandidate(candidate, unavailableCoordinates) ? candidate : null;
     }
 
     const row = Math.floor(index / columns);
@@ -156,7 +192,7 @@ function fallbackSearch(
 
     for (const key of candidateKeys) {
       const piece = parsePieceInventoryKey(key);
-      if (localCreatesRun(grid, row, column, piece)) {
+      if (localCreatesRun(grid, row, column, piece, unavailableKeys)) {
         continue;
       }
 
@@ -201,9 +237,13 @@ export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleRes
   );
 
   const randomSource = resolveRandomSource(input);
+  const unavailableCoordinates = validateUnavailableCoordinates(
+    input.unavailableCoordinates ?? [],
+    input.board.getDimensions(),
+  );
 
-  assertStableBoard(input.board);
-  if (!isDeadBoard(input.board)) {
+  assertStableBoard(input.board, unavailableCoordinates);
+  if (!isDeadBoard(input.board, unavailableCoordinates)) {
     throw new BoardDomainError(
       'board-not-dead',
       'reshuffleDeadBoard requires a stable dead board (zero activation-aware playable swaps)',
@@ -222,7 +262,7 @@ export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleRes
     permuteInPlace(candidatePieces, randomSource);
 
     const candidate = boardFromFlatPieces(candidatePieces, rows, columns);
-    if (!isAcceptableCandidate(candidate)) {
+    if (!isAcceptableCandidate(candidate, unavailableCoordinates)) {
       continue;
     }
 
@@ -236,8 +276,8 @@ export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleRes
       randomAttempts: attempts,
       fallbackSearchUsed: false,
       searchNodesVisited: 0,
-      validScoringSwaps: findValidScoringSwaps(candidate),
-      validPlayableSwaps: findPlayableSwaps(candidate),
+      validScoringSwaps: findValidScoringSwaps(candidate, unavailableCoordinates),
+      validPlayableSwaps: findPlayableSwaps(candidate, unavailableCoordinates),
     };
   }
 
@@ -250,6 +290,7 @@ export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleRes
     remainingInventory,
     tieBreakOrder,
     maxSearchNodes,
+    unavailableCoordinates,
   );
 
   if (!fallbackResult.board) {
@@ -271,7 +312,7 @@ export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleRes
     randomAttempts: attempts,
     fallbackSearchUsed: true,
     searchNodesVisited: fallbackResult.nodesVisited,
-    validScoringSwaps: findValidScoringSwaps(reshuffledBoard),
-    validPlayableSwaps: findPlayableSwaps(reshuffledBoard),
+    validScoringSwaps: findValidScoringSwaps(reshuffledBoard, unavailableCoordinates),
+    validPlayableSwaps: findPlayableSwaps(reshuffledBoard, unavailableCoordinates),
   };
 }
