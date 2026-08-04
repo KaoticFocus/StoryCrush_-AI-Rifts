@@ -639,27 +639,23 @@ Stage B - Deterministic bounded fallback search:
 - Special pieces count by underlying piece type.
 - Progress never decreases.
 
-### Rift Hunger (Phase RH-0 domain foundation)
+### Rift Hunger / Rift Erosion (RH-0 foundation + RH-1 playable lab)
 
 Optional `LevelDefinition.threat` / `LevelSessionState.threatState` carry a genre-neutral
-deterministic pressure system (Rift Hunger / Rift Erosion). Domain modules live under
-`src/game/level/riftHunger*.ts`.
+deterministic pressure system. Domain modules live under `src/game/level/riftHunger*.ts`.
+Board algorithms use a generic `unavailableCoordinates` contract (no Fantasy/threat terms).
 
 Contract highlights:
 
-- Corruption is a **cell overlay**; the underlying board piece is unchanged in RH-0.
-- Source cells begin corrupted and do **not** increase `hungerCurrent`.
-- Countdown advances only on accepted authoritative moves (once per move; cascades do not add turns).
-- Threatened cell is telegraph-locked until spread; it must remain a member of the eligible orthogonal frontier.
-- `validateRiftHungerStateRelationship` enforces definition/state/board invariants at level-session boundaries and inside `advanceRiftHungerForAcceptedMove` (entry and return). Malformed OOB, diagonal, disconnected, or non-frontier telegraphs are rejected rather than silently repaired.
-- State `sourceCells` must match definition sources; every source must remain in `corruptedCells`.
-- Status invariants: `active` requires a frontier telegraph and countdown in `1..spreadInterval`; `contained` requires null telegraph, countdown `0`, and no remaining uncorrupted orthogonal frontier; `overwhelmed` requires null telegraph, countdown `0`, and `hungerCurrent >= hungerMaximum`. Initially contained boards use countdown `0`.
-- Spread targeting uses orthogonal frontier, excluding corrupted and protected cells, in stable row-major order. After a spread, the next telegraph is chosen from post-tick protection eligibility.
-- Completing all objectives on the same accepted move wins **before** pending threat advancement.
-- Overwhelm fails the level when objectives remain incomplete; move exhaustion is evaluated after threat processing.
-- Protection uses accepted-move remaining cycles (no timers). `addOrRefreshRiftHungerProtection` validates relationships, rejects protecting corrupted cells, retargets immediately when protecting the current telegraph (countdown unchanged), and rejects final-frontier protection that would create false containment until pause/reactivation semantics exist. Special-creation wiring is deferred.
-- Phaser telegraph/HUD/corruption presentation, cleansing, catalog pressure levels, and bosses are out of RH-0 (RH-1+).
-- Persistence: schema v3 still stores only `LevelRunDescriptor`; mid-level threat state is not saved. Existing Fantasy catalog levels remain threat-free.
+- Corruption is a **cell overlay**; the underlying board piece remains present.
+- Corrupted coordinates are unavailable for ordinary swaps/matches/hints/dead-board checks. Gravity and refill are **not** segmented by corruption in RH-1 (provisional).
+- Source cells begin corrupted, never add initial hunger, and cannot be cleansed in RH-1.
+- Non-source corruption cleanses only via orthogonal adjacent ordinary matches (`adjacent-match`). Special cleansing is RH-2.
+- Cleansing does **not** reduce `hungerCurrent`. Cleansed cells become available on the next accepted move.
+- Countdown/spread reuse RH-0 `advanceRiftHungerForAcceptedMove` inside `resolveRiftHungerForAcceptedMove`, which also applies cleanses and recomputes the future telegraph.
+- Completing all objectives wins **before** all threat processing (no countdown/spread/cleanse on the winning move).
+- Puzzle Lab includes experimental `rift-erosion-lab` (provisional: score 2200 / 8 amethyst / 15 moves / spread every 3 / hunger max 5). Calm Archive/Moonwell/Rootbound levels remain threat-free.
+- Persistence: schema v3 still stores only `LevelRunDescriptor`; full mid-level threat resume is deferred.
 
 Product direction: [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
 

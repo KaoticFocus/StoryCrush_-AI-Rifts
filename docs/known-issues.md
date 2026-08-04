@@ -180,10 +180,10 @@
 
 - Phase 3A.1 longer Fantasy score goals (2,500 / 3,500 / 5,000) remain provisional after Phase 3B special alignment; human playtesting and a separate rebalance PR are still required.
 - Distinct enhanced six-plus behavior remains reserved; current six-plus straight runs intentionally use the existing wildcard fallback.
-- Phase RH-0 adds a deterministic Rift Hunger domain foundation only. It is not yet visible in Phaser, not wired into Puzzle Lab or the Fantasy catalog, and does not cleanse corruption or protect newly created specials. Runtime boundaries reject malformed threat state (OOB/non-frontier telegraphs, source mismatch, invalid status/countdown/hunger). Final-frontier temporary protection is rejected until RH-1 defines pause/reactivation. See [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
-- Game-flow persistence remains schema v3 active-run descriptors (`levelId` + `seed`) only. Mid-level board/session state, including Rift Hunger state, is not durably saved across reload; threat state is regenerable only when a future persistence phase stores full sessions or move history.
+- Phase RH-1 adds the first playable Puzzle Lab **Rift Erosion Lab** level. Calm campaign-style Fantasy levels remain threat-free. Special line/cross/wildcard cleansing, special-created protection wiring, campaign pressure levels, and bosses are deferred (RH-2+). Coordinate-bound corruption does not block gravity in RH-1. Cleansing does not reduce hunger. Lab balance is provisional (21-seed probe: 0 wins / 21 threat failures, median score 750, median hunger 5, median cleanses 3) and still needs human playtesting before RH-3. See [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
+- Game-flow persistence remains schema v3 active-run descriptors (`levelId` + `seed`) only. Full mid-level board/session/threat-state persistence remains deferred.
 - Only score and collection objectives are implemented.
-- No playable blockers/hazards are presented yet (Rift Hunger corruption exists as domain overlay data only in RH-0).
+- Rift Hunger corruption is a cell overlay; corrupted cells are unavailable for ordinary swaps/matches, but pieces still fall/refill through those coordinates in RH-1.
 - No timed levels are implemented.
 - Enhanced special combinations are still deferred.
 - Placeholder visuals only.
