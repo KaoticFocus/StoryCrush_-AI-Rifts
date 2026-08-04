@@ -22,15 +22,11 @@ function cloneState(state: LevelSessionState): LevelSessionState {
   };
 }
 
-function createActiveState(definition: LevelDefinition, board: Board): LevelSessionState {
-  const threatState =
-    definition.threat !== undefined
-      ? createInitialRiftHungerState({
-          definition: definition.threat,
-          boardDimensions: board.getDimensions(),
-        })
-      : undefined;
-
+function createActiveState(
+  definition: LevelDefinition,
+  board: Board,
+  threatState: LevelSessionState['threatState'],
+): LevelSessionState {
   return {
     levelId: definition.id,
     baseSeed: definition.seed,
@@ -50,11 +46,22 @@ export function createLevelSession(input: {
 }): CreateLevelSessionResult {
   const definition = validateLevelDefinition(input.definition);
 
-  assertStableBoard(input.initialBoard);
+  // Threat overlay must exist before stability/playability checks so source cells
+  // are treated as unavailable during initial dead-board evaluation.
+  const threatState =
+    definition.threat !== undefined
+      ? createInitialRiftHungerState({
+          definition: definition.threat,
+          boardDimensions: input.initialBoard.getDimensions(),
+        })
+      : undefined;
+  const unavailableCoordinates = threatState?.corruptedCells ?? [];
 
-  if (!isDeadBoard(input.initialBoard)) {
+  assertStableBoard(input.initialBoard, unavailableCoordinates);
+
+  if (!isDeadBoard(input.initialBoard, unavailableCoordinates)) {
     return {
-      state: cloneState(createActiveState(definition, input.initialBoard)),
+      state: cloneState(createActiveState(definition, input.initialBoard, threatState)),
     };
   }
 
@@ -69,9 +76,10 @@ export function createLevelSession(input: {
     seed: reshuffleSeed,
     maxRandomAttempts: definition.reshuffle?.maxRandomAttempts,
     maxSearchNodes: definition.reshuffle?.maxSearchNodes,
+    unavailableCoordinates,
   });
 
-  const state = createActiveState(definition, initialReshuffle.reshuffledBoard);
+  const state = createActiveState(definition, initialReshuffle.reshuffledBoard, threatState);
 
   return {
     state: cloneState(state),

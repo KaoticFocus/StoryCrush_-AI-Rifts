@@ -17,7 +17,7 @@ import {
 import { calculateResolutionScore } from './scoring';
 import { createPieceCollectionEvents } from './collectionEvents';
 import { areAllObjectivesComplete, updateObjectiveProgress } from './objectives';
-import { advanceRiftHungerForAcceptedMove } from './riftHungerResolution';
+import { resolveRiftHungerForAcceptedMove } from './riftHungerResolution';
 import { cloneRiftHungerState } from './riftHungerValidation';
 import { deriveLevelSeed } from './seedDerivation';
 import { validateLevelDefinition, validateLevelStateRelationship } from './levelValidation';
@@ -79,7 +79,7 @@ function rejectedResult(input: {
   state: LevelSessionState;
   from: BoardCoordinate;
   to: BoardCoordinate;
-  reason: 'no-match-created' | 'structurally-invalid';
+  reason: 'no-match-created' | 'structurally-invalid' | 'cell-unavailable';
   structuralReason?: string;
 }): RejectedLevelMoveResult {
   return {
@@ -126,7 +126,14 @@ export function applyLevelMove(input: {
     return terminalResult(previousState, input.from, input.to);
   }
 
-  const playableSwap = validatePlayableSwap(previousState.board, input.from, input.to);
+  const unavailableCoordinates = previousState.threatState?.corruptedCells ?? [];
+
+  const playableSwap = validatePlayableSwap(
+    previousState.board,
+    input.from,
+    input.to,
+    unavailableCoordinates,
+  );
   if (!playableSwap.isValid) {
     return rejectedResult({
       state: previousState,
@@ -152,6 +159,7 @@ export function applyLevelMove(input: {
     seed: resolutionSeed,
     maxCascadeSteps: definition.maxCascadeSteps,
     maxSpecialActivations: definition.maxSpecialActivations,
+    unavailableCoordinates,
   });
 
   if (!resolution.isValid) {
@@ -209,11 +217,11 @@ export function applyLevelMove(input: {
   }
 
   /**
-   * RH-0 fairness order:
-   * 1) Objective completion wins before pending threat spread.
-   * 2) Otherwise advance Rift Hunger once for this accepted move.
+   * RH-1 fairness order:
+   * 1) Objective completion wins before all threat processing.
+   * 2) Otherwise resolve countdown/spread + adjacent cleanses once.
    * 3) Overwhelm fails before move-exhaustion failure.
-   * 4) Reshuffle only while the level remains active.
+   * 4) Reshuffle only while active, using final corruption as unavailable.
    */
   let resolvedStatus: LevelStatus;
   let nextThreatState = previousState.threatState
@@ -224,10 +232,11 @@ export function applyLevelMove(input: {
   if (areAllObjectivesComplete(objectiveProgressResult.nextProgress)) {
     resolvedStatus = 'won';
   } else if (definition.threat && previousState.threatState) {
-    threatTransition = advanceRiftHungerForAcceptedMove({
+    threatTransition = resolveRiftHungerForAcceptedMove({
       definition: definition.threat,
       state: previousState.threatState,
       boardDimensions: resolution.finalBoard.getDimensions(),
+      resolution,
     });
     nextThreatState = cloneRiftHungerState(threatTransition.nextState);
 
@@ -244,8 +253,12 @@ export function applyLevelMove(input: {
 
   let finalBoard = resolution.finalBoard;
   let reshuffle;
+  // Cleansed cells become available on the *next* accepted move. For this move's
+  // dead-board/reshuffle evaluation, keep them unavailable with remaining corruption.
+  const cleansedThisMove = threatTransition?.cleanseEvents.map((event) => event.coordinate) ?? [];
+  const finalUnavailable = [...(nextThreatState?.corruptedCells ?? []), ...cleansedThisMove];
 
-  if (resolvedStatus === 'active' && isDeadBoard(finalBoard)) {
+  if (resolvedStatus === 'active' && isDeadBoard(finalBoard, finalUnavailable)) {
     const reshuffleSeed = deriveLevelSeed({
       baseSeed: previousState.baseSeed,
       acceptedMoveIndex,
@@ -257,6 +270,7 @@ export function applyLevelMove(input: {
       seed: reshuffleSeed,
       maxRandomAttempts: definition.reshuffle?.maxRandomAttempts,
       maxSearchNodes: definition.reshuffle?.maxSearchNodes,
+      unavailableCoordinates: finalUnavailable,
     });
 
     finalBoard = reshuffle.reshuffledBoard;

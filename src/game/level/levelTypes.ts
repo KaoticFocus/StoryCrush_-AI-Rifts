@@ -16,6 +16,8 @@ import type {
 } from './riftHungerTypes';
 
 export type {
+  RiftHungerCleanseCause,
+  RiftHungerCleanseEvent,
   RiftHungerDefinition,
   RiftHungerProtectedCell,
   RiftHungerSpreadEvent,

@@ -22,7 +22,11 @@ export {
   selectThreatenedCell,
   tickRiftHungerProtection,
 } from './riftHungerState';
-export { advanceRiftHungerForAcceptedMove } from './riftHungerResolution';
+export { planAdjacentMatchCleanses } from './riftHungerCleanse';
+export {
+  advanceRiftHungerForAcceptedMove,
+  resolveRiftHungerForAcceptedMove,
+} from './riftHungerResolution';
 export {
   cloneCoordinate as cloneRiftHungerCoordinate,
   cloneRiftHungerState,
@@ -46,6 +50,8 @@ export type {
   PieceClearScoreEvent,
   PieceCollectionEvent,
   RejectedLevelMoveResult,
+  RiftHungerCleanseCause,
+  RiftHungerCleanseEvent,
   RiftHungerDefinition,
   RiftHungerProtectedCell,
   RiftHungerSpreadEvent,

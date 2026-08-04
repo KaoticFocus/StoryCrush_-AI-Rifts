@@ -1,5 +1,6 @@
-import { BoardCoordinate, BoardDimensions } from '../board/boardTypes';
+import { BoardCoordinate, BoardDimensions, CascadeResolutionResult } from '../board/boardTypes';
 import { BoardDomainError } from '../board/errors';
+import { applyRiftHungerCleanses, planAdjacentMatchCleanses } from './riftHungerCleanse';
 import {
   RiftHungerDefinition,
   RiftHungerSpreadEvent,
@@ -75,6 +76,7 @@ export function advanceRiftHungerForAcceptedMove(input: {
       countdownBefore,
       countdownAfter: nextState.acceptedMovesUntilSpread,
       spreadEvent: null,
+      cleanseEvents: [],
       statusBefore: previousState.status,
       statusAfter: nextState.status,
     };
@@ -250,6 +252,136 @@ export function advanceRiftHungerForAcceptedMove(input: {
             : null,
         }
       : null,
+    cleanseEvents: [],
+    statusBefore: previousState.status,
+    statusAfter: nextState.status,
+  };
+}
+
+/**
+ * Canonical RH-1 accepted-move threat resolver:
+ * countdown/spread (RH-0) + adjacent-match cleansing + final telegraph selection.
+ */
+export function resolveRiftHungerForAcceptedMove(input: {
+  definition: RiftHungerDefinition;
+  state: RiftHungerState;
+  boardDimensions: BoardDimensions;
+  resolution: Extract<CascadeResolutionResult, { isValid: true }>;
+}): RiftHungerTransition {
+  const definition = validateRiftHungerDefinition(input.definition, input.boardDimensions);
+  const previousState = validateRiftHungerStateRelationship({
+    definition,
+    state: input.state,
+    boardDimensions: input.boardDimensions,
+  });
+
+  const willSpread =
+    previousState.status === 'active' && previousState.acceptedMovesUntilSpread === 1;
+  const lockedSpreadTarget =
+    willSpread && previousState.threatenedCell
+      ? cloneCoordinate(previousState.threatenedCell)
+      : null;
+
+  const cleanseEvents = planAdjacentMatchCleanses({
+    previousState,
+    resolution: input.resolution,
+    newlySpreadCoordinate: lockedSpreadTarget,
+  });
+
+  const advanced = advanceRiftHungerForAcceptedMove({
+    definition,
+    state: previousState,
+    boardDimensions: input.boardDimensions,
+  });
+
+  let working = applyRiftHungerCleanses(advanced.nextState, cleanseEvents);
+  const countdownAfterAdvance = advanced.nextState.acceptedMovesUntilSpread;
+  const enteredFromContained =
+    previousState.status === 'contained' || advanced.nextState.status === 'contained';
+
+  if (working.status !== 'overwhelmed') {
+    const eligible = selectThreatenedCell({
+      dimensions: input.boardDimensions,
+      corruptedCells: working.corruptedCells,
+      protectedCells: working.protectedCells,
+    });
+    const uncorruptedFrontierExists = hasUncorruptedOrthogonalFrontier({
+      state: working,
+      dimensions: input.boardDimensions,
+    });
+
+    if (enteredFromContained) {
+      if (eligible) {
+        working.status = 'active';
+        working.threatenedCell = cloneCoordinate(eligible);
+        working.acceptedMovesUntilSpread = definition.spreadInterval;
+      } else if (!uncorruptedFrontierExists) {
+        working.status = 'contained';
+        working.threatenedCell = null;
+        working.acceptedMovesUntilSpread = 0;
+      } else {
+        throw new BoardDomainError(
+          'invalid-level-state',
+          'cannot leave rift hunger without a telegraph while uncorrupted frontier remains',
+        );
+      }
+    } else if (working.status === 'active') {
+      if (
+        working.threatenedCell &&
+        isEligibleFrontierMember({
+          coordinate: working.threatenedCell,
+          state: working,
+          dimensions: input.boardDimensions,
+        })
+      ) {
+        working.acceptedMovesUntilSpread = countdownAfterAdvance;
+      } else if (eligible) {
+        working.threatenedCell = cloneCoordinate(eligible);
+        working.acceptedMovesUntilSpread = countdownAfterAdvance;
+        working.status = 'active';
+      } else if (!uncorruptedFrontierExists) {
+        working.status = 'contained';
+        working.threatenedCell = null;
+        working.acceptedMovesUntilSpread = 0;
+      } else {
+        throw new BoardDomainError(
+          'invalid-level-state',
+          'cannot leave rift hunger without a telegraph while uncorrupted frontier remains',
+        );
+      }
+    }
+  }
+
+  const nextState = validateRiftHungerStateRelationship({
+    definition,
+    state: working,
+    boardDimensions: input.boardDimensions,
+  });
+
+  const spreadEvent = advanced.spreadEvent
+    ? {
+        generation: advanced.spreadEvent.generation,
+        coordinate: cloneCoordinate(advanced.spreadEvent.coordinate),
+        hungerBefore: advanced.spreadEvent.hungerBefore,
+        hungerAfter: advanced.spreadEvent.hungerAfter,
+        nextThreatenedCell: nextState.threatenedCell
+          ? cloneCoordinate(nextState.threatenedCell)
+          : null,
+      }
+    : null;
+
+  return {
+    previousState,
+    nextState,
+    countdownBefore: advanced.countdownBefore,
+    countdownAfter: nextState.acceptedMovesUntilSpread,
+    spreadEvent,
+    cleanseEvents: cleanseEvents.map((event) => ({
+      coordinate: cloneCoordinate(event.coordinate),
+      cause: event.cause,
+      triggeringStepIndexes: [...event.triggeringStepIndexes],
+      adjacentMatchedCoordinates: event.adjacentMatchedCoordinates.map(cloneCoordinate),
+    })),
     statusBefore: previousState.status,
     statusAfter: nextState.status,
   };
