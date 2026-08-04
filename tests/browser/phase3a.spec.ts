@@ -31,6 +31,14 @@ const levels = [
     scoreTarget: '5000',
     allowed: 'ruby,emerald,topaz,amethyst,pearl',
   },
+  {
+    id: 'rift-erosion-lab',
+    title: 'Rift Erosion Lab',
+    moves: '15',
+    objective: 'Score 2200',
+    scoreTarget: '2200',
+    allowed: 'ruby,sapphire,emerald,topaz,amethyst,pearl',
+  },
 ] as const;
 
 async function clickSceneButton(page: Page, xRatio: number, yRatio: number): Promise<void> {
@@ -126,7 +134,7 @@ test('single click opens Puzzle Lab selector without launching a level', async (
   await page.mouse.up();
 
   await waitForSceneReady(page, 'puzzle-lab');
-  await expect(levelControls(page)).toHaveCount(3);
+  await expect(levelControls(page)).toHaveCount(4);
   await expect(getTestStatus(page)).toHaveAttribute('data-scene', 'puzzle-lab');
   await page.getByRole('button', { name: 'Play Moonwell Recovery' }).click();
   await expect(await waitForSceneReady(page, 'puzzle')).toHaveAttribute(
@@ -143,13 +151,18 @@ test('Puzzle Lab level controls expose names and ordered Tab focus', async ({ pa
   await clickSceneButton(page, 0.5, 0.5);
   await waitForSceneReady(page, 'puzzle-lab');
 
-  await expect(levelControls(page)).toHaveCount(3);
+  await expect(levelControls(page)).toHaveCount(4);
   await expect(levelControls(page).nth(0)).toHaveAccessibleName('Play Archive Stabilization');
   await expect(levelControls(page).nth(1)).toHaveAccessibleName('Play Moonwell Recovery');
   await expect(levelControls(page).nth(2)).toHaveAccessibleName('Play Rootbound Seal');
+  await expect(levelControls(page).nth(3)).toHaveAccessibleName(
+    'Play Rift Erosion Lab. Experimental Rift Hunger',
+  );
   for (const level of levels) {
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('button', { name: `Play ${level.title}` })).toBeFocused();
+    await expect(
+      page.getByRole('button', { name: new RegExp(`^Play ${level.title}`) }),
+    ).toBeFocused();
   }
   errors.assertNone();
 });
@@ -191,14 +204,14 @@ test('Puzzle Lab controls clean up and remain singular after returning', async (
   await waitForSceneReady(page, 'main-menu');
   await clickSceneButton(page, 0.5, 0.5);
   await waitForSceneReady(page, 'puzzle-lab');
-  await expect(levelControls(page)).toHaveCount(3);
+  await expect(levelControls(page)).toHaveCount(4);
 
   await page.keyboard.press('Escape');
   await waitForSceneReady(page, 'main-menu');
   await expect(levelControls(page)).toHaveCount(0);
   await clickSceneButton(page, 0.5, 0.5);
   await waitForSceneReady(page, 'puzzle-lab');
-  await expect(levelControls(page)).toHaveCount(3);
+  await expect(levelControls(page)).toHaveCount(4);
   errors.assertNone();
 });
 
