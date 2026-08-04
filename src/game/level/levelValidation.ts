@@ -10,6 +10,10 @@ import {
   ScoringRulesValidationInput,
   ScoreObjectiveDefinition,
 } from './levelTypes';
+import {
+  validateRiftHungerDefinition,
+  validateRiftHungerStateRelationship,
+} from './riftHungerValidation';
 
 export const DEFAULT_SCORING_RULES: ScoringRules = {
   pointsPerRemovedPiece: 10,
@@ -241,6 +245,9 @@ export function validateLevelDefinition(definition: LevelDefinition): LevelDefin
     );
   }
 
+  const threat =
+    definition.threat !== undefined ? validateRiftHungerDefinition(definition.threat) : undefined;
+
   return {
     id: definition.id,
     moveLimit: definition.moveLimit,
@@ -256,6 +263,7 @@ export function validateLevelDefinition(definition: LevelDefinition): LevelDefin
           maxSearchNodes: definition.reshuffle.maxSearchNodes,
         }
       : undefined,
+    threat,
   };
 }
 
@@ -314,6 +322,34 @@ export function validateLevelStateRelationship(
       );
     }
   });
+
+  const definitionHasThreat = definition.threat !== undefined;
+  const stateHasThreat = state.threatState !== undefined;
+  if (definitionHasThreat !== stateHasThreat) {
+    throw new BoardDomainError(
+      'level-state-mismatch',
+      definitionHasThreat
+        ? 'level definition declares a threat but session state has no threatState'
+        : 'session state has threatState but level definition has no threat',
+    );
+  }
+
+  if (definition.threat && state.threatState) {
+    validateRiftHungerStateRelationship({
+      definition: definition.threat,
+      state: state.threatState,
+      boardDimensions: state.board.getDimensions(),
+    });
+
+    // An active session cannot carry a terminal overwhelmed threat; that pairing
+    // means prior evaluation was skipped or state was corrupted externally.
+    if (state.status === 'active' && state.threatState.status === 'overwhelmed') {
+      throw new BoardDomainError(
+        'invalid-level-state',
+        'active level session cannot carry overwhelmed rift hunger state',
+      );
+    }
+  }
 }
 
 export function isScoreObjective(

@@ -639,15 +639,43 @@ Stage B - Deterministic bounded fallback search:
 - Special pieces count by underlying piece type.
 - Progress never decreases.
 
+### Rift Hunger (Phase RH-0 domain foundation)
+
+Optional `LevelDefinition.threat` / `LevelSessionState.threatState` carry a genre-neutral
+deterministic pressure system (Rift Hunger / Rift Erosion). Domain modules live under
+`src/game/level/riftHunger*.ts`.
+
+Contract highlights:
+
+- Corruption is a **cell overlay**; the underlying board piece is unchanged in RH-0.
+- Source cells begin corrupted and do **not** increase `hungerCurrent`.
+- Countdown advances only on accepted authoritative moves (once per move; cascades do not add turns).
+- Threatened cell is telegraph-locked until spread; it must remain a member of the eligible orthogonal frontier.
+- `validateRiftHungerStateRelationship` enforces definition/state/board invariants at level-session boundaries and inside `advanceRiftHungerForAcceptedMove` (entry and return). Malformed OOB, diagonal, disconnected, or non-frontier telegraphs are rejected rather than silently repaired.
+- State `sourceCells` must match definition sources; every source must remain in `corruptedCells`.
+- Status invariants: `active` requires a frontier telegraph and countdown in `1..spreadInterval`; `contained` requires null telegraph, countdown `0`, and no remaining uncorrupted orthogonal frontier; `overwhelmed` requires null telegraph, countdown `0`, and `hungerCurrent >= hungerMaximum`. Initially contained boards use countdown `0`.
+- Spread targeting uses orthogonal frontier, excluding corrupted and protected cells, in stable row-major order. After a spread, the next telegraph is chosen from post-tick protection eligibility.
+- Completing all objectives on the same accepted move wins **before** pending threat advancement.
+- Overwhelm fails the level when objectives remain incomplete; move exhaustion is evaluated after threat processing.
+- Protection uses accepted-move remaining cycles (no timers). `addOrRefreshRiftHungerProtection` validates relationships, rejects protecting corrupted cells, retargets immediately when protecting the current telegraph (countdown unchanged), and rejects final-frontier protection that would create false containment until pause/reactivation semantics exist. Special-creation wiring is deferred.
+- Phaser telegraph/HUD/corruption presentation, cleansing, catalog pressure levels, and bosses are out of RH-0 (RH-1+).
+- Persistence: schema v3 still stores only `LevelRunDescriptor`; mid-level threat state is not saved. Existing Fantasy catalog levels remain threat-free.
+
+Product direction: [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
+
 ### Status Evaluation Precedence
 
 After an accepted move:
 
-1. Evaluate win first (all objectives complete).
-2. Evaluate failure second (objectives incomplete and moves remaining equals zero).
-3. Otherwise remain active.
+1. Evaluate win first (all objectives complete). When won, do **not** advance Rift Hunger.
+2. Otherwise, if the level declares a threat, advance Rift Hunger exactly once for this accepted move.
+3. If threat status becomes `overwhelmed`, the level fails.
+4. Else if moves remaining equals zero, the level fails.
+5. Otherwise remain active.
 
-Win precedence ensures completing final objective on final move results in `won`.
+For levels without a threat, steps 2–3 are skipped and the historical win-then-moves-fail order is unchanged.
+
+Win precedence ensures completing the final objective on the final move (or on a pending-spread move) results in `won`.
 
 ### Seed Derivation
 

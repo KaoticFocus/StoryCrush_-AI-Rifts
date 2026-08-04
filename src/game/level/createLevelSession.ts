@@ -3,6 +3,8 @@ import { assertStableBoard, isDeadBoard } from '../board/deadBoard';
 import { reshuffleDeadBoard } from '../board/reshuffleBoard';
 import { CreateLevelSessionResult, LevelDefinition, LevelSessionState } from './levelTypes';
 import { createInitialObjectiveProgress } from './objectives';
+import { createInitialRiftHungerState } from './riftHungerState';
+import { cloneRiftHungerState } from './riftHungerValidation';
 import { deriveLevelSeed } from './seedDerivation';
 import { validateLevelDefinition } from './levelValidation';
 
@@ -16,10 +18,19 @@ function cloneState(state: LevelSessionState): LevelSessionState {
     acceptedMoveCount: state.acceptedMoveCount,
     status: state.status,
     objectiveProgress: state.objectiveProgress.map((progress) => ({ ...progress })),
+    threatState: state.threatState ? cloneRiftHungerState(state.threatState) : undefined,
   };
 }
 
 function createActiveState(definition: LevelDefinition, board: Board): LevelSessionState {
+  const threatState =
+    definition.threat !== undefined
+      ? createInitialRiftHungerState({
+          definition: definition.threat,
+          boardDimensions: board.getDimensions(),
+        })
+      : undefined;
+
   return {
     levelId: definition.id,
     baseSeed: definition.seed,
@@ -29,6 +40,7 @@ function createActiveState(definition: LevelDefinition, board: Board): LevelSess
     acceptedMoveCount: 0,
     status: 'active',
     objectiveProgress: createInitialObjectiveProgress({ definition }),
+    threatState,
   };
 }
 

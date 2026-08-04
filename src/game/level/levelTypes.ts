@@ -9,6 +9,21 @@ import {
   ReshuffleResult,
   SpecialActivationReason,
 } from '../board/boardTypes';
+import type {
+  RiftHungerDefinition,
+  RiftHungerState,
+  RiftHungerTransition,
+} from './riftHungerTypes';
+
+export type {
+  RiftHungerDefinition,
+  RiftHungerProtectedCell,
+  RiftHungerSpreadEvent,
+  RiftHungerSpreadPriority,
+  RiftHungerState,
+  RiftHungerStatus,
+  RiftHungerTransition,
+} from './riftHungerTypes';
 
 export type LevelStatus = 'active' | 'won' | 'failed';
 
@@ -63,6 +78,8 @@ export interface LevelDefinition {
   maxCascadeSteps?: number;
   maxSpecialActivations?: number;
   reshuffle?: LevelReshuffleRules;
+  /** Optional deterministic board threat. Absent on existing Fantasy levels. */
+  threat?: RiftHungerDefinition;
 }
 
 export interface ObjectiveProgress {
@@ -130,6 +147,8 @@ export interface LevelSessionState {
   acceptedMoveCount: number;
   status: LevelStatus;
   objectiveProgress: ObjectiveProgress[];
+  /** Present only when the level definition declares a threat. */
+  threatState?: RiftHungerState;
 }
 
 export type LevelSeedPurpose = 'move-resolution' | 'post-move-reshuffle' | 'initial-reshuffle';
@@ -156,6 +175,11 @@ export interface AcceptedLevelMoveResult {
   collectionEvents: PieceCollectionEvent[];
   objectiveUpdates: ObjectiveProgressUpdate[];
   reshuffle?: ReshuffleResult;
+  /**
+   * Present for threat-enabled levels on every accepted move.
+   * Omitted for levels without a threat definition.
+   */
+  threatTransition?: RiftHungerTransition;
 }
 
 export interface RejectedLevelMoveResult {

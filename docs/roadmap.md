@@ -34,17 +34,24 @@
   schema-v3 active-run persistence, and accessibility/lifecycle audit corrections.
 - Phase 3A.1 longer-level balance is merged: first-pass score goals of 2,500 / 3,500 / 5,000
   with unchanged collection targets and scoring rules. Values remain provisional playtest targets.
-- Phase 3B is the current special-rule alignment pass on the existing Phase 1D–1H engine:
-  perpendicular straight-four line clears, full row+column `cross-clear` for T/L/cross matches,
-  preserved wildcard type-targeting for straight five-or-more (`straight-5-plus`, including
-  current six/seven/eight fallback), legacy `area-clear` decode compatibility, and Fantasy
-  presentation labels. A distinct enhanced six-plus effect remains reserved. Level goals and
-  scoring constants are unchanged; a separate rebalance PR should follow human playtesting.
+- Phase 3B special-rule alignment is merged: perpendicular straight-four line clears,
+  full row+column `cross-clear` for T/L/cross matches, preserved wildcard type-targeting for
+  straight five-or-more (`straight-5-plus`, including current six/seven/eight fallback),
+  legacy `area-clear` decode compatibility, and Fantasy presentation labels. A distinct
+  enhanced six-plus effect remains reserved. Level goals and scoring constants were unchanged.
   Combination _expansion_ remains later scope.
-  (Distinct from any later data-driven content work also informally called “3B” in older notes.)
-  AI and voice remain later optional overlays and do not affect balance authority.
   See [level-balance-baseline.md](level-balance-baseline.md) and
   [special-pieces-and-level-balance.md](special-pieces-and-level-balance.md).
+- Phase RH-0 is the active draft foundation for deterministic **Rift Hunger** / Rift Erosion:
+  optional threat definition and session state, accepted-move countdown, telegraph-locked
+  orthogonal row-major spread targeting, hunger / contained / overwhelmed status, objective-win
+  priority over pending spread, full definition/state/board relationship validation at runtime
+  boundaries, and a pure protection contract that rejects false containment. No Phaser threat UI,
+  cleansing, catalog pressure level, or boss behavior yet (RH-1+). Corruption is a cell overlay;
+  pieces are unchanged. Existing Fantasy levels remain threat-free. Persistence stays schema v3
+  descriptor-only. Product direction:
+  [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
+  AI and voice remain later optional overlays and do not affect balance or threat authority.
 
 ## Phase 0B - Foundation Scaffold
 
