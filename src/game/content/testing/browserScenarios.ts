@@ -40,6 +40,7 @@ export type BrowserScenarioId =
   | 'rift-line-cleanse'
   | 'rift-cross-cleanse'
   | 'rift-wildcard-cleanse'
+  | 'rift-wildcard-pair-cleanse'
   | 'rift-overwhelm';
 
 const ordinaryMove = { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } };
@@ -221,6 +222,13 @@ const scenarios: Record<BrowserScenarioId, BrowserScenarioDefinition> = {
     description: 'Wildcard type-target cleanses matching corrupted cells.',
     expectedAction: { kind: 'swap', from: { row: 0, column: 0 }, to: { row: 0, column: 1 } },
     expectedFeatures: ['rift-hunger', 'special-cleanse', 'wildcard', 'threat-sync'],
+  },
+  'rift-wildcard-pair-cleanse': {
+    id: 'rift-wildcard-pair-cleanse',
+    fixtureId: 'rift-wildcard-pair-cleanse',
+    description: 'Wildcard-pair entire-board activation cleanses non-source corruption.',
+    expectedAction: { kind: 'swap', from: { row: 0, column: 0 }, to: { row: 0, column: 1 } },
+    expectedFeatures: ['rift-hunger', 'special-cleanse', 'wildcard', 'entire-board', 'threat-sync'],
   },
   'rift-overwhelm': {
     id: 'rift-overwhelm',

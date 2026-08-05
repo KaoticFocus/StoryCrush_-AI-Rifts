@@ -30,6 +30,7 @@ export type BrowserFixtureId =
   | 'rift-line-cleanse'
   | 'rift-cross-cleanse'
   | 'rift-wildcard-cleanse'
+  | 'rift-wildcard-pair-cleanse'
   | 'rift-overwhelm';
 
 export interface BrowserFixture {
@@ -160,6 +161,35 @@ function createRiftWildcardCleanseBoard(): Board {
       createStandardPiece('emerald'),
       createStandardPiece('amethyst'),
       createStandardPiece('pearl'),
+    ],
+  ]);
+}
+
+function createRiftWildcardPairCleanseBoard(): Board {
+  return Board.fromGrid([
+    [
+      createWildcardPiece('ruby'),
+      createWildcardPiece('sapphire'),
+      createStandardPiece('emerald'),
+      createStandardPiece('topaz'),
+    ],
+    [
+      createStandardPiece('amethyst'),
+      createStandardPiece('pearl'),
+      createStandardPiece('ruby'),
+      createStandardPiece('sapphire'),
+    ],
+    [
+      createStandardPiece('topaz'),
+      createStandardPiece('emerald'),
+      createStandardPiece('amethyst'),
+      createStandardPiece('pearl'),
+    ],
+    [
+      createStandardPiece('ruby'),
+      createStandardPiece('sapphire'),
+      createStandardPiece('emerald'),
+      createStandardPiece('topaz'),
     ],
   ]);
 }
@@ -391,6 +421,27 @@ const fixtures: Record<BrowserFixtureId, BrowserFixture> = {
         { row: 3, column: 3 },
       ],
       threatenedCell: { row: 2, column: 3 },
+      acceptedMovesUntilSpread: 3,
+      status: 'active',
+    }),
+  }),
+  'rift-wildcard-pair-cleanse': createFixture({
+    id: 'rift-wildcard-pair-cleanse',
+    definition: createCompactRiftDefinition('rift-wildcard-pair-cleanse', 31_013, {
+      row: 3,
+      column: 3,
+    }),
+    initialBoard: createRiftWildcardPairCleanseBoard(),
+    expectedMove: { from: { row: 0, column: 0 }, to: { row: 0, column: 1 } },
+    prepareThreatState: (threat) => ({
+      ...threat,
+      corruptedCells: [
+        { row: 0, column: 2 },
+        { row: 1, column: 0 },
+        { row: 2, column: 1 },
+        { row: 3, column: 3 },
+      ],
+      threatenedCell: { row: 1, column: 1 },
       acceptedMovesUntilSpread: 3,
       status: 'active',
     }),
