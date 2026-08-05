@@ -45,13 +45,14 @@
 - Phase RH-0 is merged (`main` includes PR #8): deterministic Rift Hunger domain foundation with
   strict definition/state/board validation, telegraph-locked orthogonal spread, and win-before-threat
   fairness.
-- Phase **RH-1** is the active draft: first playable single-source **Rift Erosion** in Puzzle Lab.
-  Corruption is a coordinate overlay that makes cells unavailable for ordinary swaps/matches without
-  blocking gravity. Adjacent ordinary matches cleanse non-source corruption. Source cells persist.
-  Special-piece cleansing, campaign pressure levels, and bosses remain RH-2+. Existing calm Fantasy
-  levels are unchanged. Persistence stays schema v3 descriptor-only (`levelId` + `seed`); full
-  mid-level threat resume is deferred. Lab values are provisional. Product direction:
-  [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
+- Phase RH-1 is merged (`main` includes PR #9): playable single-source **Rift Erosion** in Puzzle Lab
+  with adjacent-match cleansing, returned-mask resting-board stabilization, and threat HUD/playback.
+- Phase **RH-2** is the active draft: special-piece Rift cleansing. Authoritative
+  `activationEvents[].affectedCoordinates` for line/cross/wildcard cleanse pre-existing non-source
+  corruption once per cell with full provenance. No cleanse score/objective bonus. Special-created
+  protection wiring, campaign pressure levels, bosses, and RH-3 balance/content remain deferred.
+  Existing calm Fantasy levels are unchanged. Persistence stays schema v3 descriptor-only.
+  Product direction: [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
 
 ## Phase 0B - Foundation Scaffold
 

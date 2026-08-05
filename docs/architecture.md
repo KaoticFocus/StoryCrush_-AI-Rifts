@@ -639,7 +639,7 @@ Stage B - Deterministic bounded fallback search:
 - Special pieces count by underlying piece type.
 - Progress never decreases.
 
-### Rift Hunger / Rift Erosion (RH-0 foundation + RH-1 playable lab)
+### Rift Hunger / Rift Erosion (RH-0/RH-1 merged + RH-2 special cleansing draft)
 
 Optional `LevelDefinition.threat` / `LevelSessionState.threatState` carry a genre-neutral
 deterministic pressure system. Domain modules live under `src/game/level/riftHunger*.ts`.
@@ -648,11 +648,13 @@ Board algorithms use a generic `unavailableCoordinates` contract (no Fantasy/thr
 Contract highlights:
 
 - Corruption is a **cell overlay**; the underlying board piece remains present.
-- Corrupted coordinates are unavailable for ordinary swaps/matches/hints/dead-board checks. Gravity and refill are **not** segmented by corruption in RH-1 (provisional).
-- Source cells begin corrupted, never add initial hunger, and cannot be cleansed in RH-1.
-- Non-source corruption cleanses only via orthogonal adjacent ordinary matches (`adjacent-match`). Special cleansing is RH-2.
-- Cleansing does **not** reduce `hungerCurrent`. Cleansed cells are absent from returned `threatState.corruptedCells` and are therefore available in the returned resting board.
-- Active returned boards must be stable and playable under the returned corruption mask only. If cleansing exposes matches or leaves a dead board, `applyLevelMove` deterministically rearranges the exact piece inventory (`rearrangeBoardToStablePlayable`) without another scoring cascade, collection, cleanse, spread, hunger, or move.
+- Corrupted coordinates are unavailable for ordinary swaps/matches/hints/dead-board checks. Gravity and refill are **not** segmented by corruption in RH-1/RH-2 (provisional).
+- Source cells begin corrupted, never add initial hunger, and cannot be cleansed.
+- Non-source corruption cleanses via orthogonal adjacent ordinary matches (`adjacent-match`) and via authoritative special activation `affectedCoordinates` for `line-clear`, `cross-clear`, and `wildcard` (RH-2). Geometry is never re-derived inside Rift code.
+- Exactly one cleanse event exists per cleansed coordinate per accepted move, with complete cause/evidence provenance. Cleansing does **not** award score, collection, or objective progress, and does **not** reduce `hungerCurrent`.
+- Cleansed cells are absent from returned `threatState.corruptedCells` and are therefore available in the returned resting board.
+- Active returned boards must be stable and playable under the returned corruption mask only. If cleansing (adjacent or special) exposes matches or leaves a dead board, `applyLevelMove` deterministically rearranges the exact piece inventory (`rearrangeBoardToStablePlayable`) without another scoring cascade, collection, cleanse, spread, hunger, or move.
+- Playback threat order: `rift-spread` → `rift-cleanse` → `rift-threat-sync` → optional reshuffle → board sync. Special-created protection wiring remains deferred.
 - Countdown/spread reuse RH-0 `advanceRiftHungerForAcceptedMove` inside `resolveRiftHungerForAcceptedMove`, which also applies cleanses and recomputes the future telegraph.
 - Completing all objectives wins **before** all threat processing (no countdown/spread/cleanse on the winning move).
 - Puzzle Lab includes experimental `rift-erosion-lab` (provisional: score 2200 / 8 amethyst / 15 moves / spread every 3 / hunger max 5). Calm Archive/Moonwell/Rootbound levels remain threat-free.
