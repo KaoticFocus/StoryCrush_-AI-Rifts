@@ -47,11 +47,14 @@
   fairness.
 - Phase RH-1 is merged (`main` includes PR #9): playable single-source **Rift Erosion** in Puzzle Lab
   with adjacent-match cleansing, returned-mask resting-board stabilization, and threat HUD/playback.
-- Phase **RH-2** is the active draft: special-piece Rift cleansing. Authoritative
-  `activationEvents[].affectedCoordinates` for line/cross/wildcard cleanse pre-existing non-source
-  corruption once per cell with full provenance. No cleanse score/objective bonus. Special-created
-  protection wiring, campaign pressure levels, bosses, and RH-3 balance/content remain deferred.
-  Existing calm Fantasy levels are unchanged. Persistence stays schema v3 descriptor-only.
+- Phase **RH-2** is merged (`main` includes PR #10): special-piece Rift cleansing via authoritative
+  `activationEvents[].affectedCoordinates` for line/cross/wildcard. No cleanse score/objective bonus.
+- Phase **RH-3** is the active draft: curated **Thornwake Containment** Fantasy pressure in Puzzle Lab
+  only, RH-3 playtest URL mode (`?playtest=1&level=&seed=`), automation baselines, and human playtest
+  pending. Calm Fantasy levels and Rift Erosion Lab remain unchanged aside from catalog ordering.
+- Phase **RH-4** (deferred): boss encounters, campaign pressure wiring, special-created protection.
+  Existing calm Fantasy levels stay threat-free in campaign until then. Persistence stays schema v3
+  descriptor-only.
   Product direction: [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).
 
 ## Phase 0B - Foundation Scaffold
