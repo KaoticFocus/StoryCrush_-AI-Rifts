@@ -159,6 +159,56 @@ test('rift-cleanse fixture removes adjacent non-source corruption', async ({ pag
   errors.assertNone();
 });
 
+test('rift-line-cleanse fixture cleanses corruption via line-clear activation', async ({
+  page,
+}) => {
+  const errors = collectBrowserErrors(page);
+  await enableInstantPlayback(page);
+  await page.goto(buildE2EUrl({ fixture: 'rift-line-cleanse' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneCenter(page);
+  const status = await waitForSceneReady(page, 'puzzle');
+  await expect(status).toHaveAttribute('data-threat-corrupted-coordinates', /0:3/);
+  await submitExpectedMove(page);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /special-activation/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /rift-cleanse/);
+  await expect(getTestStatus(page)).not.toHaveAttribute('data-threat-corrupted-coordinates', /0:3/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-threat-hunger-current', '0');
+  errors.assertNone();
+});
+
+test('rift-cross-cleanse fixture cleanses unique cells from special combination', async ({
+  page,
+}) => {
+  const errors = collectBrowserErrors(page);
+  await enableInstantPlayback(page);
+  await page.goto(buildE2EUrl({ fixture: 'rift-cross-cleanse' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneCenter(page);
+  await waitForSceneReady(page, 'puzzle');
+  await submitExpectedMove(page);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /special-activation/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /rift-cleanse/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-threat-corrupted-coordinates', '3:0');
+  await expect(getTestStatus(page)).toHaveAttribute('data-threat-hunger-current', '0');
+  errors.assertNone();
+});
+
+test('rift-wildcard-cleanse fixture cleanses type-targeted corruption', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await enableInstantPlayback(page);
+  await page.goto(buildE2EUrl({ fixture: 'rift-wildcard-cleanse' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneCenter(page);
+  await waitForSceneReady(page, 'puzzle');
+  await submitExpectedMove(page);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /special-activation/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /rift-cleanse/);
+  await expect(getTestStatus(page)).not.toHaveAttribute('data-threat-corrupted-coordinates', /2:2/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-threat-hunger-current', '0');
+  errors.assertNone();
+});
+
 test('rift-overwhelm fixture labels Rift Overwhelmed and locks input', async ({ page }) => {
   const errors = collectBrowserErrors(page);
   await enableInstantPlayback(page);

@@ -1,6 +1,8 @@
 import {
   Board,
+  createCrossClearPiece,
   createLineClearPiece,
+  createStandardPiece,
   createWildcardPiece,
   type BoardCoordinate,
 } from '../../board';
@@ -25,6 +27,9 @@ export type BrowserFixtureId =
   | 'wildcard-pair'
   | 'rift-spread'
   | 'rift-cleanse'
+  | 'rift-line-cleanse'
+  | 'rift-cross-cleanse'
+  | 'rift-wildcard-cleanse'
   | 'rift-overwhelm';
 
 export interface BrowserFixture {
@@ -70,6 +75,110 @@ function createWildcardPairBoard(): Board {
   grid[4][5] = createWildcardPiece('topaz');
   grid[6][6] = createLineClearPiece('ruby', 'horizontal');
   return Board.fromGrid(grid);
+}
+
+function createRiftLineCleanseBoard(): Board {
+  return Board.fromGrid([
+    [
+      createStandardPiece('ruby'),
+      createStandardPiece('sapphire'),
+      createStandardPiece('ruby'),
+      createStandardPiece('topaz'),
+    ],
+    [
+      createStandardPiece('topaz'),
+      createLineClearPiece('ruby', 'horizontal'),
+      createStandardPiece('emerald'),
+      createStandardPiece('pearl'),
+    ],
+    [
+      createStandardPiece('emerald'),
+      createStandardPiece('amethyst'),
+      createStandardPiece('sapphire'),
+      createStandardPiece('emerald'),
+    ],
+    [
+      createStandardPiece('pearl'),
+      createStandardPiece('topaz'),
+      createStandardPiece('amethyst'),
+      createStandardPiece('pearl'),
+    ],
+  ]);
+}
+
+function createRiftCrossCleanseBoard(): Board {
+  return Board.fromGrid([
+    [
+      createCrossClearPiece('emerald'),
+      createLineClearPiece('sapphire', 'vertical'),
+      createStandardPiece('topaz'),
+      createStandardPiece('pearl'),
+    ],
+    [
+      createStandardPiece('ruby'),
+      createStandardPiece('amethyst'),
+      createStandardPiece('pearl'),
+      createStandardPiece('ruby'),
+    ],
+    [
+      createStandardPiece('topaz'),
+      createStandardPiece('emerald'),
+      createStandardPiece('sapphire'),
+      createStandardPiece('topaz'),
+    ],
+    [
+      createStandardPiece('pearl'),
+      createStandardPiece('ruby'),
+      createStandardPiece('amethyst'),
+      createStandardPiece('pearl'),
+    ],
+  ]);
+}
+
+function createRiftWildcardCleanseBoard(): Board {
+  return Board.fromGrid([
+    [
+      createWildcardPiece('ruby'),
+      createStandardPiece('sapphire'),
+      createStandardPiece('ruby'),
+      createStandardPiece('topaz'),
+    ],
+    [
+      createStandardPiece('emerald'),
+      createStandardPiece('amethyst'),
+      createStandardPiece('pearl'),
+      createStandardPiece('emerald'),
+    ],
+    [
+      createStandardPiece('topaz'),
+      createStandardPiece('ruby'),
+      createStandardPiece('sapphire'),
+      createStandardPiece('topaz'),
+    ],
+    [
+      createStandardPiece('pearl'),
+      createStandardPiece('emerald'),
+      createStandardPiece('amethyst'),
+      createStandardPiece('pearl'),
+    ],
+  ]);
+}
+
+function createCompactRiftDefinition(
+  id: BrowserFixtureId,
+  seed: number,
+  source: BoardCoordinate,
+): LevelDefinition {
+  return {
+    ...createFixtureDefinition(id, seed),
+    threat: {
+      kind: 'rift-hunger',
+      sourceCells: [source],
+      spreadInterval: 3,
+      hungerMaximum: 5,
+      spreadPriority: 'orthogonal-stable-coordinate',
+    },
+  };
 }
 
 function objectivesHash(session: CreateLevelSessionResult['state']): string {
@@ -132,9 +241,10 @@ function createFixture(input: Omit<BrowserFixture, 'expectedOutcome'>): BrowserF
           'apply-gravity',
           'refill-pieces',
         ]),
-        ...(result.threatTransition?.cleanseEvents.length ? ['rift-cleanse'] : []),
         ...(result.threatTransition?.spreadEvent ? ['rift-spread'] : []),
+        ...(result.threatTransition?.cleanseEvents.length ? ['rift-cleanse'] : []),
         ...(result.threatTransition ? ['rift-threat-sync'] : []),
+        ...(result.reshuffle ? ['reshuffle-movement'] : []),
         'synchronize-board',
       ],
       activationCount: result.resolution.steps.reduce(
@@ -221,6 +331,66 @@ const fixtures: Record<BrowserFixtureId, BrowserFixture> = {
         { row: 7, column: 0 },
       ],
       threatenedCell: { row: 7, column: 1 },
+      acceptedMovesUntilSpread: 3,
+      status: 'active',
+    }),
+  }),
+  'rift-line-cleanse': createFixture({
+    id: 'rift-line-cleanse',
+    definition: createCompactRiftDefinition('rift-line-cleanse', 31_010, {
+      row: 3,
+      column: 3,
+    }),
+    initialBoard: createRiftLineCleanseBoard(),
+    expectedMove: { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } },
+    prepareThreatState: (threat) => ({
+      ...threat,
+      corruptedCells: [
+        { row: 0, column: 3 },
+        { row: 3, column: 3 },
+      ],
+      threatenedCell: { row: 2, column: 3 },
+      acceptedMovesUntilSpread: 3,
+      status: 'active',
+    }),
+  }),
+  'rift-cross-cleanse': createFixture({
+    id: 'rift-cross-cleanse',
+    definition: createCompactRiftDefinition('rift-cross-cleanse', 31_011, {
+      row: 3,
+      column: 0,
+    }),
+    initialBoard: createRiftCrossCleanseBoard(),
+    expectedMove: { from: { row: 0, column: 0 }, to: { row: 0, column: 1 } },
+    prepareThreatState: (threat) => ({
+      ...threat,
+      corruptedCells: [
+        { row: 0, column: 2 },
+        { row: 1, column: 0 },
+        { row: 2, column: 1 },
+        { row: 3, column: 0 },
+      ],
+      threatenedCell: { row: 3, column: 1 },
+      acceptedMovesUntilSpread: 3,
+      status: 'active',
+    }),
+  }),
+  'rift-wildcard-cleanse': createFixture({
+    id: 'rift-wildcard-cleanse',
+    definition: createCompactRiftDefinition('rift-wildcard-cleanse', 31_012, {
+      row: 3,
+      column: 3,
+    }),
+    initialBoard: createRiftWildcardCleanseBoard(),
+    expectedMove: { from: { row: 0, column: 0 }, to: { row: 0, column: 1 } },
+    prepareThreatState: (threat) => ({
+      ...threat,
+      corruptedCells: [
+        { row: 0, column: 2 },
+        { row: 2, column: 2 },
+        { row: 3, column: 3 },
+      ],
+      threatenedCell: { row: 2, column: 3 },
       acceptedMovesUntilSpread: 3,
       status: 'active',
     }),

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AriaStatusAnnouncer,
   createAriaStatusMessage,
+  summarizeRiftCleanseAria,
 } from '../../../src/game/presentation/accessibility/ariaStatus';
 
 describe('ariaStatus', () => {
@@ -19,6 +20,32 @@ describe('ariaStatus', () => {
     expect(createAriaStatusMessage({ kind: 'objective-completed', label: 'Collect Rubies' })).toBe(
       'Objective completed: Collect Rubies.',
     );
+  });
+
+  it('summarizes special Rift cleanse causes without per-cell spam', () => {
+    expect(
+      summarizeRiftCleanseAria([
+        {
+          coordinate: { row: 0, column: 1 },
+          causes: ['line-clear'],
+          evidence: [],
+        },
+        {
+          coordinate: { row: 0, column: 2 },
+          causes: ['line-clear'],
+          evidence: [],
+        },
+      ]),
+    ).toBe('Line clear cleansed 2 corrupted cells.');
+    expect(
+      summarizeRiftCleanseAria([
+        {
+          coordinate: { row: 1, column: 0 },
+          causes: ['adjacent-match', 'wildcard'],
+          evidence: [],
+        },
+      ]),
+    ).toBe('One corrupted cell cleansed by multiple effects.');
   });
 
   it('suppresses immediately duplicated messages', () => {

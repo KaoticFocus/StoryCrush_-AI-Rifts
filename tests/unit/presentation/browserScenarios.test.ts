@@ -8,7 +8,7 @@ import { getBrowserFixture } from '../../../src/game/content/testing/browserFixt
 describe('browser scenarios', () => {
   it('defines every required B1 scenario with an existing deterministic fixture', () => {
     const scenarios = getBrowserScenarios();
-    expect(scenarios).toHaveLength(23);
+    expect(scenarios).toHaveLength(26);
     for (const scenario of scenarios) {
       expect(getBrowserFixture(scenario.fixtureId)).not.toBeNull();
       expect(scenario.expectedFeatures.length).toBeGreaterThan(0);
