@@ -327,7 +327,7 @@ test('Puzzle Lab remains interactive after a fixture terminal return-to-menu loo
 
   // Second pass: normal Puzzle Lab entry (no fixture short-circuit) and a real accepted move.
   await page.evaluate(() => {
-    const url = new URL(window.location.href);
+    const url = new window.URL(window.location.href);
     url.searchParams.delete('fixture');
     url.searchParams.delete('scenario');
     window.history.replaceState({}, '', url.toString());
