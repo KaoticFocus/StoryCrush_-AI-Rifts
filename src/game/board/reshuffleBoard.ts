@@ -4,6 +4,7 @@ import {
   BoardPiece,
   ExactPieceInventory,
   RandomSource,
+  RearrangeBoardToStablePlayableInput,
   ReshuffleDeadBoardInput,
   ReshuffleResult,
 } from './boardTypes';
@@ -38,7 +39,7 @@ function validatePositiveInteger(value: number, label: string): number {
   return value;
 }
 
-function resolveRandomSource(input: ReshuffleDeadBoardInput): RandomSource {
+function resolveRandomSource(input: RearrangeBoardToStablePlayableInput): RandomSource {
   if (input.randomSource) {
     return input.randomSource;
   }
@@ -46,7 +47,7 @@ function resolveRandomSource(input: ReshuffleDeadBoardInput): RandomSource {
   if (input.seed === undefined) {
     throw new BoardDomainError(
       'invalid-seed',
-      'reshuffleDeadBoard requires either randomSource or integer seed',
+      'board rearrangement requires either randomSource or integer seed',
     );
   }
 
@@ -226,7 +227,15 @@ function cloneInventoryRecord(source: ExactPieceInventory): ExactPieceInventory 
   return clone;
 }
 
-export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleResult {
+/**
+ * Deterministically rearrange a board's exact piece inventory into a stable,
+ * activation-aware playable layout under the supplied unavailable mask.
+ *
+ * Accepts boards that already contain immediate matches. Does not mutate inputs.
+ */
+export function rearrangeBoardToStablePlayable(
+  input: RearrangeBoardToStablePlayableInput,
+): ReshuffleResult {
   const maxRandomAttempts = validatePositiveInteger(
     input.maxRandomAttempts ?? DEFAULT_RESHUFFLE_RANDOM_ATTEMPTS,
     'maxRandomAttempts',
@@ -241,14 +250,6 @@ export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleRes
     input.unavailableCoordinates ?? [],
     input.board.getDimensions(),
   );
-
-  assertStableBoard(input.board, unavailableCoordinates);
-  if (!isDeadBoard(input.board, unavailableCoordinates)) {
-    throw new BoardDomainError(
-      'board-not-dead',
-      'reshuffleDeadBoard requires a stable dead board (zero activation-aware playable swaps)',
-    );
-  }
 
   const originalBoard = input.board;
   const originalInventory = createPieceInventory(originalBoard);
@@ -315,4 +316,25 @@ export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleRes
     validScoringSwaps: findValidScoringSwaps(reshuffledBoard, unavailableCoordinates),
     validPlayableSwaps: findPlayableSwaps(reshuffledBoard, unavailableCoordinates),
   };
+}
+
+/**
+ * Reshuffle a stable dead board. Preserves the historical contract that the
+ * input must already be stable and have zero playable swaps.
+ */
+export function reshuffleDeadBoard(input: ReshuffleDeadBoardInput): ReshuffleResult {
+  const unavailableCoordinates = validateUnavailableCoordinates(
+    input.unavailableCoordinates ?? [],
+    input.board.getDimensions(),
+  );
+
+  assertStableBoard(input.board, unavailableCoordinates);
+  if (!isDeadBoard(input.board, unavailableCoordinates)) {
+    throw new BoardDomainError(
+      'board-not-dead',
+      'reshuffleDeadBoard requires a stable dead board (zero activation-aware playable swaps)',
+    );
+  }
+
+  return rearrangeBoardToStablePlayable(input);
 }

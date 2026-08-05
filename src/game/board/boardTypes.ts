@@ -240,6 +240,9 @@ export interface ReshuffleDeadBoardInput {
   maxSearchNodes?: number;
 }
 
+/** Shared rearrange input; accepts stable or unstable boards. */
+export type RearrangeBoardToStablePlayableInput = ReshuffleDeadBoardInput;
+
 export interface ReshuffleResult {
   originalBoard: import('./Board').Board;
   reshuffledBoard: import('./Board').Board;
