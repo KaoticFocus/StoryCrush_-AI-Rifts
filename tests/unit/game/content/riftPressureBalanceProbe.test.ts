@@ -17,7 +17,9 @@ import {
 const FIXED_SUBSET = [1831, 1835, 1840, 1845, 1850, 1855, 1860, 1865, 1870] as const;
 
 async function yieldEventLoop(): Promise<void> {
-  await new Promise<void>((resolve) => setImmediate(resolve));
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }
 
 async function runPolicyMatrix(policy: RiftPressureProbePolicy): Promise<RiftPressureProbeRun[]> {
