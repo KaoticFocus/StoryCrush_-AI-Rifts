@@ -28,6 +28,21 @@ export function buildE2EUrl(options: E2EPageOptions = {}): string {
   return `/?${query.toString()}`;
 }
 
+export interface PlaytestUrlOptions {
+  level: string;
+  seed: number;
+}
+
+/** Human playtest launch URL — intentionally omits e2e=1. */
+export function buildPlaytestUrl(options: PlaytestUrlOptions): string {
+  const query = new URLSearchParams([
+    ['playtest', '1'],
+    ['level', options.level],
+    ['seed', String(options.seed)],
+  ]);
+  return `/?${query.toString()}`;
+}
+
 export function getTestStatus(page: Page): Locator {
   return page.locator(statusSelector);
 }

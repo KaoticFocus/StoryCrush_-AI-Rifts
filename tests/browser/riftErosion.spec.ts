@@ -105,7 +105,7 @@ test('Rift Erosion Lab launches with initial threat HUD fields', async ({ page }
   await waitForSceneReady(page, 'main-menu');
   await clickSceneCenter(page);
   await waitForSceneReady(page, 'puzzle-lab');
-  await expect(page.getByRole('button', { name: /^Play / })).toHaveCount(4);
+  await expect(page.getByRole('button', { name: /^Play / })).toHaveCount(5);
   await page.getByRole('button', { name: /^Play Rift Erosion Lab/ }).click();
   const status = await waitForSceneReady(page, 'puzzle');
   await expect(status).toHaveAttribute('data-level-id', 'rift-erosion-lab');
@@ -387,7 +387,7 @@ test('Rift Lab remains usable across required mobile-first viewports', async ({ 
     await waitForSceneReady(page, 'main-menu');
     await clickSceneCenter(page);
     await waitForSceneReady(page, 'puzzle-lab');
-    await expect(page.getByRole('button', { name: /^Play / })).toHaveCount(4);
+    await expect(page.getByRole('button', { name: /^Play / })).toHaveCount(5);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
     ).toBe(true);

@@ -24,6 +24,14 @@ const levels = [
     allowed: 'sapphire,emerald,topaz,amethyst,pearl',
   },
   {
+    id: 'thornwake-containment',
+    title: 'Thornwake Containment',
+    moves: '18',
+    objective: 'Score 3000',
+    scoreTarget: '3000',
+    allowed: 'ruby,sapphire,emerald,topaz,amethyst,pearl',
+  },
+  {
     id: 'rootbound-seal',
     title: 'Rootbound Seal',
     moves: '10',
@@ -134,7 +142,7 @@ test('single click opens Puzzle Lab selector without launching a level', async (
   await page.mouse.up();
 
   await waitForSceneReady(page, 'puzzle-lab');
-  await expect(levelControls(page)).toHaveCount(4);
+  await expect(levelControls(page)).toHaveCount(5);
   await expect(getTestStatus(page)).toHaveAttribute('data-scene', 'puzzle-lab');
   await page.getByRole('button', { name: 'Play Moonwell Recovery' }).click();
   await expect(await waitForSceneReady(page, 'puzzle')).toHaveAttribute(
@@ -151,12 +159,13 @@ test('Puzzle Lab level controls expose names and ordered Tab focus', async ({ pa
   await clickSceneButton(page, 0.5, 0.5);
   await waitForSceneReady(page, 'puzzle-lab');
 
-  await expect(levelControls(page)).toHaveCount(4);
+  await expect(levelControls(page)).toHaveCount(5);
   await expect(levelControls(page).nth(0)).toHaveAccessibleName('Play Archive Stabilization');
   await expect(levelControls(page).nth(1)).toHaveAccessibleName('Play Moonwell Recovery');
-  await expect(levelControls(page).nth(2)).toHaveAccessibleName('Play Rootbound Seal');
-  await expect(levelControls(page).nth(3)).toHaveAccessibleName(
-    'Play Rift Erosion Lab. Experimental Rift Hunger',
+  await expect(levelControls(page).nth(2)).toHaveAccessibleName(/Play Thornwake Containment/);
+  await expect(levelControls(page).nth(3)).toHaveAccessibleName('Play Rootbound Seal');
+  await expect(levelControls(page).nth(4)).toHaveAccessibleName(
+    /Play Rift Erosion Lab\. Experimental Rift Hunger/,
   );
   for (const level of levels) {
     await page.keyboard.press('Tab');
@@ -204,14 +213,14 @@ test('Puzzle Lab controls clean up and remain singular after returning', async (
   await waitForSceneReady(page, 'main-menu');
   await clickSceneButton(page, 0.5, 0.5);
   await waitForSceneReady(page, 'puzzle-lab');
-  await expect(levelControls(page)).toHaveCount(4);
+  await expect(levelControls(page)).toHaveCount(5);
 
   await page.keyboard.press('Escape');
   await waitForSceneReady(page, 'main-menu');
   await expect(levelControls(page)).toHaveCount(0);
   await clickSceneButton(page, 0.5, 0.5);
   await waitForSceneReady(page, 'puzzle-lab');
-  await expect(levelControls(page)).toHaveCount(4);
+  await expect(levelControls(page)).toHaveCount(5);
   errors.assertNone();
 });
 
@@ -358,9 +367,11 @@ test('longer level goals render and survive restart, new board, and campaign res
       .map((child) => ('text' in child ? String(child.text) : ''))
       .filter(Boolean);
   });
-  expect(labLabels?.some((text) => text.includes('Score 2500'))).toBe(true);
-  expect(labLabels?.some((text) => text.includes('Score 3500'))).toBe(true);
-  expect(labLabels?.some((text) => text.includes('Score 5000'))).toBe(true);
+  const labText = labLabels?.join('\n') ?? '';
+  expect(labText).toMatch(/2500/);
+  expect(labText).toMatch(/3500/);
+  expect(labText).toMatch(/3000/);
+  expect(labText).toMatch(/5000/);
 
   for (const level of levels) {
     await page.getByRole('button', { name: `Play ${level.title}` }).click();
