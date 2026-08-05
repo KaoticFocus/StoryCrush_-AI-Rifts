@@ -22,6 +22,12 @@ describe('ariaStatus', () => {
     );
   });
 
+  it('guides corrupted-cell taps with adjacent and special cleanse options', () => {
+    expect(createAriaStatusMessage({ kind: 'corrupted-cell-tapped' })).toBe(
+      'That cell is corrupted. Match beside it, or clear it with a special, to cleanse it.',
+    );
+  });
+
   it('summarizes special Rift cleanse causes without per-cell spam', () => {
     expect(
       summarizeRiftCleanseAria([

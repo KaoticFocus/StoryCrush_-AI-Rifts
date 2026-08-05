@@ -214,7 +214,8 @@ export class PuzzleScene extends Phaser.Scene {
         this.handleCellSelection(coordinate);
       });
       this.boardView.setCorruptedCellTappedHandler(() => {
-        this.summaryMessage = 'That cell is corrupted. Match beside it to cleanse it.';
+        this.summaryMessage =
+          'That cell is corrupted. Match beside it, or clear it with a special, to cleanse it.';
         this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'corrupted-cell-tapped' }));
         this.renderScene();
         this.publishBrowserStatus('idle');

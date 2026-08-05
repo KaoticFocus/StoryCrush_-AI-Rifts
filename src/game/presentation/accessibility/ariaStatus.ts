@@ -98,7 +98,7 @@ export function createAriaStatusMessage(
     case 'threat-initialized':
       return `Rift Hunger active. Hunger ${input.hunger} of ${input.maximum}. Spread in ${input.countdown} ${input.countdown === 1 ? 'move' : 'moves'}.`;
     case 'corrupted-cell-tapped':
-      return 'That cell is corrupted. Match beside it to cleanse it.';
+      return 'That cell is corrupted. Match beside it, or clear it with a special, to cleanse it.';
     case 'rift-countdown':
       return `Rift spreads in ${input.moves} ${input.moves === 1 ? 'move' : 'moves'}.`;
     case 'rift-spread':
