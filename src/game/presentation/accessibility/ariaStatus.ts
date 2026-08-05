@@ -1,7 +1,52 @@
 import { type BoardCoordinate } from '../../board';
+import {
+  type RiftHungerCleanseCause,
+  type RiftHungerCleanseEvent,
+} from '../../level/riftHungerTypes';
 
 export function formatCoordinate(coordinate: BoardCoordinate): string {
   return `row ${coordinate.row + 1}, column ${coordinate.column + 1}`;
+}
+
+const CAUSE_LABEL: Record<RiftHungerCleanseCause, string> = {
+  'adjacent-match': 'Adjacent match',
+  'line-clear': 'Line clear',
+  'cross-clear': 'Cross clear',
+  wildcard: 'Wildcard',
+};
+
+/**
+ * One concise ARIA summary per accepted move for unique cleansed cells.
+ */
+export function summarizeRiftCleanseAria(events: readonly RiftHungerCleanseEvent[]): string {
+  const count = events.length;
+  if (count === 0) {
+    return 'No corrupted cells cleansed.';
+  }
+
+  const causeSet = new Set<RiftHungerCleanseCause>();
+  for (const event of events) {
+    for (const cause of event.causes) {
+      causeSet.add(cause);
+    }
+  }
+  const causes = [...causeSet];
+  const cellWord = count === 1 ? 'cell' : 'cells';
+
+  if (causes.length === 1) {
+    const cause = causes[0]!;
+    if (cause === 'adjacent-match') {
+      return `${count} corrupted ${cellWord} cleansed.`;
+    }
+    if (cause === 'wildcard') {
+      return `Wildcard cleansed ${count} corrupted ${cellWord}.`;
+    }
+    return `${CAUSE_LABEL[cause]} cleansed ${count} corrupted ${cellWord}.`;
+  }
+
+  const countWord =
+    count === 1 ? 'One' : count === 2 ? 'Two' : count === 3 ? 'Three' : String(count);
+  return `${countWord} corrupted ${cellWord} cleansed by multiple effects.`;
 }
 
 export function createAriaStatusMessage(
@@ -21,7 +66,7 @@ export function createAriaStatusMessage(
     | { kind: 'corrupted-cell-tapped' }
     | { kind: 'rift-countdown'; moves: number }
     | { kind: 'rift-spread'; coordinate: BoardCoordinate }
-    | { kind: 'rift-cleanse'; count: number }
+    | { kind: 'rift-cleanse'; count: number; events?: readonly RiftHungerCleanseEvent[] }
     | { kind: 'rift-hunger'; current: number; maximum: number }
     | { kind: 'rift-overwhelmed' }
     | { kind: 'rift-contained' }
@@ -59,6 +104,9 @@ export function createAriaStatusMessage(
     case 'rift-spread':
       return `Rift spread to ${formatCoordinate(input.coordinate)}.`;
     case 'rift-cleanse':
+      if (input.events) {
+        return summarizeRiftCleanseAria(input.events);
+      }
       return `${input.count} corrupted ${input.count === 1 ? 'cell' : 'cells'} cleansed.`;
     case 'rift-hunger':
       return `Rift hunger ${input.current} of ${input.maximum}.`;

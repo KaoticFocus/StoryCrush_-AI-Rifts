@@ -857,7 +857,11 @@ export class PuzzleScene extends Phaser.Scene {
           this.playbackController.getSettings(),
         );
         this.ariaAnnouncer.announce(
-          createAriaStatusMessage({ kind: 'rift-cleanse', count: command.events.length }),
+          createAriaStatusMessage({
+            kind: 'rift-cleanse',
+            count: command.events.length,
+            events: command.events,
+          }),
         );
         return;
       case 'rift-spread':

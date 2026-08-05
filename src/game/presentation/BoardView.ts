@@ -35,6 +35,21 @@ import { type SpecialEffectPresentationPlan } from './playback/specialEffectPlan
 import { planTwoPhaseCoordinateRekey } from './playback/twoPhaseCoordinateRekey';
 import { getBoardPieceHash } from './testing/BrowserTestStatusBridge';
 import { type ThreatViewModel } from './levelViewModel';
+import { type RiftHungerCleanseEvent } from '../level/riftHungerTypes';
+
+function selectRiftCleanseFlashColor(events: readonly RiftHungerCleanseEvent[]): number {
+  const causes = new Set(events.flatMap((event) => event.causes));
+  if (causes.has('wildcard')) {
+    return 0xe9d5ff;
+  }
+  if (causes.has('cross-clear')) {
+    return 0xfca5a5;
+  }
+  if (causes.has('line-clear')) {
+    return 0x7dd3fc;
+  }
+  return 0x86efac;
+}
 
 interface BoardViewState {
   selectedCoordinate: BoardCoordinate | null;
@@ -287,13 +302,16 @@ export class BoardView {
       case 'cascade-pause':
         await this.showCascadePause(command, settings);
         return;
-      case 'rift-cleanse':
+      case 'rift-cleanse': {
+        // Presentation priority when a cell has multiple causes: wildcard > cross > line > adjacent.
+        const color = selectRiftCleanseFlashColor(command.events);
         await this.flashCoordinates(
           command.events.map((event) => event.coordinate),
-          0x86efac,
+          color,
           settings,
         );
         return;
+      }
       case 'rift-spread':
         await this.flashCoordinates([command.event.coordinate], 0xfb7185, settings);
         return;
