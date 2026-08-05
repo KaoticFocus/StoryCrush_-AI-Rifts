@@ -146,6 +146,65 @@ test('plays the fantasy chapter shell flow through results and consequence scene
   await waitForSceneReady(page, 'multiverse-map');
 });
 
+test('second fantasy chapter pass accepts a new story choice after the first terminal loop', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') pageErrors.push(message.text());
+  });
+
+  await page.addInitScript(() => {
+    window.localStorage.clear();
+    window.localStorage.setItem(
+      'storycrush.prototype-settings.v1',
+      JSON.stringify({
+        version: 1,
+        playbackMode: 'instant',
+        reducedMotion: false,
+        hintsEnabled: true,
+      }),
+    );
+  });
+  await page.goto(buildE2EUrl({ fixture: 'terminal-failure' }));
+
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneButton(page, 0.5, 0.6);
+  await waitForSceneReady(page, 'multiverse-map');
+  await clickSceneButton(page, 0.28, 0.56);
+  await waitForSceneReady(page, 'chapter-intro');
+  await clickSceneButton(page, 0.5, 0.68);
+  await waitForSceneReady(page, 'dialogue');
+  await clickSceneButton(page, 0.5, 0.72);
+  await waitForSceneReady(page, 'story-choice');
+  await clickSceneButton(page, 0.5, 0.34);
+  await waitForSceneReady(page, 'puzzle');
+  await submitExpectedFixtureMove(page);
+  await waitForSceneReady(page, 'results');
+  await clickSceneButton(page, 0.5, 0.72);
+  await waitForSceneReady(page, 'consequence');
+  await clickSceneButton(page, 0.5, 0.68);
+  await waitForSceneReady(page, 'multiverse-map');
+
+  // Second pass: re-enter Fantasy and prove the choice advances into a new puzzle run.
+  await clickSceneButton(page, 0.28, 0.56);
+  await waitForSceneReady(page, 'chapter-intro');
+  await clickSceneButton(page, 0.5, 0.68);
+  await waitForSceneReady(page, 'dialogue');
+  await clickSceneButton(page, 0.5, 0.72);
+  await waitForSceneReady(page, 'story-choice');
+  await clickSceneButton(page, 0.5, 0.34);
+  await waitForSceneReady(page, 'puzzle');
+
+  const movesBefore = Number(await getTestStatus(page).getAttribute('data-moves-remaining'));
+  expect(Number.isFinite(movesBefore)).toBe(true);
+  await submitExpectedFixtureMove(page);
+  await waitForSceneReady(page, 'results');
+  expect(pageErrors).toEqual([]);
+});
+
 test('cancels and confirms future-save replacement without losing the old payload', async ({
   page,
 }) => {
@@ -234,6 +293,54 @@ test('resumes an interrupted campaign puzzle as campaign play', async ({ page })
   );
   expect(savedState.currentNodeId).toBe('results');
   expect(savedState.latestPuzzleResult).toBeTruthy();
+});
+
+test('Puzzle Lab remains interactive after a fixture terminal return-to-menu loop', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await page.addInitScript(() => {
+    window.localStorage.clear();
+    window.localStorage.setItem(
+      'storycrush.prototype-settings.v1',
+      JSON.stringify({
+        version: 1,
+        playbackMode: 'instant',
+        reducedMotion: false,
+        hintsEnabled: true,
+      }),
+    );
+  });
+
+  // First pass: e2e fixture path (Menu Puzzle control) to a legitimate terminal lock.
+  await page.goto(buildE2EUrl({ fixture: 'terminal-failure' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle');
+  await submitExpectedFixtureMove(page);
+  await expect(getTestStatus(page)).toHaveAttribute('data-input-locked', 'true');
+  await page.keyboard.press('m');
+  await waitForSceneReady(page, 'main-menu');
+
+  // Second pass: normal Puzzle Lab entry (no fixture short-circuit) and a real accepted move.
+  await page.evaluate(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('fixture');
+    url.searchParams.delete('scenario');
+    window.history.replaceState({}, '', url.toString());
+  });
+  await clickSceneButton(page, 0.5, 0.5);
+  await waitForSceneReady(page, 'puzzle-lab');
+  await page.getByRole('button', { name: 'Play Archive Stabilization' }).click();
+  await waitForSceneReady(page, 'puzzle');
+  await expect(getTestStatus(page)).toHaveAttribute('data-input-locked', 'false');
+  const movesBefore = await getTestStatus(page).getAttribute('data-moves-remaining');
+  await submitExpectedFixtureMove(page);
+  await expect(getTestStatus(page)).not.toHaveAttribute('data-moves-remaining', movesBefore ?? '');
+  expect(pageErrors).toEqual([]);
 });
 
 test('keeps Puzzle Lab isolated from campaign persistence', async ({ page }) => {

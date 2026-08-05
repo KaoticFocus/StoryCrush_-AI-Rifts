@@ -622,9 +622,14 @@ export function createGameFlowController(
       const nextState = cloneState(state);
       nextState.currentNodeId = nodeId;
       if (nodeId === 'fantasy-chapter-intro') {
+        // Chapter re-entry owns a fresh attempt: clear prior choice/result locks so
+        // StoryChoiceScene can accept a new option after a completed first pass.
         nextState.chapterStatus[definition.chapters[0]?.id ?? 'fantasy-chapter'] = {
           status: 'in-progress',
         };
+        nextState.storyFlags = [];
+        nextState.latestPuzzleResult = null;
+        nextState.activeLevelRun = null;
       }
       if (nodeId === 'fantasy-consequence') {
         nextState.hasContinuableSession = false;
