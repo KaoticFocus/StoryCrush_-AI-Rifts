@@ -1010,7 +1010,8 @@ describe('rift hunger level lifecycle integration', () => {
       moveLimit: 10,
       objectives: [{ id: 'score-main', kind: 'score', targetScore: 50_000 }],
       threat: threatDefinition({
-        sourceCells: [{ row: 0, column: 0 }],
+        // Keep source off the matchReadyBoard ruby line so the accepted swap still scores.
+        sourceCells: [{ row: 2, column: 2 }],
         spreadInterval: 1,
         hungerMaximum: 1,
       }),
@@ -1036,7 +1037,7 @@ describe('rift hunger level lifecycle integration', () => {
       moveLimit: 1,
       objectives: [{ id: 'score-main', kind: 'score', targetScore: 50_000 }],
       threat: threatDefinition({
-        sourceCells: [{ row: 0, column: 0 }],
+        sourceCells: [{ row: 2, column: 2 }],
         spreadInterval: 3,
         hungerMaximum: 5,
       }),
@@ -1063,7 +1064,7 @@ describe('rift hunger level lifecycle integration', () => {
       moveLimit: 1,
       objectives: [{ id: 'score-main', kind: 'score', targetScore: 50_000 }],
       threat: threatDefinition({
-        sourceCells: [{ row: 0, column: 0 }],
+        sourceCells: [{ row: 2, column: 2 }],
         spreadInterval: 1,
         hungerMaximum: 1,
       }),
@@ -1088,7 +1089,7 @@ describe('rift hunger level lifecycle integration', () => {
       moveLimit: 10,
       objectives: [{ id: 'score-main', kind: 'score', targetScore: 50_000 }],
       threat: threatDefinition({
-        sourceCells: [{ row: 0, column: 0 }],
+        sourceCells: [{ row: 2, column: 2 }],
         spreadInterval: 3,
         hungerMaximum: 8,
       }),
@@ -1130,7 +1131,7 @@ describe('rift hunger level lifecycle integration', () => {
 
   it('clones threat state from PuzzleSessionController.getState and recreates on restart', () => {
     const definition = makeDefinition({
-      threat: threatDefinition({ sourceCells: [{ row: 0, column: 0 }] }),
+      threat: threatDefinition({ sourceCells: [{ row: 2, column: 2 }] }),
     });
     const board = matchReadyBoard();
     const controller = new PuzzleSessionController(

@@ -3,6 +3,9 @@ import {
   type LevelStatus,
   type PieceCollectionEvent,
   type ScoreCalculationResult,
+  type RiftHungerCleanseEvent,
+  type RiftHungerSpreadEvent,
+  type RiftHungerState,
 } from '../../level';
 import {
   type AppliedSpecialCreation,
@@ -120,6 +123,21 @@ export interface ReshuffleMovementPlaybackCommand extends PlaybackCommandBase {
   movementPlan: ReshuffleMovementPlan;
 }
 
+export interface RiftCleansePlaybackCommand extends PlaybackCommandBase {
+  kind: 'rift-cleanse';
+  events: RiftHungerCleanseEvent[];
+}
+
+export interface RiftSpreadPlaybackCommand extends PlaybackCommandBase {
+  kind: 'rift-spread';
+  event: RiftHungerSpreadEvent;
+}
+
+export interface RiftThreatSyncPlaybackCommand extends PlaybackCommandBase {
+  kind: 'rift-threat-sync';
+  state: RiftHungerState;
+}
+
 export interface SynchronizeBoardPlaybackCommand extends PlaybackCommandBase {
   kind: 'synchronize-board';
   board: BoardSnapshot;
@@ -140,6 +158,9 @@ export type PlaybackCommand =
   | ApplyGravityPlaybackCommand
   | RefillPiecesPlaybackCommand
   | CascadePausePlaybackCommand
+  | RiftCleansePlaybackCommand
+  | RiftSpreadPlaybackCommand
+  | RiftThreatSyncPlaybackCommand
   | ReshuffleMovementPlaybackCommand
   | SynchronizeBoardPlaybackCommand;
 

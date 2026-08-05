@@ -23,6 +23,8 @@ export class HudView {
   private readonly movesText: Phaser.GameObjects.Text;
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly summaryText: Phaser.GameObjects.Text;
+  private readonly threatText: Phaser.GameObjects.Text;
+  private readonly threatSegments: Phaser.GameObjects.Graphics;
   private readonly feedbackLayer: Phaser.GameObjects.Container;
   private readonly pauseOverlay: Phaser.GameObjects.Container;
   private readonly pauseOverlayBackground: Phaser.GameObjects.Graphics;
@@ -59,6 +61,8 @@ export class HudView {
     this.movesText = scene.add.text(0, 0, '', this.bodyStyle('#bae6fd', 24));
     this.statusText = scene.add.text(0, 0, '', this.bodyStyle('#fcd34d', 22));
     this.summaryText = scene.add.text(0, 0, '', this.bodyStyle('#cbd5e1', 18));
+    this.threatText = scene.add.text(0, 0, '', this.bodyStyle('#fecdd3', 16));
+    this.threatSegments = scene.add.graphics();
     this.feedbackLayer = scene.add.container(0, 0);
     this.pauseOverlay = scene.add.container(0, 0).setVisible(false);
     this.pauseOverlayBackground = scene.add.graphics();
@@ -73,6 +77,8 @@ export class HudView {
       this.movesText,
       this.statusText,
       this.summaryText,
+      this.threatSegments,
+      this.threatText,
       this.feedbackLayer,
       this.pauseOverlay,
     ]);
@@ -214,6 +220,40 @@ export class HudView {
       if (!viewModel.objectives.some((objective) => objective.id === objectiveId)) {
         this.objectiveTextById.delete(objectiveId);
         text.setVisible(false);
+      }
+    }
+
+    this.threatSegments.clear();
+    this.threatText.setVisible(Boolean(viewModel.threat));
+    this.threatSegments.setVisible(Boolean(viewModel.threat));
+    if (viewModel.threat) {
+      const threat = viewModel.threat;
+      cursorY += 4;
+      this.threatText
+        .setPosition(textX, cursorY)
+        .setText(`${threat.hungerText} · ${threat.countdownText} · ${threat.statusText}`);
+      const segmentY = cursorY + this.threatText.height + 5;
+      const segmentGap = 4;
+      const segmentWidth = Math.max(
+        8,
+        Math.min(
+          24,
+          (layout.hudRect.width - horizontalPadding * 2 - segmentGap * (threat.hungerMaximum - 1)) /
+            threat.hungerMaximum,
+        ),
+      );
+      for (let index = 0; index < threat.hungerMaximum; index += 1) {
+        this.threatSegments.fillStyle(
+          index < threat.hungerCurrent ? 0xfb7185 : 0x334155,
+          index < threat.hungerCurrent ? 1 : 0.8,
+        );
+        this.threatSegments.fillRoundedRect(
+          textX + index * (segmentWidth + segmentGap),
+          segmentY,
+          segmentWidth,
+          8,
+          3,
+        );
       }
     }
 

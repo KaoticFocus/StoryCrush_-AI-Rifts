@@ -1,4 +1,10 @@
 export { Board } from './Board';
+export {
+  coordinateKey,
+  unavailableCoordinateKeySet,
+  validateUnavailableCoordinates,
+  type BoardAvailability,
+} from './boardAvailability';
 export { applyGravity } from './applyGravity';
 export { applyMatchPlanning } from './applyMatchPlanning';
 export { assertStableBoard, isDeadBoard } from './deadBoard';
@@ -23,6 +29,7 @@ export { removeMatchedCoordinates } from './removeMatches';
 export {
   DEFAULT_RESHUFFLE_RANDOM_ATTEMPTS,
   DEFAULT_RESHUFFLE_SEARCH_NODES,
+  rearrangeBoardToStablePlayable,
   reshuffleDeadBoard,
 } from './reshuffleBoard';
 export { DEFAULT_MAX_CASCADE_STEPS, resolveCascade } from './resolveCascade';
@@ -110,6 +117,7 @@ export {
   type ResolvableCell,
   type ResolvableGrid,
   type ResolveCascadeInput,
+  type RearrangeBoardToStablePlayableInput,
   type ReshuffleDeadBoardInput,
   type ReshuffleResult,
   type SuccessfulCascadeResolutionResult,

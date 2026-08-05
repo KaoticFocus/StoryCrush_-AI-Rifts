@@ -1,10 +1,14 @@
 import { Board } from './Board';
+import { BoardCoordinate } from './boardTypes';
 import { BoardDomainError } from './errors';
 import { findMatchRuns } from './matchDetection';
 import { hasPlayableSwap } from './validMoves';
 
-export function assertStableBoard(board: Board): void {
-  const matchResult = findMatchRuns(board);
+export function assertStableBoard(
+  board: Board,
+  unavailableCoordinates: readonly BoardCoordinate[] = [],
+): void {
+  const matchResult = findMatchRuns(board, unavailableCoordinates);
   if (matchResult.runs.length > 0) {
     throw new BoardDomainError(
       'board-not-stable',
@@ -13,7 +17,10 @@ export function assertStableBoard(board: Board): void {
   }
 }
 
-export function isDeadBoard(board: Board): boolean {
-  assertStableBoard(board);
-  return !hasPlayableSwap(board);
+export function isDeadBoard(
+  board: Board,
+  unavailableCoordinates: readonly BoardCoordinate[] = [],
+): boolean {
+  assertStableBoard(board, unavailableCoordinates);
+  return !hasPlayableSwap(board, unavailableCoordinates);
 }

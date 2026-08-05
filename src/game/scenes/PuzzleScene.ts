@@ -213,6 +213,12 @@ export class PuzzleScene extends Phaser.Scene {
       this.boardView.setCellSelectedHandler((coordinate) => {
         this.handleCellSelection(coordinate);
       });
+      this.boardView.setCorruptedCellTappedHandler(() => {
+        this.summaryMessage = 'That cell is corrupted. Match beside it to cleanse it.';
+        this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'corrupted-cell-tapped' }));
+        this.renderScene();
+        this.publishBrowserStatus('idle');
+      });
 
       this.hudView.setCallbacks({
         onRestart: () => {
@@ -281,6 +287,18 @@ export class PuzzleScene extends Phaser.Scene {
       });
 
       this.renderScene();
+      const initialThreat = this.controller.getState().threatState;
+      const threatDefinition = this.controller.getDefinition().threat;
+      if (initialThreat && threatDefinition) {
+        this.ariaAnnouncer.announce(
+          createAriaStatusMessage({
+            kind: 'threat-initialized',
+            hunger: initialThreat.hungerCurrent,
+            maximum: threatDefinition.hungerMaximum,
+            countdown: initialThreat.acceptedMovesUntilSpread,
+          }),
+        );
+      }
       this.add
         .text(
           this.scale.width * 0.86,
@@ -358,12 +376,8 @@ export class PuzzleScene extends Phaser.Scene {
     const hudState = this.hudStateOverride ?? authoritativeState;
     const displayBoard = this.displayBoardOverride ?? hudState.board;
     const dimensions = displayBoard.getDimensions();
-    const layout = calculatePuzzleLayout({
-      width: this.scale.width,
-      height: this.scale.height,
-      rows: dimensions.rows,
-      columns: dimensions.columns,
-    });
+    const layout = this.calculateLayout(dimensions.rows, dimensions.columns, hudState);
+    const levelViewModel = createLevelViewModel(this.controller.getDefinition(), hudState);
 
     this.boardView.render({
       layout,
@@ -375,6 +389,8 @@ export class PuzzleScene extends Phaser.Scene {
           state: this.presentationState,
           levelIsActive: hudState.status === 'active',
         }) || this.hasError,
+      threat: levelViewModel.threat,
+      reducedMotion: this.reducedMotion,
     });
   }
 
@@ -387,12 +403,7 @@ export class PuzzleScene extends Phaser.Scene {
     const hudState = this.hudStateOverride ?? authoritativeState;
     const displayBoard = this.displayBoardOverride ?? hudState.board;
     const dimensions = displayBoard.getDimensions();
-    const layout = calculatePuzzleLayout({
-      width: this.scale.width,
-      height: this.scale.height,
-      rows: dimensions.rows,
-      columns: dimensions.columns,
-    });
+    const layout = this.calculateLayout(dimensions.rows, dimensions.columns, hudState);
 
     this.hudView.render({
       layout,
@@ -529,7 +540,11 @@ export class PuzzleScene extends Phaser.Scene {
       this.setInputLocked(false);
       this.hasError = false;
       this.summaryMessage = 'Same level and board restarted.';
-      this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'same-board-restarted' }));
+      this.ariaAnnouncer.announce(
+        createAriaStatusMessage({
+          kind: this.controller.getState().threatState ? 'rift-restarted' : 'same-board-restarted',
+        }),
+      );
       this.renderScene();
       this.publishBrowserStatus('idle');
     } catch (error) {
@@ -700,6 +715,19 @@ export class PuzzleScene extends Phaser.Scene {
                 movesRemaining: result.movesAfter,
               }),
         );
+        const threat = result.nextState.threatState;
+        if (threat?.status === 'overwhelmed') {
+          this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'rift-overwhelmed' }));
+        } else if (threat?.status === 'contained') {
+          this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'rift-contained' }));
+        } else if (threat) {
+          this.ariaAnnouncer.announce(
+            createAriaStatusMessage({
+              kind: 'rift-countdown',
+              moves: threat.acceptedMovesUntilSpread,
+            }),
+          );
+        }
         this.renderScene();
         this.stopPerformanceMeasurement();
         this.publishBrowserStatus('completed');
@@ -715,6 +743,12 @@ export class PuzzleScene extends Phaser.Scene {
             });
             this.flowController.advanceTo('results');
             this.scene.start(ResultsScene.key);
+          } else if (
+            this.launchContext?.mode === 'puzzle-lab' ||
+            this.launchContext?.mode === 'browser-fixture'
+          ) {
+            // Keep Puzzle Lab / fixture terminals on-scene so failure labels remain readable.
+            this.setInputLocked(true);
           } else {
             this.scene.start(MainMenuScene.key);
           }
@@ -778,6 +812,22 @@ export class PuzzleScene extends Phaser.Scene {
       acceptedMoveCount: state.acceptedMoveCount,
       status: state.status,
       objectiveProgress: state.objectiveProgress.map((progress) => ({ ...progress })),
+      threatState: state.threatState
+        ? {
+            ...state.threatState,
+            sourceCells: state.threatState.sourceCells.map((coordinate) => ({ ...coordinate })),
+            corruptedCells: state.threatState.corruptedCells.map((coordinate) => ({
+              ...coordinate,
+            })),
+            threatenedCell: state.threatState.threatenedCell
+              ? { ...state.threatState.threatenedCell }
+              : null,
+            protectedCells: state.threatState.protectedCells.map((cell) => ({
+              ...cell,
+              coordinate: { ...cell.coordinate },
+            })),
+          }
+        : undefined,
     };
   }
 
@@ -800,6 +850,49 @@ export class PuzzleScene extends Phaser.Scene {
         return;
       case 'objective-feedback':
         await this.playObjectiveFeedbackCommand(command);
+        return;
+      case 'rift-cleanse':
+        await this.boardView?.executePlaybackCommand(
+          command,
+          this.playbackController.getSettings(),
+        );
+        this.ariaAnnouncer.announce(
+          createAriaStatusMessage({ kind: 'rift-cleanse', count: command.events.length }),
+        );
+        return;
+      case 'rift-spread':
+        await this.boardView?.executePlaybackCommand(
+          command,
+          this.playbackController.getSettings(),
+        );
+        this.ariaAnnouncer.announce(
+          createAriaStatusMessage({ kind: 'rift-spread', coordinate: command.event.coordinate }),
+        );
+        return;
+      case 'rift-threat-sync':
+        if (this.hudStateOverride) {
+          this.hudStateOverride.threatState = {
+            ...command.state,
+            sourceCells: command.state.sourceCells.map((coordinate) => ({ ...coordinate })),
+            corruptedCells: command.state.corruptedCells.map((coordinate) => ({ ...coordinate })),
+            threatenedCell: command.state.threatenedCell
+              ? { ...command.state.threatenedCell }
+              : null,
+            protectedCells: command.state.protectedCells.map((cell) => ({
+              ...cell,
+              coordinate: { ...cell.coordinate },
+            })),
+          };
+          this.renderScene();
+          const maximum = this.controller?.getDefinition().threat?.hungerMaximum ?? 0;
+          this.ariaAnnouncer.announce(
+            createAriaStatusMessage({
+              kind: 'rift-hunger',
+              current: command.state.hungerCurrent,
+              maximum,
+            }),
+          );
+        }
         return;
       default:
         await this.boardView?.executePlaybackCommand(
@@ -943,11 +1036,16 @@ export class PuzzleScene extends Phaser.Scene {
     const displayBoard = this.displayBoardOverride ?? hudState.board;
     const dimensions = displayBoard.getDimensions();
 
+    return this.calculateLayout(dimensions.rows, dimensions.columns, hudState);
+  }
+
+  private calculateLayout(rows: number, columns: number, state: LevelSessionState) {
     return calculatePuzzleLayout({
       width: this.scale.width,
       height: this.scale.height,
-      rows: dimensions.rows,
-      columns: dimensions.columns,
+      rows,
+      columns,
+      threatHudHeight: state.threatState ? 54 : 0,
     });
   }
 
@@ -1102,6 +1200,12 @@ export class PuzzleScene extends Phaser.Scene {
         objectiveSummary: '',
         allowedPieceTypes: '',
         levelStatus: 'inactive',
+        threatStatus: '',
+        threatHungerCurrent: 0,
+        threatHungerMaximum: 0,
+        threatMovesUntilSpread: 0,
+        threatCorruptedCoordinates: '',
+        threatThreatenedCoordinate: '',
         playbackState,
         playbackSequence: this.playbackSequence,
         playbackMode: this.playbackMode,
@@ -1156,15 +1260,12 @@ export class PuzzleScene extends Phaser.Scene {
     const state = this.controller.getState();
     const renderedBoard = this.displayBoardOverride ?? state.board;
     const dimensions = renderedBoard.getDimensions();
-    const layout = calculatePuzzleLayout({
-      width: this.scale.width,
-      height: this.scale.height,
-      rows: dimensions.rows,
-      columns: dimensions.columns,
-    });
+    const layout = this.calculateLayout(dimensions.rows, dimensions.columns, state);
     const expectedRenderedHash = getBoardHash(renderedBoard);
     const actualRenderedHash = this.boardView?.getRenderedBoardHash() ?? 'unavailable';
-    const expectedMove = this.browserFixture?.expectedMove ?? findPlayableSwaps(state.board)[0];
+    const expectedMove =
+      this.browserFixture?.expectedMove ??
+      findPlayableSwaps(state.board, state.threatState?.corruptedCells)[0];
     if (this.playbackStateTrace.at(-1) !== playbackState) {
       this.playbackStateTrace.push(playbackState);
     }
@@ -1204,6 +1305,17 @@ export class PuzzleScene extends Phaser.Scene {
         : definition.objectives.map((objective) => objective.id).join(','),
       allowedPieceTypes: definition.allowedRefillPieceTypes.join(','),
       levelStatus: state.status,
+      threatStatus: state.threatState?.status ?? '',
+      threatHungerCurrent: state.threatState?.hungerCurrent ?? 0,
+      threatHungerMaximum: definition.threat?.hungerMaximum ?? 0,
+      threatMovesUntilSpread: state.threatState?.acceptedMovesUntilSpread ?? 0,
+      threatCorruptedCoordinates:
+        state.threatState?.corruptedCells
+          .map((coordinate) => `${coordinate.row}:${coordinate.column}`)
+          .join(',') ?? '',
+      threatThreatenedCoordinate: state.threatState?.threatenedCell
+        ? `${state.threatState.threatenedCell.row}:${state.threatState.threatenedCell.column}`
+        : '',
       playbackState,
       playbackSequence: this.playbackSequence,
       playbackMode: this.playbackMode,
@@ -1393,6 +1505,7 @@ export class PuzzleScene extends Phaser.Scene {
       levelIsActive: state.status === 'active',
       hintsEnabled: this.settingsController.getSnapshot().hintsEnabled,
       presentationState: this.presentationState,
+      unavailableCoordinates: state.threatState?.corruptedCells,
     });
     if (result.kind === 'hint') {
       this.presentationState.hasActiveHint = true;

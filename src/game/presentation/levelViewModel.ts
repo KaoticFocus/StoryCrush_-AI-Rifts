@@ -3,7 +3,9 @@ import {
   type LevelMoveResult,
   type LevelSessionState,
   type LevelStatus,
+  type RiftHungerState,
 } from '../level';
+import { type BoardCoordinate } from '../board';
 import { getPieceTypeLabel } from './pieceAppearance';
 
 export interface ObjectiveViewModel {
@@ -19,22 +21,64 @@ export interface LevelViewModel {
   movesText: string;
   statusText: string;
   objectives: ObjectiveViewModel[];
+  threat?: ThreatViewModel;
   isTerminal: boolean;
+}
+
+export interface ThreatViewModel {
+  hungerText: string;
+  hungerCurrent: number;
+  hungerMaximum: number;
+  countdownText: string;
+  statusText: string;
+  corruptedCoordinates: BoardCoordinate[];
+  sourceCoordinates: BoardCoordinate[];
+  threatenedCoordinate: BoardCoordinate | null;
 }
 
 function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
 }
 
-export function getLevelStatusLabel(status: LevelStatus): string {
+export function getLevelStatusLabel(status: LevelStatus, threatState?: RiftHungerState): string {
   switch (status) {
     case 'active':
       return 'Active';
     case 'won':
       return 'Level Complete';
     case 'failed':
-      return 'Out of Moves';
+      return threatState?.status === 'overwhelmed' ? 'Rift Overwhelmed' : 'Out of Moves';
   }
+}
+
+export function createThreatViewModel(
+  definition: LevelDefinition,
+  state: LevelSessionState,
+): ThreatViewModel | undefined {
+  if (!definition.threat || !state.threatState) {
+    return undefined;
+  }
+  const threat = state.threatState;
+  const countdown = threat.acceptedMovesUntilSpread;
+  const statusText =
+    threat.status === 'contained'
+      ? 'Rift Contained'
+      : threat.status === 'overwhelmed'
+        ? 'Rift Overwhelmed'
+        : 'Rift Active';
+  return {
+    hungerText: `Hunger ${threat.hungerCurrent} / ${definition.threat.hungerMaximum}`,
+    hungerCurrent: threat.hungerCurrent,
+    hungerMaximum: definition.threat.hungerMaximum,
+    countdownText:
+      threat.status === 'active'
+        ? `Spread in ${countdown} ${pluralize(countdown, 'move', 'moves')}`
+        : statusText,
+    statusText,
+    corruptedCoordinates: threat.corruptedCells.map((coordinate) => ({ ...coordinate })),
+    sourceCoordinates: threat.sourceCells.map((coordinate) => ({ ...coordinate })),
+    threatenedCoordinate: threat.threatenedCell ? { ...threat.threatenedCell } : null,
+  };
 }
 
 export function formatObjectiveLabel(
@@ -58,6 +102,9 @@ export function formatMoveSummary(result: LevelMoveResult): string {
 
     if (result.reason === 'no-match-created') {
       return 'Rejected move. That swap does not create a playable result.';
+    }
+    if (result.reason === 'cell-unavailable') {
+      return 'That cell is corrupted. Match beside it to cleanse it.';
     }
 
     return 'Rejected move. Choose orthogonally adjacent cells on the board.';
@@ -103,8 +150,9 @@ export function createLevelViewModel(
     titleText: definition.id.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
     scoreText: `Score ${state.score}`,
     movesText: `Moves ${state.movesRemaining}`,
-    statusText: getLevelStatusLabel(state.status),
+    statusText: getLevelStatusLabel(state.status, state.threatState),
     objectives,
+    threat: createThreatViewModel(definition, state),
     isTerminal: state.status !== 'active',
   };
 }

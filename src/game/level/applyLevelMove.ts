@@ -1,8 +1,9 @@
 import { BoardCoordinate } from '../board/boardTypes';
 import { BoardDomainError } from '../board/errors';
-import { isDeadBoard } from '../board/deadBoard';
-import { reshuffleDeadBoard } from '../board/reshuffleBoard';
+import { findMatchRuns } from '../board/matchDetection';
+import { rearrangeBoardToStablePlayable } from '../board/reshuffleBoard';
 import { resolveCascade } from '../board/resolveCascade';
+import { hasPlayableSwap } from '../board/validMoves';
 import { validatePlayableSwap } from '../board/playableSwapValidation';
 import {
   AcceptedLevelMoveResult,
@@ -17,7 +18,7 @@ import {
 import { calculateResolutionScore } from './scoring';
 import { createPieceCollectionEvents } from './collectionEvents';
 import { areAllObjectivesComplete, updateObjectiveProgress } from './objectives';
-import { advanceRiftHungerForAcceptedMove } from './riftHungerResolution';
+import { resolveRiftHungerForAcceptedMove } from './riftHungerResolution';
 import { cloneRiftHungerState } from './riftHungerValidation';
 import { deriveLevelSeed } from './seedDerivation';
 import { validateLevelDefinition, validateLevelStateRelationship } from './levelValidation';
@@ -79,7 +80,7 @@ function rejectedResult(input: {
   state: LevelSessionState;
   from: BoardCoordinate;
   to: BoardCoordinate;
-  reason: 'no-match-created' | 'structurally-invalid';
+  reason: 'no-match-created' | 'structurally-invalid' | 'cell-unavailable';
   structuralReason?: string;
 }): RejectedLevelMoveResult {
   return {
@@ -126,7 +127,14 @@ export function applyLevelMove(input: {
     return terminalResult(previousState, input.from, input.to);
   }
 
-  const playableSwap = validatePlayableSwap(previousState.board, input.from, input.to);
+  const unavailableCoordinates = previousState.threatState?.corruptedCells ?? [];
+
+  const playableSwap = validatePlayableSwap(
+    previousState.board,
+    input.from,
+    input.to,
+    unavailableCoordinates,
+  );
   if (!playableSwap.isValid) {
     return rejectedResult({
       state: previousState,
@@ -152,6 +160,7 @@ export function applyLevelMove(input: {
     seed: resolutionSeed,
     maxCascadeSteps: definition.maxCascadeSteps,
     maxSpecialActivations: definition.maxSpecialActivations,
+    unavailableCoordinates,
   });
 
   if (!resolution.isValid) {
@@ -209,11 +218,13 @@ export function applyLevelMove(input: {
   }
 
   /**
-   * RH-0 fairness order:
-   * 1) Objective completion wins before pending threat spread.
-   * 2) Otherwise advance Rift Hunger once for this accepted move.
+   * RH-1 fairness order:
+   * 1) Objective completion wins before all threat processing.
+   * 2) Otherwise resolve countdown/spread + adjacent cleanses once.
    * 3) Overwhelm fails before move-exhaustion failure.
-   * 4) Reshuffle only while the level remains active.
+   * 4) While active, stabilize the resting board under the returned final
+   *    corruption mask only (no temporary "cleansed this move" mask).
+   *    Exposed matches are rearranged, never resolved as another cascade.
    */
   let resolvedStatus: LevelStatus;
   let nextThreatState = previousState.threatState
@@ -224,10 +235,11 @@ export function applyLevelMove(input: {
   if (areAllObjectivesComplete(objectiveProgressResult.nextProgress)) {
     resolvedStatus = 'won';
   } else if (definition.threat && previousState.threatState) {
-    threatTransition = advanceRiftHungerForAcceptedMove({
+    threatTransition = resolveRiftHungerForAcceptedMove({
       definition: definition.threat,
       state: previousState.threatState,
       boardDimensions: resolution.finalBoard.getDimensions(),
+      resolution,
     });
     nextThreatState = cloneRiftHungerState(threatTransition.nextState);
 
@@ -244,22 +256,34 @@ export function applyLevelMove(input: {
 
   let finalBoard = resolution.finalBoard;
   let reshuffle;
+  // Authoritative resting availability equals returned next-state corruption.
+  // Cleansed cells are available immediately in the returned board state.
+  const finalUnavailableCoordinates = nextThreatState?.corruptedCells ?? [];
 
-  if (resolvedStatus === 'active' && isDeadBoard(finalBoard)) {
-    const reshuffleSeed = deriveLevelSeed({
-      baseSeed: previousState.baseSeed,
-      acceptedMoveIndex,
-      purpose: 'post-move-reshuffle',
-    });
+  if (resolvedStatus === 'active') {
+    const finalMatches = findMatchRuns(finalBoard, finalUnavailableCoordinates);
+    const finalHasPlayableSwap = hasPlayableSwap(finalBoard, finalUnavailableCoordinates);
+    const needsRestingBoardStabilization = finalMatches.runs.length > 0 || !finalHasPlayableSwap;
 
-    reshuffle = reshuffleDeadBoard({
-      board: finalBoard,
-      seed: reshuffleSeed,
-      maxRandomAttempts: definition.reshuffle?.maxRandomAttempts,
-      maxSearchNodes: definition.reshuffle?.maxSearchNodes,
-    });
+    if (needsRestingBoardStabilization) {
+      // Reuse the existing post-move reshuffle seed purpose so historical
+      // dead-board paths remain deterministic under the same derivation.
+      const reshuffleSeed = deriveLevelSeed({
+        baseSeed: previousState.baseSeed,
+        acceptedMoveIndex,
+        purpose: 'post-move-reshuffle',
+      });
 
-    finalBoard = reshuffle.reshuffledBoard;
+      reshuffle = rearrangeBoardToStablePlayable({
+        board: finalBoard,
+        seed: reshuffleSeed,
+        maxRandomAttempts: definition.reshuffle?.maxRandomAttempts,
+        maxSearchNodes: definition.reshuffle?.maxSearchNodes,
+        unavailableCoordinates: finalUnavailableCoordinates,
+      });
+
+      finalBoard = reshuffle.reshuffledBoard;
+    }
   }
 
   const nextState: LevelSessionState = {

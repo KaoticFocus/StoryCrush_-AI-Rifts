@@ -63,6 +63,8 @@ export interface MatchDetectionResult {
 export type StructuralSwapFailureReason =
   | 'first-coordinate-out-of-bounds'
   | 'second-coordinate-out-of-bounds'
+  | 'first-coordinate-unavailable'
+  | 'second-coordinate-unavailable'
   | 'same-coordinate'
   | 'not-adjacent';
 
@@ -71,7 +73,8 @@ export interface StructuralSwapValidationResult {
   reason?: StructuralSwapFailureReason;
 }
 
-export type ScoringSwapFailureReason = 'structurally-invalid' | 'no-match-created';
+export type ScoringSwapFailureReason =
+  'structurally-invalid' | 'cell-unavailable' | 'no-match-created';
 
 export type PlayableSwapFailureReason = ScoringSwapFailureReason;
 
@@ -208,6 +211,7 @@ export interface ResolveCascadeInput {
   first: BoardCoordinate;
   second: BoardCoordinate;
   pieceTypes: readonly string[];
+  unavailableCoordinates?: readonly BoardCoordinate[];
   seed?: number;
   randomSource?: RandomSource;
   maxCascadeSteps?: number;
@@ -229,11 +233,15 @@ export type PieceInventory = ExactPieceInventory;
 
 export interface ReshuffleDeadBoardInput {
   board: import('./Board').Board;
+  unavailableCoordinates?: readonly BoardCoordinate[];
   seed?: number;
   randomSource?: RandomSource;
   maxRandomAttempts?: number;
   maxSearchNodes?: number;
 }
+
+/** Shared rearrange input; accepts stable or unstable boards. */
+export type RearrangeBoardToStablePlayableInput = ReshuffleDeadBoardInput;
 
 export interface ReshuffleResult {
   originalBoard: import('./Board').Board;

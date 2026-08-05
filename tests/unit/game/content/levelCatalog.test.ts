@@ -16,6 +16,7 @@ describe('level catalog', () => {
       'archive-stabilization',
       'moonwell-recovery',
       'rootbound-seal',
+      'rift-erosion-lab',
     ]);
 
     const archive = getPlayableLevelContent('archive-stabilization');

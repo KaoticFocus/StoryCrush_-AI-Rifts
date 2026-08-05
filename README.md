@@ -142,7 +142,7 @@ Cancellation behavior:
 - Restart, menu exit, resize, shutdown, and playback failure cancel active tweens and rebuild from the authoritative controller state.
 - Terminal states remain input-locked after playback completes.
 
-Fantasy Puzzle Lab levels use 8 x 8 boards with first-pass score goals of 2,500 / 3,500 / 5,000 plus unchanged piece-collection targets. See `docs/level-balance-baseline.md`.
+Fantasy Puzzle Lab includes three calm levels (score goals 2,500 / 3,500 / 5,000 plus collection targets) and an experimental **Rift Erosion Lab** single-source threat level. Calm level goals are unchanged; Rift Lab values are provisional. See `docs/level-balance-baseline.md` and `docs/rift-hunger-board-threat-direction.md`.
 
 ## Verification Command
 

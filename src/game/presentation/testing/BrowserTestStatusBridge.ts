@@ -23,6 +23,12 @@ export interface BrowserTestStatus {
   objectiveSummary: string;
   allowedPieceTypes: string;
   levelStatus: string;
+  threatStatus: string;
+  threatHungerCurrent: number;
+  threatHungerMaximum: number;
+  threatMovesUntilSpread: number;
+  threatCorruptedCoordinates: string;
+  threatThreatenedCoordinate: string;
   playbackState: BrowserPlaybackState;
   playbackSequence: number;
   playbackMode: string;

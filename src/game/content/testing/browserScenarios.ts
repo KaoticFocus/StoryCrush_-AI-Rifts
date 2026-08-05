@@ -34,7 +34,10 @@ export type BrowserScenarioId =
   | 'terminal-win'
   | 'terminal-failure'
   | 'mobile-layout'
-  | 'reduced-motion';
+  | 'reduced-motion'
+  | 'rift-spread'
+  | 'rift-cleanse'
+  | 'rift-overwhelm';
 
 const ordinaryMove = { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } };
 const lineAreaMove = { from: { row: 6, column: 6 }, to: { row: 6, column: 7 } };
@@ -180,6 +183,27 @@ const scenarios: Record<BrowserScenarioId, BrowserScenarioDefinition> = {
     description: 'Reduced-motion special-effect presentation.',
     expectedAction: { kind: 'swap', ...lineAreaMove },
     expectedFeatures: ['reduced-motion', 'special-activation'],
+  },
+  'rift-spread': {
+    id: 'rift-spread',
+    fixtureId: 'rift-spread',
+    description: 'Deterministic Rift Hunger spread after an accepted move.',
+    expectedAction: { kind: 'swap', ...ordinaryMove },
+    expectedFeatures: ['rift-hunger', 'spread', 'threat-sync'],
+  },
+  'rift-cleanse': {
+    id: 'rift-cleanse',
+    fixtureId: 'rift-cleanse',
+    description: 'Adjacent ordinary match cleanses non-source corruption.',
+    expectedAction: { kind: 'swap', ...ordinaryMove },
+    expectedFeatures: ['rift-hunger', 'cleanse', 'threat-sync'],
+  },
+  'rift-overwhelm': {
+    id: 'rift-overwhelm',
+    fixtureId: 'rift-overwhelm',
+    description: 'Hunger maximum failure labels Rift Overwhelmed.',
+    expectedAction: { kind: 'swap', ...ordinaryMove },
+    expectedFeatures: ['rift-hunger', 'overwhelmed', 'threat-sync'],
   },
 };
 

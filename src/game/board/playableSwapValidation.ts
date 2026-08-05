@@ -16,12 +16,16 @@ export function validatePlayableSwap(
   board: Board,
   first: BoardCoordinate,
   second: BoardCoordinate,
+  unavailableCoordinates: readonly BoardCoordinate[] = [],
 ): PlayableSwapValidationResult {
-  const structural = validateStructuralSwap(board, first, second);
+  const structural = validateStructuralSwap(board, first, second, unavailableCoordinates);
   if (!structural.isValid) {
+    const isUnavailable =
+      structural.reason === 'first-coordinate-unavailable' ||
+      structural.reason === 'second-coordinate-unavailable';
     return {
       isValid: false,
-      reason: 'structurally-invalid',
+      reason: isUnavailable ? 'cell-unavailable' : 'structurally-invalid',
       structuralReason: structural.reason,
       board,
     };
@@ -29,7 +33,7 @@ export function validatePlayableSwap(
 
   const firstPiece = board.getPieceAt(first);
   const secondPiece = board.getPieceAt(second);
-  const scoring = validateScoringSwap(board, first, second);
+  const scoring = validateScoringSwap(board, first, second, unavailableCoordinates);
 
   const hasWildcard = isWildcardPiece(firstPiece) || isWildcardPiece(secondPiece);
   const hasSpecialCombination = isSpecialPiece(firstPiece) && isSpecialPiece(secondPiece);

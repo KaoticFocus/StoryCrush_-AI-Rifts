@@ -4,6 +4,11 @@ import {
   ScoringSwapValidationResult,
   StructuralSwapValidationResult,
 } from './boardTypes';
+import {
+  coordinateKey,
+  unavailableCoordinateKeySet,
+  validateUnavailableCoordinates,
+} from './boardAvailability';
 import { findMatchRuns } from './matchDetection';
 
 function isSameCoordinate(first: BoardCoordinate, second: BoardCoordinate): boolean {
@@ -23,6 +28,7 @@ export function validateStructuralSwap(
   board: Board,
   first: BoardCoordinate,
   second: BoardCoordinate,
+  unavailableCoordinates: readonly BoardCoordinate[] = [],
 ): StructuralSwapValidationResult {
   if (!board.isWithinBounds(first)) {
     return { isValid: false, reason: 'first-coordinate-out-of-bounds' };
@@ -30,6 +36,17 @@ export function validateStructuralSwap(
 
   if (!board.isWithinBounds(second)) {
     return { isValid: false, reason: 'second-coordinate-out-of-bounds' };
+  }
+
+  const unavailableKeys = unavailableCoordinateKeySet(
+    validateUnavailableCoordinates(unavailableCoordinates, board.getDimensions()),
+  );
+  if (unavailableKeys.has(coordinateKey(first))) {
+    return { isValid: false, reason: 'first-coordinate-unavailable' };
+  }
+
+  if (unavailableKeys.has(coordinateKey(second))) {
+    return { isValid: false, reason: 'second-coordinate-unavailable' };
   }
 
   if (isSameCoordinate(first, second)) {
@@ -56,14 +73,15 @@ export function createsMatchAfterSwap(
   board: Board,
   first: BoardCoordinate,
   second: BoardCoordinate,
+  unavailableCoordinates: readonly BoardCoordinate[] = [],
 ): boolean {
-  const structural = validateStructuralSwap(board, first, second);
+  const structural = validateStructuralSwap(board, first, second, unavailableCoordinates);
   if (!structural.isValid) {
     return false;
   }
 
   const swapped = board.swapPieces(first, second);
-  const result = findMatchRuns(swapped);
+  const result = findMatchRuns(swapped, unavailableCoordinates);
 
   return result.runs.some(
     (run) => coordinateInRun(run.coordinates, first) || coordinateInRun(run.coordinates, second),
@@ -74,19 +92,23 @@ export function validateScoringSwap(
   board: Board,
   first: BoardCoordinate,
   second: BoardCoordinate,
+  unavailableCoordinates: readonly BoardCoordinate[] = [],
 ): ScoringSwapValidationResult {
-  const structural = validateStructuralSwap(board, first, second);
+  const structural = validateStructuralSwap(board, first, second, unavailableCoordinates);
   if (!structural.isValid) {
+    const isUnavailable =
+      structural.reason === 'first-coordinate-unavailable' ||
+      structural.reason === 'second-coordinate-unavailable';
     return {
       isValid: false,
-      reason: 'structurally-invalid',
+      reason: isUnavailable ? 'cell-unavailable' : 'structurally-invalid',
       structuralReason: structural.reason,
       board,
     };
   }
 
   const swappedBoard = board.swapPieces(first, second);
-  const matchResult = findMatchRuns(swappedBoard);
+  const matchResult = findMatchRuns(swappedBoard, unavailableCoordinates);
   const hasRelevantMatch = matchResult.runs.some(
     (run) => coordinateInRun(run.coordinates, first) || coordinateInRun(run.coordinates, second),
   );

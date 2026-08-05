@@ -6,9 +6,13 @@ import {
 } from '../../board';
 import {
   applyLevelMove,
+  cloneRiftHungerState,
   createLevelSession,
   type CreateLevelSessionResult,
   type LevelDefinition,
+  type LevelSessionState,
+  type RiftHungerState,
+  validateRiftHungerStateRelationship,
 } from '../../level';
 import { createPrototypeBoard, prototypeLevelDefinition } from '../prototypeLevel';
 
@@ -18,7 +22,10 @@ export type BrowserFixtureId =
   | 'instant-resolution'
   | 'line-area-combination'
   | 'wildcard-target'
-  | 'wildcard-pair';
+  | 'wildcard-pair'
+  | 'rift-spread'
+  | 'rift-cleanse'
+  | 'rift-overwhelm';
 
 export interface BrowserFixture {
   id: BrowserFixtureId;
@@ -28,6 +35,8 @@ export interface BrowserFixture {
     from: BoardCoordinate;
     to: BoardCoordinate;
   };
+  /** Optional threat-state seed applied after session create (RH-1 cleanse fixtures). */
+  prepareThreatState?: (state: RiftHungerState) => RiftHungerState;
   expectedOutcome: {
     scoreAfter: number;
     movesAfter: number;
@@ -69,14 +78,38 @@ function objectivesHash(session: CreateLevelSessionResult['state']): string {
     .join(',');
 }
 
+function withPreparedThreatState(
+  definition: LevelDefinition,
+  state: LevelSessionState,
+  prepareThreatState?: (threat: RiftHungerState) => RiftHungerState,
+): LevelSessionState {
+  if (!prepareThreatState || !state.threatState || !definition.threat) {
+    return state;
+  }
+  const nextThreat = validateRiftHungerStateRelationship({
+    definition: definition.threat,
+    state: prepareThreatState(cloneRiftHungerState(state.threatState)),
+    boardDimensions: state.board.getDimensions(),
+  });
+  return {
+    ...state,
+    threatState: nextThreat,
+  };
+}
+
 function createFixture(input: Omit<BrowserFixture, 'expectedOutcome'>): BrowserFixture {
   const session = createLevelSession({
     definition: input.definition,
     initialBoard: input.initialBoard,
   });
+  const preparedState = withPreparedThreatState(
+    input.definition,
+    session.state,
+    input.prepareThreatState,
+  );
   const result = applyLevelMove({
     definition: input.definition,
-    state: session.state,
+    state: preparedState,
     ...input.expectedMove,
   });
   if (!result.accepted) {
@@ -99,6 +132,9 @@ function createFixture(input: Omit<BrowserFixture, 'expectedOutcome'>): BrowserF
           'apply-gravity',
           'refill-pieces',
         ]),
+        ...(result.threatTransition?.cleanseEvents.length ? ['rift-cleanse'] : []),
+        ...(result.threatTransition?.spreadEvent ? ['rift-spread'] : []),
+        ...(result.threatTransition ? ['rift-threat-sync'] : []),
         'synchronize-board',
       ],
       activationCount: result.resolution.steps.reduce(
@@ -149,6 +185,61 @@ const fixtures: Record<BrowserFixtureId, BrowserFixture> = {
     initialBoard: createWildcardPairBoard(),
     expectedMove: { from: { row: 4, column: 4 }, to: { row: 4, column: 5 } },
   }),
+  'rift-spread': createFixture({
+    id: 'rift-spread',
+    definition: {
+      ...createFixtureDefinition('rift-spread', 31_007),
+      threat: {
+        kind: 'rift-hunger',
+        sourceCells: [{ row: 7, column: 7 }],
+        spreadInterval: 1,
+        hungerMaximum: 5,
+        spreadPriority: 'orthogonal-stable-coordinate',
+      },
+    },
+    initialBoard: createPrototypeFixtureBoard(),
+    expectedMove: { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } },
+  }),
+  'rift-cleanse': createFixture({
+    id: 'rift-cleanse',
+    definition: {
+      ...createFixtureDefinition('rift-cleanse', 31_008),
+      threat: {
+        kind: 'rift-hunger',
+        sourceCells: [{ row: 7, column: 0 }],
+        spreadInterval: 3,
+        hungerMaximum: 5,
+        spreadPriority: 'orthogonal-stable-coordinate',
+      },
+    },
+    initialBoard: createPrototypeFixtureBoard(),
+    expectedMove: { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } },
+    prepareThreatState: (threat) => ({
+      ...threat,
+      corruptedCells: [
+        { row: 1, column: 0 },
+        { row: 7, column: 0 },
+      ],
+      threatenedCell: { row: 7, column: 1 },
+      acceptedMovesUntilSpread: 3,
+      status: 'active',
+    }),
+  }),
+  'rift-overwhelm': createFixture({
+    id: 'rift-overwhelm',
+    definition: {
+      ...createFixtureDefinition('rift-overwhelm', 31_009),
+      threat: {
+        kind: 'rift-hunger',
+        sourceCells: [{ row: 7, column: 7 }],
+        spreadInterval: 1,
+        hungerMaximum: 1,
+        spreadPriority: 'orthogonal-stable-coordinate',
+      },
+    },
+    initialBoard: createPrototypeFixtureBoard(),
+    expectedMove: { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } },
+  }),
 };
 
 export function getBrowserFixture(id: string | null): BrowserFixture | null {
@@ -159,8 +250,12 @@ export function getBrowserFixture(id: string | null): BrowserFixture | null {
 }
 
 export function createBrowserFixtureSession(fixture: BrowserFixture): CreateLevelSessionResult {
-  return createLevelSession({
+  const session = createLevelSession({
     definition: fixture.definition,
     initialBoard: fixture.initialBoard,
   });
+  return {
+    ...session,
+    state: withPreparedThreatState(fixture.definition, session.state, fixture.prepareThreatState),
+  };
 }

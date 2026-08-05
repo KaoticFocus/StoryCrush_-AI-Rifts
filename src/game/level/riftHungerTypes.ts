@@ -1,10 +1,11 @@
 import { BoardCoordinate } from '../board/boardTypes';
 
 /**
- * Deterministic Rift Hunger / Rift Erosion threat (RH-0 domain foundation).
+ * Deterministic Rift Hunger / Rift Erosion threat.
  *
  * Corruption is a cell-state overlay; underlying board pieces are unchanged.
- * Presentation, cleansing, and special-creation protection wiring are deferred.
+ * RH-1 adds adjacent-match cleansing for non-source corruption.
+ * Special-piece cleansing and special-creation protection wiring remain deferred (RH-2).
  */
 
 export type RiftHungerStatus = 'active' | 'contained' | 'overwhelmed';
@@ -50,12 +51,23 @@ export interface RiftHungerSpreadEvent {
   nextThreatenedCell: BoardCoordinate | null;
 }
 
+/** RH-1 cleanse cause. Special cleansing is deferred to RH-2. */
+export type RiftHungerCleanseCause = 'adjacent-match';
+
+export interface RiftHungerCleanseEvent {
+  coordinate: BoardCoordinate;
+  cause: 'adjacent-match';
+  triggeringStepIndexes: number[];
+  adjacentMatchedCoordinates: BoardCoordinate[];
+}
+
 export interface RiftHungerTransition {
   previousState: RiftHungerState;
   nextState: RiftHungerState;
   countdownBefore: number;
   countdownAfter: number;
   spreadEvent: RiftHungerSpreadEvent | null;
+  cleanseEvents: RiftHungerCleanseEvent[];
   statusBefore: RiftHungerStatus;
   statusAfter: RiftHungerStatus;
 }

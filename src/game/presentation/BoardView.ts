@@ -34,6 +34,7 @@ import { type PlaybackSettings } from './playback/ResolutionPlaybackController';
 import { type SpecialEffectPresentationPlan } from './playback/specialEffectPlanning';
 import { planTwoPhaseCoordinateRekey } from './playback/twoPhaseCoordinateRekey';
 import { getBoardPieceHash } from './testing/BrowserTestStatusBridge';
+import { type ThreatViewModel } from './levelViewModel';
 
 interface BoardViewState {
   selectedCoordinate: BoardCoordinate | null;
@@ -79,6 +80,8 @@ export class BoardView {
   private readonly backgroundGraphics: Phaser.GameObjects.Graphics;
   private readonly cellBackgroundGraphics: Phaser.GameObjects.Graphics;
   private readonly pieceLayer: Phaser.GameObjects.Container;
+  private readonly threatLayer: Phaser.GameObjects.Container;
+  private threatGraphics: Phaser.GameObjects.Graphics;
   private readonly effectLayer: Phaser.GameObjects.Container;
   private readonly overlayGraphics: Phaser.GameObjects.Graphics;
   private readonly hitZone: Phaser.GameObjects.Zone;
@@ -101,12 +104,18 @@ export class BoardView {
     disabled: false,
   };
   private onCellSelected: ((coordinate: BoardCoordinate) => void) | null = null;
+  private onCorruptedCellTapped: ((coordinate: BoardCoordinate) => void) | null = null;
+  private threatViewModel: ThreatViewModel | undefined;
+  private threatTween: Phaser.Tweens.Tween | null = null;
 
   public constructor(private readonly scene: Phaser.Scene) {
     this.root = scene.add.container(0, 0);
     this.backgroundGraphics = scene.add.graphics();
     this.cellBackgroundGraphics = scene.add.graphics();
     this.pieceLayer = scene.add.container(0, 0);
+    this.threatLayer = scene.add.container(0, 0);
+    this.threatGraphics = scene.add.graphics();
+    this.threatLayer.add(this.threatGraphics);
     this.effectLayer = scene.add.container(0, 0);
     this.overlayGraphics = scene.add.graphics();
     this.hitZone = scene.add.zone(0, 0, 1, 1).setOrigin(0, 0).setInteractive();
@@ -121,6 +130,14 @@ export class BoardView {
         y: pointer.y,
       });
       if (coordinate) {
+        if (
+          this.threatViewModel?.corruptedCoordinates.some(
+            (entry) => entry.row === coordinate.row && entry.column === coordinate.column,
+          )
+        ) {
+          this.onCorruptedCellTapped?.(coordinate);
+          return;
+        }
         this.onCellSelected(coordinate);
       }
     };
@@ -166,6 +183,7 @@ export class BoardView {
       this.backgroundGraphics,
       this.cellBackgroundGraphics,
       this.pieceLayer,
+      this.threatLayer,
       this.effectLayer,
       this.overlayGraphics,
       this.hitZone,
@@ -174,6 +192,10 @@ export class BoardView {
 
   public setCellSelectedHandler(handler: (coordinate: BoardCoordinate) => void): void {
     this.onCellSelected = handler;
+  }
+
+  public setCorruptedCellTappedHandler(handler: (coordinate: BoardCoordinate) => void): void {
+    this.onCorruptedCellTapped = handler;
   }
 
   public getRenderedBoardHash(): string | null {
@@ -214,9 +236,12 @@ export class BoardView {
     selectedCoordinate: BoardCoordinate | null;
     rejectedCoordinates?: BoardCoordinate[];
     disabled: boolean;
+    threat?: ThreatViewModel;
+    reducedMotion?: boolean;
   }): void {
     this.layout = input.layout;
     this.boardViewModel = input.boardViewModel;
+    this.threatViewModel = input.threat;
     this.state = {
       ...this.state,
       selectedCoordinate: input.selectedCoordinate,
@@ -226,6 +251,7 @@ export class BoardView {
 
     this.drawBoardChrome();
     this.rebuildPieces();
+    this.redrawThreatLayer(Boolean(input.reducedMotion));
     this.redrawOverlay();
   }
 
@@ -260,6 +286,18 @@ export class BoardView {
         return;
       case 'cascade-pause':
         await this.showCascadePause(command, settings);
+        return;
+      case 'rift-cleanse':
+        await this.flashCoordinates(
+          command.events.map((event) => event.coordinate),
+          0x86efac,
+          settings,
+        );
+        return;
+      case 'rift-spread':
+        await this.flashCoordinates([command.event.coordinate], 0xfb7185, settings);
+        return;
+      case 'rift-threat-sync':
         return;
       case 'reshuffle-movement':
         await this.playReshuffleMovement(command, settings);
@@ -336,6 +374,7 @@ export class BoardView {
       tween.stop();
     }
     this.activeTweens.clear();
+    this.threatTween = null;
 
     for (const timer of this.activeTimers) {
       timer.remove(false);
@@ -435,6 +474,91 @@ export class BoardView {
     this.clearTransientState();
     this.hitZone.removeAllListeners();
     this.root.destroy(true);
+  }
+
+  private redrawThreatLayer(reducedMotion: boolean): void {
+    if (!this.layout) return;
+    if (this.threatTween) {
+      this.threatTween.stop();
+      this.activeTweens.delete(this.threatTween);
+      this.threatTween = null;
+    }
+    this.threatLayer.removeAll(true);
+    this.threatLayer.setAlpha(1);
+    this.threatGraphics = this.scene.add.graphics();
+    this.threatLayer.add(this.threatGraphics);
+    const threat = this.threatViewModel;
+    if (!threat) return;
+
+    for (const coordinate of threat.corruptedCoordinates) {
+      const bounds = getBoardCellBounds(this.layout, coordinate);
+      const source = isCoordinateInList(coordinate, threat.sourceCoordinates);
+      this.threatGraphics.fillStyle(source ? 0x3f0712 : 0x111827, 0.76);
+      this.threatGraphics.fillRect(bounds.x + 2, bounds.y + 2, bounds.width - 4, bounds.height - 4);
+      this.threatGraphics.lineStyle(source ? 4 : 2, source ? 0xf43f5e : 0xa78bfa, 0.95);
+      this.threatGraphics.strokeRect(
+        bounds.x + 3,
+        bounds.y + 3,
+        bounds.width - 6,
+        bounds.height - 6,
+      );
+      const hatchStep = Math.max(8, Math.floor(bounds.width / 5));
+      this.threatGraphics.lineStyle(1, 0xc4b5fd, 0.38);
+      for (let offset = -bounds.height; offset < bounds.width; offset += hatchStep) {
+        this.threatGraphics.beginPath();
+        this.threatGraphics.moveTo(bounds.x + Math.max(2, offset), bounds.y + 2);
+        this.threatGraphics.lineTo(
+          bounds.x + Math.min(bounds.width - 2, offset + bounds.height),
+          bounds.y + bounds.height - 2,
+        );
+        this.threatGraphics.strokePath();
+      }
+      const symbol = this.scene.add
+        .text(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, source ? '◆' : '×', {
+          fontFamily: 'monospace',
+          fontSize: `${Math.max(16, Math.floor(bounds.width * 0.42))}px`,
+          color: source ? '#fb7185' : '#ddd6fe',
+        })
+        .setOrigin(0.5);
+      this.threatLayer.add(symbol);
+    }
+
+    if (threat.threatenedCoordinate) {
+      const bounds = getBoardCellBounds(this.layout, threat.threatenedCoordinate);
+      this.threatGraphics.lineStyle(3, 0xfbbf24, 1);
+      this.threatGraphics.strokeRoundedRect(
+        bounds.x + 4,
+        bounds.y + 4,
+        bounds.width - 8,
+        bounds.height - 8,
+        8,
+      );
+      const warning = this.scene.add
+        .text(bounds.x + bounds.width - 7, bounds.y + 4, '!', {
+          fontFamily: 'monospace',
+          fontSize: `${Math.max(14, Math.floor(bounds.width * 0.32))}px`,
+          color: '#fef3c7',
+          backgroundColor: '#92400e',
+          padding: { x: 3, y: 0 },
+        })
+        .setOrigin(1, 0);
+      this.threatLayer.add(warning);
+    }
+
+    if (!reducedMotion) {
+      this.threatTween = this.trackTween(
+        this.scene.tweens.add({
+          targets: this.threatLayer,
+          alpha: 0.76,
+          duration: 1250,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        }),
+      );
+    } else {
+      this.threatLayer.setAlpha(1);
+    }
   }
 
   private drawBoardChrome(): void {

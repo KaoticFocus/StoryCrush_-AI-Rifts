@@ -1,4 +1,9 @@
-import { findPlayableSwaps, type Board, type PlayableSwap } from '../../board';
+import {
+  findPlayableSwaps,
+  type Board,
+  type BoardCoordinate,
+  type PlayableSwap,
+} from '../../board';
 import { type PuzzlePresentationState, canRequestHint } from '../state/presentationPermissions';
 
 export type HintSelectionResult =
@@ -10,6 +15,7 @@ export function selectHint(input: {
   levelIsActive: boolean;
   hintsEnabled: boolean;
   presentationState: PuzzlePresentationState;
+  unavailableCoordinates?: readonly BoardCoordinate[];
 }): HintSelectionResult {
   if (
     !canRequestHint({
@@ -24,7 +30,7 @@ export function selectHint(input: {
     };
   }
 
-  const move = findPlayableSwaps(input.board)[0];
+  const move = findPlayableSwaps(input.board, input.unavailableCoordinates)[0];
   if (!move) {
     return { kind: 'unavailable', reason: 'no-playable-move' };
   }
