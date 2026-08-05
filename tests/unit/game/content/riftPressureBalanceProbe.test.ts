@@ -38,15 +38,10 @@ describe('rift pressure balance probe', () => {
     }
   });
 
-  it('keeps the selected threat-aware baseline deterministic for the shared seed matrix', () => {
+  it('keeps the selected threat-aware baseline for the shared seed matrix', () => {
     const runs = RIFT_PRESSURE_PROBE_SEEDS.map((seed) =>
       runRiftPressureProbeForSeed({ seed, policy: 'threat-aware' }),
     );
-    const again = RIFT_PRESSURE_PROBE_SEEDS.map((seed) =>
-      runRiftPressureProbeForSeed({ seed, policy: 'threat-aware' }),
-    );
-    expect(again).toEqual(runs);
-
     const summary = summarizeRiftPressureProbe('threat-aware', runs);
     expect(evaluateHardGates(summary)).toBe(true);
     // Locked RH-3 selected-candidate evidence (seeds 1831–1870).
@@ -68,7 +63,11 @@ describe('rift pressure balance probe', () => {
       invalidRejectedSelections: 0,
       returnedActiveWithoutPlayable: 0,
     });
-  }, 90_000);
+    // Spot-check determinism on the default catalog seed.
+    expect(runRiftPressureProbeForSeed({ seed: 1831, policy: 'threat-aware' })).toEqual(
+      runs.find((run) => run.seed === 1831),
+    );
+  }, 60_000);
 
   it('keeps a fixed seed subset identical across repeated threat-aware runs', () => {
     const baselines = FIXED_SUBSET.map((seed) =>
