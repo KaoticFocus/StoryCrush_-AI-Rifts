@@ -20,6 +20,7 @@ import {
 } from '../flow/gameFlowPersistenceCoordinator';
 import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusBridge';
 import { createBrowserSeedProvider } from '../presentation/browserSeedProvider';
+import { parsePlaytestLaunch } from '../content/playtestLaunch';
 import { type PuzzleLaunchContext } from '../content/levelRun';
 
 export class MainMenuScene extends Phaser.Scene {
@@ -80,6 +81,16 @@ export class MainMenuScene extends Phaser.Scene {
         const context: PuzzleLaunchContext = {
           mode: 'browser-fixture',
           fixtureId: query.get('fixture') ?? query.get('scenario') ?? 'fixture',
+        };
+        this.scene.start(PuzzleScene.key, context);
+        return;
+      }
+      const playtestRun = parsePlaytestLaunch(window.location.search);
+      if (playtestRun) {
+        const context: PuzzleLaunchContext = {
+          mode: 'puzzle-lab',
+          run: playtestRun,
+          playtest: true,
         };
         this.scene.start(PuzzleScene.key, context);
         return;

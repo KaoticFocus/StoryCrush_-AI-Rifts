@@ -70,7 +70,8 @@ export function createAriaStatusMessage(
     | { kind: 'rift-hunger'; current: number; maximum: number }
     | { kind: 'rift-overwhelmed' }
     | { kind: 'rift-contained' }
-    | { kind: 'rift-restarted' },
+    | { kind: 'rift-restarted' }
+    | { kind: 'playtest-seed'; seed: number },
 ): string {
   switch (input.kind) {
     case 'move-accepted':
@@ -116,6 +117,8 @@ export function createAriaStatusMessage(
       return 'Rift contained.';
     case 'rift-restarted':
       return 'Rift Hunger level restarted.';
+    case 'playtest-seed':
+      return `Playtest seed ${input.seed}.`;
   }
 }
 
