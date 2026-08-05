@@ -651,7 +651,8 @@ Contract highlights:
 - Corrupted coordinates are unavailable for ordinary swaps/matches/hints/dead-board checks. Gravity and refill are **not** segmented by corruption in RH-1 (provisional).
 - Source cells begin corrupted, never add initial hunger, and cannot be cleansed in RH-1.
 - Non-source corruption cleanses only via orthogonal adjacent ordinary matches (`adjacent-match`). Special cleansing is RH-2.
-- Cleansing does **not** reduce `hungerCurrent`. Cleansed cells become available on the next accepted move.
+- Cleansing does **not** reduce `hungerCurrent`. Cleansed cells are absent from returned `threatState.corruptedCells` and are therefore available in the returned resting board.
+- Active returned boards must be stable and playable under the returned corruption mask only. If cleansing exposes matches or leaves a dead board, `applyLevelMove` deterministically rearranges the exact piece inventory (`rearrangeBoardToStablePlayable`) without another scoring cascade, collection, cleanse, spread, hunger, or move.
 - Countdown/spread reuse RH-0 `advanceRiftHungerForAcceptedMove` inside `resolveRiftHungerForAcceptedMove`, which also applies cleanses and recomputes the future telegraph.
 - Completing all objectives wins **before** all threat processing (no countdown/spread/cleanse on the winning move).
 - Puzzle Lab includes experimental `rift-erosion-lab` (provisional: score 2200 / 8 amethyst / 15 moves / spread every 3 / hunger max 5). Calm Archive/Moonwell/Rootbound levels remain threat-free.
@@ -667,7 +668,7 @@ After an accepted move:
 2. Otherwise, if the level declares a threat, advance Rift Hunger exactly once for this accepted move.
 3. If threat status becomes `overwhelmed`, the level fails.
 4. Else if moves remaining equals zero, the level fails.
-5. Otherwise remain active.
+5. Else remain active, and if the resting board is unstable or dead under returned `corruptedCells`, deterministically rearrange inventory into a stable playable board (not a cascade).
 
 For levels without a threat, steps 2–3 are skipped and the historical win-then-moves-fail order is unchanged.
 
