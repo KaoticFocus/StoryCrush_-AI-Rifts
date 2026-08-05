@@ -37,6 +37,10 @@ export type BrowserScenarioId =
   | 'reduced-motion'
   | 'rift-spread'
   | 'rift-cleanse'
+  | 'rift-line-cleanse'
+  | 'rift-cross-cleanse'
+  | 'rift-wildcard-cleanse'
+  | 'rift-wildcard-pair-cleanse'
   | 'rift-overwhelm';
 
 const ordinaryMove = { from: { row: 0, column: 1 }, to: { row: 1, column: 1 } };
@@ -197,6 +201,34 @@ const scenarios: Record<BrowserScenarioId, BrowserScenarioDefinition> = {
     description: 'Adjacent ordinary match cleanses non-source corruption.',
     expectedAction: { kind: 'swap', ...ordinaryMove },
     expectedFeatures: ['rift-hunger', 'cleanse', 'threat-sync'],
+  },
+  'rift-line-cleanse': {
+    id: 'rift-line-cleanse',
+    fixtureId: 'rift-line-cleanse',
+    description: 'Line-clear special activation cleanses corruption on its row.',
+    expectedAction: { kind: 'swap', from: { row: 0, column: 1 }, to: { row: 1, column: 1 } },
+    expectedFeatures: ['rift-hunger', 'special-cleanse', 'line-clear', 'threat-sync'],
+  },
+  'rift-cross-cleanse': {
+    id: 'rift-cross-cleanse',
+    fixtureId: 'rift-cross-cleanse',
+    description: 'Cross-clear / line special combination cleanses unique corrupted cells.',
+    expectedAction: { kind: 'swap', from: { row: 0, column: 0 }, to: { row: 0, column: 1 } },
+    expectedFeatures: ['rift-hunger', 'special-cleanse', 'cross-clear', 'threat-sync'],
+  },
+  'rift-wildcard-cleanse': {
+    id: 'rift-wildcard-cleanse',
+    fixtureId: 'rift-wildcard-cleanse',
+    description: 'Wildcard type-target cleanses matching corrupted cells.',
+    expectedAction: { kind: 'swap', from: { row: 0, column: 0 }, to: { row: 0, column: 1 } },
+    expectedFeatures: ['rift-hunger', 'special-cleanse', 'wildcard', 'threat-sync'],
+  },
+  'rift-wildcard-pair-cleanse': {
+    id: 'rift-wildcard-pair-cleanse',
+    fixtureId: 'rift-wildcard-pair-cleanse',
+    description: 'Wildcard-pair entire-board activation cleanses non-source corruption.',
+    expectedAction: { kind: 'swap', from: { row: 0, column: 0 }, to: { row: 0, column: 1 } },
+    expectedFeatures: ['rift-hunger', 'special-cleanse', 'wildcard', 'entire-board', 'threat-sync'],
   },
   'rift-overwhelm': {
     id: 'rift-overwhelm',

@@ -142,7 +142,7 @@ Cancellation behavior:
 - Restart, menu exit, resize, shutdown, and playback failure cancel active tweens and rebuild from the authoritative controller state.
 - Terminal states remain input-locked after playback completes.
 
-Fantasy Puzzle Lab includes three calm levels (score goals 2,500 / 3,500 / 5,000 plus collection targets) and an experimental **Rift Erosion Lab** single-source threat level. Calm level goals are unchanged; Rift Lab values are provisional. See `docs/level-balance-baseline.md` and `docs/rift-hunger-board-threat-direction.md`.
+Fantasy Puzzle Lab includes three calm levels (score goals 2,500 / 3,500 / 5,000 plus collection targets) and an experimental **Rift Erosion Lab** single-source threat level. RH-1 adjacent cleansing is on `main`; RH-2 drafts authoritative line/cross/wildcard special cleansing without cleanse score bonuses. Calm level goals are unchanged; Rift Lab values are provisional. See `docs/level-balance-baseline.md` and `docs/rift-hunger-board-threat-direction.md`.
 
 ## Verification Command
 

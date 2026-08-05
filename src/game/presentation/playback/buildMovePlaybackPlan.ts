@@ -2,6 +2,7 @@ import { type AppliedSpecialCreation } from '../../board/boardTypes';
 import { cloneResolvableGrid } from '../../board/resolutionGrid';
 import { type BoardCoordinate } from '../../board';
 import {
+  cloneRiftHungerCleanseEvent,
   type AcceptedLevelMoveResult,
   type LevelMoveResult,
   type LevelObjectiveDefinition,
@@ -283,20 +284,7 @@ export function buildMovePlaybackPlan(
   }
 
   if (acceptedResult.threatTransition) {
-    if (acceptedResult.threatTransition.cleanseEvents.length > 0) {
-      commands.push({
-        kind: 'rift-cleanse',
-        index: commandIndex,
-        stepIndex: null,
-        events: acceptedResult.threatTransition.cleanseEvents.map((event) => ({
-          ...event,
-          coordinate: cloneCoordinate(event.coordinate),
-          triggeringStepIndexes: [...event.triggeringStepIndexes],
-          adjacentMatchedCoordinates: event.adjacentMatchedCoordinates.map(cloneCoordinate),
-        })),
-      });
-      commandIndex += 1;
-    }
+    // Domain order for presentation: spread overlay lands before authoritative cleanses.
     if (acceptedResult.threatTransition.spreadEvent) {
       const event = acceptedResult.threatTransition.spreadEvent;
       commands.push({
@@ -310,6 +298,15 @@ export function buildMovePlaybackPlan(
             ? cloneCoordinate(event.nextThreatenedCell)
             : null,
         },
+      });
+      commandIndex += 1;
+    }
+    if (acceptedResult.threatTransition.cleanseEvents.length > 0) {
+      commands.push({
+        kind: 'rift-cleanse',
+        index: commandIndex,
+        stepIndex: null,
+        events: acceptedResult.threatTransition.cleanseEvents.map(cloneRiftHungerCleanseEvent),
       });
       commandIndex += 1;
     }

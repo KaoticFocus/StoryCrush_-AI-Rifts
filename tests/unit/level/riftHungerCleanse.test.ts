@@ -4,7 +4,7 @@ import {
   createLevelSession,
   createInitialRiftHungerState,
   DEFAULT_SCORING_RULES,
-  planAdjacentMatchCleanses,
+  planRiftHungerCleanses,
   type LevelDefinition,
   type RiftHungerDefinition,
 } from '../../../src/game/level';
@@ -73,13 +73,14 @@ describe('RH-1 adjacent-match cleanse planning', () => {
       return;
     }
 
-    const events = planAdjacentMatchCleanses({
+    const events = planRiftHungerCleanses({
       previousState: previous,
       resolution,
     });
     // Matched rubies include (0,0)/(0,1)/(0,2) or similar — (1,2) may be orthogonal to a match.
     for (const event of events) {
-      expect(event.cause).toBe('adjacent-match');
+      expect(event.causes).toEqual(['adjacent-match']);
+      expect(event.evidence.every((entry) => entry.kind === 'adjacent-match')).toBe(true);
       expect(event.coordinate).not.toEqual({ row: 2, column: 2 });
     }
   });
@@ -152,7 +153,7 @@ describe('RH-1 adjacent-match cleanse planning', () => {
       acceptedMovesUntilSpread: 1,
     };
 
-    const events = planAdjacentMatchCleanses({
+    const events = planRiftHungerCleanses({
       previousState: withSpreadTarget,
       resolution: fakeResolution as never,
       newlySpreadCoordinate: { row: 0, column: 1 },
@@ -285,9 +286,12 @@ describe('RH-1 accepted-move resolver integration', () => {
     expect(result.threatTransition?.cleanseEvents).toEqual([
       expect.objectContaining({
         coordinate: { row: 1, column: 0 },
-        cause: 'adjacent-match',
+        causes: ['adjacent-match'],
       }),
     ]);
+    expect(result.threatTransition?.cleanseEvents[0]?.evidence[0]).toEqual(
+      expect.objectContaining({ kind: 'adjacent-match' }),
+    );
     expect(result.nextState.threatState?.corruptedCells).toEqual([{ row: 2, column: 2 }]);
     expect(result.nextState.threatState?.hungerCurrent).toBe(0);
     expect(result.threatTransition?.spreadEvent).toBeNull();

@@ -61,18 +61,42 @@ async function submitExpectedMove(
   );
 }
 
-async function enableInstantPlayback(page: Page): Promise<void> {
-  await page.addInitScript(() =>
-    window.localStorage.setItem(
-      'storycrush.prototype-settings.v1',
-      JSON.stringify({
-        version: 1,
-        playbackMode: 'instant',
-        reducedMotion: true,
-        hintsEnabled: true,
-      }),
-    ),
+async function enablePlaybackSettings(
+  page: Page,
+  settings: { playbackMode: 'instant' | 'normal' | 'fast'; reducedMotion: boolean },
+): Promise<void> {
+  await page.addInitScript(
+    ([playbackMode, reducedMotion]) => {
+      window.localStorage.setItem(
+        'storycrush.prototype-settings.v1',
+        JSON.stringify({
+          version: 1,
+          playbackMode,
+          reducedMotion,
+          hintsEnabled: true,
+        }),
+      );
+    },
+    [settings.playbackMode, settings.reducedMotion] as const,
   );
+}
+
+async function enableInstantPlayback(page: Page): Promise<void> {
+  await enablePlaybackSettings(page, { playbackMode: 'instant', reducedMotion: true });
+}
+
+async function assertWildcardPairCleanseOutcome(page: Page): Promise<void> {
+  const status = getTestStatus(page);
+  await expect(status).toHaveAttribute('data-command-trace', /special-activation/);
+  await expect(status).toHaveAttribute('data-command-trace', /rift-cleanse/);
+  await expect(status).toHaveAttribute('data-threat-corrupted-coordinates', '3:3');
+  await expect(status).not.toHaveAttribute('data-threat-corrupted-coordinates', /0:2/);
+  await expect(status).not.toHaveAttribute('data-threat-corrupted-coordinates', /1:0/);
+  await expect(status).not.toHaveAttribute('data-threat-corrupted-coordinates', /2:1/);
+  await expect(status).toHaveAttribute('data-threat-hunger-current', '0');
+  await expect(status).toHaveAttribute('data-threat-status', 'active');
+  await expect(status).toHaveAttribute('data-input-locked', 'false');
+  await expect(status).toHaveAttribute('data-playback-state', 'idle');
 }
 
 test('Rift Erosion Lab launches with initial threat HUD fields', async ({ page }) => {
@@ -156,6 +180,111 @@ test('rift-cleanse fixture removes adjacent non-source corruption', async ({ pag
   await expect(getTestStatus(page)).toHaveAttribute('data-threat-corrupted-coordinates', '7:0');
   await expect(getTestStatus(page)).toHaveAttribute('data-threat-hunger-current', '0');
   await expect(getTestStatus(page)).not.toHaveAttribute('data-score', scoreBefore ?? '');
+  errors.assertNone();
+});
+
+test('rift-line-cleanse fixture cleanses corruption via line-clear activation', async ({
+  page,
+}) => {
+  const errors = collectBrowserErrors(page);
+  await enableInstantPlayback(page);
+  await page.goto(buildE2EUrl({ fixture: 'rift-line-cleanse' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneCenter(page);
+  const status = await waitForSceneReady(page, 'puzzle');
+  await expect(status).toHaveAttribute('data-threat-corrupted-coordinates', /0:3/);
+  await submitExpectedMove(page);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /special-activation/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /rift-cleanse/);
+  await expect(getTestStatus(page)).not.toHaveAttribute('data-threat-corrupted-coordinates', /0:3/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-threat-hunger-current', '0');
+  errors.assertNone();
+});
+
+test('rift-cross-cleanse fixture cleanses unique cells from special combination', async ({
+  page,
+}) => {
+  const errors = collectBrowserErrors(page);
+  await enableInstantPlayback(page);
+  await page.goto(buildE2EUrl({ fixture: 'rift-cross-cleanse' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneCenter(page);
+  await waitForSceneReady(page, 'puzzle');
+  await submitExpectedMove(page);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /special-activation/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /rift-cleanse/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-threat-corrupted-coordinates', '3:0');
+  await expect(getTestStatus(page)).toHaveAttribute('data-threat-hunger-current', '0');
+  errors.assertNone();
+});
+
+test('rift-wildcard-cleanse fixture cleanses type-targeted corruption', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await enableInstantPlayback(page);
+  await page.goto(buildE2EUrl({ fixture: 'rift-wildcard-cleanse' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneCenter(page);
+  await waitForSceneReady(page, 'puzzle');
+  await submitExpectedMove(page);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /special-activation/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-command-trace', /rift-cleanse/);
+  await expect(getTestStatus(page)).not.toHaveAttribute('data-threat-corrupted-coordinates', /2:2/);
+  await expect(getTestStatus(page)).toHaveAttribute('data-threat-hunger-current', '0');
+  errors.assertNone();
+});
+
+for (const [label, settings] of [
+  ['instant', { playbackMode: 'instant' as const, reducedMotion: true }],
+  ['normal', { playbackMode: 'normal' as const, reducedMotion: false }],
+  ['reduced-motion', { playbackMode: 'normal' as const, reducedMotion: true }],
+] as const) {
+  test(`rift-wildcard-pair-cleanse fixture cleanses non-source cells (${label})`, async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    const errors = collectBrowserErrors(page);
+    await enablePlaybackSettings(page, settings);
+    await page.goto(buildE2EUrl({ fixture: 'rift-wildcard-pair-cleanse' }));
+    await waitForSceneReady(page, 'main-menu');
+    await clickSceneCenter(page);
+    const status = await waitForSceneReady(page, 'puzzle');
+    await expect(status).toHaveAttribute('data-threat-corrupted-coordinates', /0:2/);
+    await expect(status).toHaveAttribute('data-threat-corrupted-coordinates', /1:0/);
+    await expect(status).toHaveAttribute('data-threat-corrupted-coordinates', /2:1/);
+    await expect(status).toHaveAttribute('data-threat-corrupted-coordinates', /3:3/);
+    const scoreBefore = await status.getAttribute('data-score');
+    await submitExpectedMove(page);
+    await assertWildcardPairCleanseOutcome(page);
+    await expect(getTestStatus(page)).not.toHaveAttribute('data-score', scoreBefore ?? '');
+    errors.assertNone();
+  });
+}
+
+test('rift-wildcard-pair-cleanse restart restores threat and menu exit clears the scene', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const errors = collectBrowserErrors(page);
+  await enableInstantPlayback(page);
+  await page.goto(buildE2EUrl({ fixture: 'rift-wildcard-pair-cleanse' }));
+  await waitForSceneReady(page, 'main-menu');
+  await clickSceneCenter(page);
+  const status = await waitForSceneReady(page, 'puzzle');
+  const initialHash = await status.getAttribute('data-initial-board-hash');
+  const initialThreat = await status.getAttribute('data-threat-corrupted-coordinates');
+  await submitExpectedMove(page);
+  await assertWildcardPairCleanseOutcome(page);
+
+  // Fixed browser fixtures do not expose New Board; restart + menu exit cover lifecycle cleanup.
+  await page.keyboard.press('r');
+  await expect(status).toHaveAttribute('data-restart-count', '1');
+  await expect(status).toHaveAttribute('data-current-board-hash', initialHash!);
+  await expect(status).toHaveAttribute('data-threat-corrupted-coordinates', initialThreat!);
+  await expect(status).toHaveAttribute('data-threat-hunger-current', '0');
+  await expect(status).toHaveAttribute('data-input-locked', 'false');
+
+  await page.keyboard.press('m');
+  await waitForSceneReady(page, 'main-menu');
   errors.assertNone();
 });
 

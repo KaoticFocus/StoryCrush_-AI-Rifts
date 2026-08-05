@@ -104,7 +104,7 @@ export function formatMoveSummary(result: LevelMoveResult): string {
       return 'Rejected move. That swap does not create a playable result.';
     }
     if (result.reason === 'cell-unavailable') {
-      return 'That cell is corrupted. Match beside it to cleanse it.';
+      return 'That cell is corrupted. Match beside it, or clear it with a special, to cleanse it.';
     }
 
     return 'Rejected move. Choose orthogonally adjacent cells on the board.';
