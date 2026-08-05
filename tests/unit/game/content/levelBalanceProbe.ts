@@ -289,9 +289,9 @@ export function summarizeBalanceProbeRuns(
   };
 }
 
-/** Baseline calm Fantasy levels only — experimental Rift Lab uses a separate probe. */
+/** Baseline calm Fantasy levels only — pressure and lab use dedicated probes. */
 export function getCalmBalanceProbeCatalog(): readonly PlayableLevelContent[] {
-  return playableLevelCatalog.filter((content) => content.experienceKind !== 'rift-erosion-lab');
+  return playableLevelCatalog.filter((content) => content.experienceKind === 'calm');
 }
 
 export function runBalanceProbeMatrix(

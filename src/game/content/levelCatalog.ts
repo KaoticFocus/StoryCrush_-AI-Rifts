@@ -5,11 +5,13 @@ import { validateLevelDefinition } from '../level/levelValidation';
 import { type LevelDefinition, type LevelSessionState } from '../level/levelTypes';
 import { type PieceType } from '../board/boardTypes';
 
+export type PlayableExperienceKind = 'calm' | 'rift-pressure' | 'rift-erosion-lab';
+
 export interface PlayableLevelContent {
   id: string;
   title: string;
   subtitle: string;
-  experienceKind: 'calm' | 'rift-erosion-lab';
+  experienceKind: PlayableExperienceKind;
   universeId: 'fantasy';
   chapterId: string;
   definition: LevelDefinition;
@@ -68,6 +70,28 @@ export function validatePlayableLevelCatalog(
   return catalog;
 }
 
+export function isThreatLevel(content: PlayableLevelContent): boolean {
+  return content.definition.threat !== undefined;
+}
+
+export function getThreatSummary(content: PlayableLevelContent): string | null {
+  const threat = content.definition.threat;
+  if (!threat || threat.kind !== 'rift-hunger') {
+    return null;
+  }
+  return `Rift every ${threat.spreadInterval} moves · Hunger ${threat.hungerMaximum}`;
+}
+
+export function getExperienceLabel(content: PlayableLevelContent): string | null {
+  if (content.experienceKind === 'rift-pressure') {
+    return 'Fantasy Pressure';
+  }
+  if (content.experienceKind === 'rift-erosion-lab') {
+    return 'Experimental Rift Hunger';
+  }
+  return null;
+}
+
 export const playableLevelCatalog: readonly PlayableLevelContent[] = validatePlayableLevelCatalog([
   createPlayableLevelContent({
     definition: {
@@ -98,6 +122,31 @@ export const playableLevelCatalog: readonly PlayableLevelContent[] = validatePla
     },
     title: 'Moonwell Recovery',
     subtitle: 'Recover the moonwell with a tighter, more focused board.',
+  }),
+  createPlayableLevelContent({
+    definition: {
+      id: 'thornwake-containment',
+      moveLimit: 18,
+      allowedRefillPieceTypes: ['ruby', 'sapphire', 'emerald', 'topaz', 'amethyst', 'pearl'],
+      objectives: [
+        { id: 'score-target', kind: 'score', targetScore: 3000 },
+        { id: 'collect-topaz', kind: 'collect-piece', pieceType: 'topaz', targetCount: 9 },
+      ],
+      scoring: DEFAULT_SCORING_RULES,
+      seed: 1831,
+      threat: {
+        kind: 'rift-hunger',
+        sourceCells: [{ row: 7, column: 3 }],
+        spreadInterval: 3,
+        hungerMaximum: 5,
+        spreadPriority: 'orthogonal-stable-coordinate',
+      },
+    },
+    title: 'Thornwake Containment',
+    subtitle: 'Contain the hungry thorns before the Rift chokes the grove.',
+    experienceKind: 'rift-pressure',
+    boardRows: 8,
+    boardColumns: 8,
   }),
   createPlayableLevelContent({
     definition: {
@@ -152,6 +201,17 @@ export function getObjectiveSummary(content: PlayableLevelContent): string {
       objective.kind === 'score'
         ? `Score ${objective.targetScore}`
         : `Collect ${objective.targetCount} ${objective.pieceType}`,
+    )
+    .join(' · ');
+}
+
+/** Compact one-line summary for dense Puzzle Lab cards. */
+export function getCompactObjectiveSummary(content: PlayableLevelContent): string {
+  return content.definition.objectives
+    .map((objective) =>
+      objective.kind === 'score'
+        ? `${objective.targetScore} pts`
+        : `${objective.targetCount} ${objective.pieceType}`,
     )
     .join(' · ');
 }

@@ -1,7 +1,10 @@
 /* global HTMLButtonElement, HTMLDivElement, KeyboardEvent */
 import Phaser from 'phaser';
 import {
+  getCompactObjectiveSummary,
+  getExperienceLabel,
   getObjectiveSummary,
+  getThreatSummary,
   playableLevelCatalog,
   type PlayableLevelContent,
 } from '../content/levelCatalog';
@@ -14,6 +17,23 @@ import {
 import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusBridge';
 import { MainMenuScene } from './MainMenuScene';
 import { PuzzleScene } from './PuzzleScene';
+
+function cardStrokeColor(content: PlayableLevelContent, index: number): number {
+  if (content.experienceKind === 'rift-pressure') {
+    return 0xd97706;
+  }
+  if (content.experienceKind === 'rift-erosion-lab') {
+    return 0xf43f5e;
+  }
+  return index === 0 ? 0x38bdf8 : 0x64748b;
+}
+
+function badgeStyle(content: PlayableLevelContent): { color: string; backgroundColor: string } {
+  if (content.experienceKind === 'rift-pressure') {
+    return { color: '#fffbeb', backgroundColor: '#92400e' };
+  }
+  return { color: '#fecdd3', backgroundColor: '#7f1d1d' };
+}
 
 export class PuzzleLabScene extends Phaser.Scene {
   public static readonly key = 'PuzzleLabScene';
@@ -35,9 +55,9 @@ export class PuzzleLabScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#07131f');
 
     this.add
-      .text(width / 2, portrait ? 30 : 28, 'Puzzle Lab', {
+      .text(width / 2, portrait ? 24 : 28, 'Puzzle Lab', {
         fontFamily: 'monospace',
-        fontSize: portrait ? '24px' : '28px',
+        fontSize: portrait ? '22px' : '28px',
         color: '#f8fafc',
       })
       .setOrigin(0.5);
@@ -53,12 +73,12 @@ export class PuzzleLabScene extends Phaser.Scene {
     this.createLevelControls();
 
     this.add
-      .text(width / 2, height - 20, 'Back to Main Menu', {
+      .text(width / 2, height - 18, 'Back to Main Menu', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '15px',
         color: '#f8fafc',
         backgroundColor: '#334155',
-        padding: { x: 14, y: 7 },
+        padding: { x: 12, y: 6 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -96,10 +116,18 @@ export class PuzzleLabScene extends Phaser.Scene {
       const control = document.createElement('button');
       control.type = 'button';
       control.className = 'puzzle-lab-level-control';
-      control.setAttribute(
-        'aria-label',
-        `Play ${content.title}${content.experienceKind === 'rift-erosion-lab' ? '. Experimental Rift Hunger' : ''}`,
-      );
+      const experience = getExperienceLabel(content);
+      const threat = getThreatSummary(content);
+      const ariaParts = [`Play ${content.title}`];
+      if (experience) {
+        ariaParts.push(experience);
+      }
+      if (threat) {
+        ariaParts.push(threat);
+      }
+      control.setAttribute('aria-label', ariaParts.join('. '));
+      control.dataset.levelId = content.id;
+      control.dataset.experienceKind = content.experienceKind;
       control.addEventListener('click', () => this.launchLevel(content));
       controls.append(control);
     });
@@ -135,58 +163,80 @@ export class PuzzleLabScene extends Phaser.Scene {
     const { width: cardWidth, height: cardHeight } = bounds;
     const x = bounds.x + cardWidth / 2;
     const y = bounds.y + cardHeight / 2;
+    const stroke = cardStrokeColor(content, index);
 
     const background = this.add
       .rectangle(x, y, cardWidth, cardHeight, 0x102a36, 0.98)
-      .setStrokeStyle(2, index === 0 ? 0x38bdf8 : 0x64748b)
+      .setStrokeStyle(2, stroke)
       .setInteractive({ useHandCursor: true });
-    const textWidth = cardWidth - 24;
-    this.add.text(x - cardWidth / 2 + 12, y - cardHeight / 2 + 10, content.title, {
-      fontFamily: 'monospace',
-      fontSize: compact ? '15px' : '18px',
-      color: '#f8fafc',
-      wordWrap: { width: textWidth },
-    });
+    const textWidth = cardWidth - 20;
+    const numberPrefix = `${index + 1}. `;
+    this.add.text(
+      x - cardWidth / 2 + 10,
+      y - cardHeight / 2 + 8,
+      `${numberPrefix}${content.title}`,
+      {
+        fontFamily: 'monospace',
+        fontSize: compact ? '13px' : '18px',
+        color: '#f8fafc',
+        wordWrap: { width: textWidth },
+      },
+    );
     if (!compact) {
-      this.add.text(x - cardWidth / 2 + 12, y - cardHeight / 2 + 44, content.subtitle, {
+      this.add.text(x - cardWidth / 2 + 10, y - cardHeight / 2 + 40, content.subtitle, {
         fontFamily: 'monospace',
         fontSize: '12px',
         color: '#cbd5e1',
         wordWrap: { width: textWidth },
       });
     }
-    if (content.experienceKind === 'rift-erosion-lab') {
-      this.add.text(
-        x - cardWidth / 2 + 12,
-        y - cardHeight / 2 + (compact ? 36 : 88),
-        'Experimental Rift Hunger',
-        {
-          fontFamily: 'monospace',
-          fontSize: '11px',
-          color: '#fecdd3',
-          backgroundColor: '#7f1d1d',
-          padding: { x: 6, y: 3 },
-        },
-      );
+
+    const experience = getExperienceLabel(content);
+    const threat = getThreatSummary(content);
+    let badgeY = y - cardHeight / 2 + (compact ? 30 : 84);
+    if (experience) {
+      const style = badgeStyle(content);
+      this.add.text(x - cardWidth / 2 + 10, badgeY, experience, {
+        fontFamily: 'monospace',
+        fontSize: compact ? '10px' : '11px',
+        color: style.color,
+        backgroundColor: style.backgroundColor,
+        padding: { x: 5, y: 2 },
+      });
+      badgeY += compact ? 16 : 22;
     }
-    this.add.text(
-      x - cardWidth / 2 + 12,
-      y + cardHeight / 2 - (compact ? 48 : 70),
-      `${content.definition.moveLimit} moves\n${getObjectiveSummary(content)}`,
-      {
+    if (threat && !compact) {
+      this.add.text(x - cardWidth / 2 + 10, badgeY, threat, {
         fontFamily: 'monospace',
-        fontSize: '12px',
-        color: '#bae6fd',
+        fontSize: '11px',
+        color: '#fde68a',
         wordWrap: { width: textWidth },
-      },
-    );
-    this.add
-      .text(x + cardWidth / 2 - 12, y + cardHeight / 2 - 12, `Play ${index + 1}`, {
+      });
+    } else if (threat && compact) {
+      this.add.text(x - cardWidth / 2 + 10, badgeY, threat, {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '9px',
+        color: '#fde68a',
+        wordWrap: { width: textWidth },
+      });
+    }
+
+    const objectiveText = compact
+      ? `${content.definition.moveLimit} moves · ${getCompactObjectiveSummary(content)}`
+      : `${content.definition.moveLimit} moves\n${getObjectiveSummary(content)}`;
+    this.add.text(x - cardWidth / 2 + 10, y + cardHeight / 2 - (compact ? 36 : 70), objectiveText, {
+      fontFamily: 'monospace',
+      fontSize: compact ? '10px' : '12px',
+      color: '#bae6fd',
+      wordWrap: { width: textWidth },
+    });
+    this.add
+      .text(x + cardWidth / 2 - 10, y + cardHeight / 2 - 8, `Play ${index + 1}`, {
+        fontFamily: 'monospace',
+        fontSize: compact ? '12px' : '14px',
         color: '#f8fafc',
         backgroundColor: '#0f766e',
-        padding: { x: 12, y: 7 },
+        padding: { x: compact ? 8 : 12, y: compact ? 4 : 7 },
       })
       .setOrigin(1, 1);
 
@@ -195,7 +245,7 @@ export class PuzzleLabScene extends Phaser.Scene {
       background.setStrokeStyle(3, 0x7dd3fc);
       this.announce(`Selected ${content.title}. ${getObjectiveSummary(content)}.`);
     });
-    background.on('pointerout', () => background.setStrokeStyle(2, 0x64748b));
+    background.on('pointerout', () => background.setStrokeStyle(2, stroke));
   }
 
   private launchLevel(content: PlayableLevelContent): void {
