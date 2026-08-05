@@ -258,18 +258,6 @@ export function planRiftHungerCleanses(input: {
   return finalizeEvents(byKey);
 }
 
-/**
- * RH-1-compatible alias for the canonical planner.
- * Prefer `planRiftHungerCleanses` for new call sites.
- */
-export function planAdjacentMatchCleanses(input: {
-  previousState: RiftHungerState;
-  resolution: Extract<CascadeResolutionResult, { isValid: true }>;
-  newlySpreadCoordinate?: BoardCoordinate | null;
-}): RiftHungerCleanseEvent[] {
-  return planRiftHungerCleanses(input);
-}
-
 export function applyRiftHungerCleanses(
   state: RiftHungerState,
   cleanseEvents: readonly RiftHungerCleanseEvent[],

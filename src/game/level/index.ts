@@ -26,7 +26,6 @@ export {
   applyRiftHungerCleanses,
   cloneRiftHungerCleanseEvent,
   cloneRiftHungerCleanseEvidence,
-  planAdjacentMatchCleanses,
   planRiftHungerCleanses,
 } from './riftHungerCleanse';
 export {

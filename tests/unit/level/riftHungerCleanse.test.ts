@@ -4,7 +4,7 @@ import {
   createLevelSession,
   createInitialRiftHungerState,
   DEFAULT_SCORING_RULES,
-  planAdjacentMatchCleanses,
+  planRiftHungerCleanses,
   type LevelDefinition,
   type RiftHungerDefinition,
 } from '../../../src/game/level';
@@ -73,7 +73,7 @@ describe('RH-1 adjacent-match cleanse planning', () => {
       return;
     }
 
-    const events = planAdjacentMatchCleanses({
+    const events = planRiftHungerCleanses({
       previousState: previous,
       resolution,
     });
@@ -153,7 +153,7 @@ describe('RH-1 adjacent-match cleanse planning', () => {
       acceptedMovesUntilSpread: 1,
     };
 
-    const events = planAdjacentMatchCleanses({
+    const events = planRiftHungerCleanses({
       previousState: withSpreadTarget,
       resolution: fakeResolution as never,
       newlySpreadCoordinate: { row: 0, column: 1 },
