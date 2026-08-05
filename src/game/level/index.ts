@@ -22,7 +22,13 @@ export {
   selectThreatenedCell,
   tickRiftHungerProtection,
 } from './riftHungerState';
-export { planAdjacentMatchCleanses } from './riftHungerCleanse';
+export {
+  applyRiftHungerCleanses,
+  cloneRiftHungerCleanseEvent,
+  cloneRiftHungerCleanseEvidence,
+  planAdjacentMatchCleanses,
+  planRiftHungerCleanses,
+} from './riftHungerCleanse';
 export {
   advanceRiftHungerForAcceptedMove,
   resolveRiftHungerForAcceptedMove,
@@ -52,8 +58,10 @@ export type {
   RejectedLevelMoveResult,
   RiftHungerCleanseCause,
   RiftHungerCleanseEvent,
+  RiftHungerCleanseEvidence,
   RiftHungerDefinition,
   RiftHungerProtectedCell,
+  RiftHungerSpecialCleanseCause,
   RiftHungerSpreadEvent,
   RiftHungerSpreadPriority,
   RiftHungerState,

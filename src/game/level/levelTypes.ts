@@ -18,14 +18,17 @@ import type {
 export type {
   RiftHungerCleanseCause,
   RiftHungerCleanseEvent,
+  RiftHungerCleanseEvidence,
   RiftHungerDefinition,
   RiftHungerProtectedCell,
+  RiftHungerSpecialCleanseCause,
   RiftHungerSpreadEvent,
   RiftHungerSpreadPriority,
   RiftHungerState,
   RiftHungerStatus,
   RiftHungerTransition,
 } from './riftHungerTypes';
+export { RIFT_HUNGER_CLEANSE_CAUSE_ORDER } from './riftHungerTypes';
 
 export type LevelStatus = 'active' | 'won' | 'failed';
 

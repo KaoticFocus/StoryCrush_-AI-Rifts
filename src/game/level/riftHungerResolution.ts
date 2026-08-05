@@ -1,6 +1,10 @@
 import { BoardCoordinate, BoardDimensions, CascadeResolutionResult } from '../board/boardTypes';
 import { BoardDomainError } from '../board/errors';
-import { applyRiftHungerCleanses, planAdjacentMatchCleanses } from './riftHungerCleanse';
+import {
+  applyRiftHungerCleanses,
+  cloneRiftHungerCleanseEvent,
+  planRiftHungerCleanses,
+} from './riftHungerCleanse';
 import {
   RiftHungerDefinition,
   RiftHungerSpreadEvent,
@@ -259,8 +263,8 @@ export function advanceRiftHungerForAcceptedMove(input: {
 }
 
 /**
- * Canonical RH-1 accepted-move threat resolver:
- * countdown/spread (RH-0) + adjacent-match cleansing + final telegraph selection.
+ * Canonical accepted-move threat resolver:
+ * countdown/spread + adjacent/special cleansing + final telegraph selection.
  */
 export function resolveRiftHungerForAcceptedMove(input: {
   definition: RiftHungerDefinition;
@@ -282,7 +286,7 @@ export function resolveRiftHungerForAcceptedMove(input: {
       ? cloneCoordinate(previousState.threatenedCell)
       : null;
 
-  const cleanseEvents = planAdjacentMatchCleanses({
+  const cleanseEvents = planRiftHungerCleanses({
     previousState,
     resolution: input.resolution,
     newlySpreadCoordinate: lockedSpreadTarget,
@@ -376,12 +380,7 @@ export function resolveRiftHungerForAcceptedMove(input: {
     countdownBefore: advanced.countdownBefore,
     countdownAfter: nextState.acceptedMovesUntilSpread,
     spreadEvent,
-    cleanseEvents: cleanseEvents.map((event) => ({
-      coordinate: cloneCoordinate(event.coordinate),
-      cause: event.cause,
-      triggeringStepIndexes: [...event.triggeringStepIndexes],
-      adjacentMatchedCoordinates: event.adjacentMatchedCoordinates.map(cloneCoordinate),
-    })),
+    cleanseEvents: cleanseEvents.map(cloneRiftHungerCleanseEvent),
     statusBefore: previousState.status,
     statusAfter: nextState.status,
   };
