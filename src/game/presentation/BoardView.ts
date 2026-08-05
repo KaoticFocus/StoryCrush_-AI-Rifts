@@ -1116,6 +1116,11 @@ export class BoardView {
     command: ReshuffleMovementPlaybackCommand,
     settings: PlaybackSettings,
   ): Promise<void> {
+    // Authoritative hard-sync before permutation animation. Cascade/special
+    // presentation can leave display maps briefly mismatched to the domain
+    // resting board that rearrange planning used as its source.
+    this.synchronizeBoardSnapshot(command.fromBoard);
+
     const durations = getPlaybackDurations(settings);
     const label = this.scene.add
       .text(
