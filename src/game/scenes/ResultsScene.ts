@@ -106,14 +106,8 @@ export class ResultsScene extends Phaser.Scene {
         align: 'center',
         wordWrap: { width: shell.bodyWrapWidth },
       })
-      .setOrigin(0.5);
-    const bounds = continueButton.getBounds();
-    const hitW = Math.max(shell.minTouch * 2.4, bounds.width + 12);
-    const hitH = Math.max(shell.minTouch, bounds.height + 8);
-    continueButton.setInteractive(
-      new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
-      Phaser.Geom.Rectangle.Contains,
-    );
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
     continueButton.on('pointerdown', () => {
       continueButton.setAlpha(0.82);
       this.advance();
