@@ -6,6 +6,7 @@ import { getBrowserTestOptions } from '../presentation/testing/browserTestOption
 import { getPlayableLevelContent } from '../content/levelCatalog';
 import { type PuzzleLaunchContext } from '../content/levelRun';
 import { PuzzleScene } from './PuzzleScene';
+import { synchronizePhaserToUsableViewport } from '../presentation/viewportAuthority';
 
 export class BootScene extends Phaser.Scene {
   public static readonly key = 'BootScene';
@@ -15,6 +16,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   public create(): void {
+    synchronizePhaserToUsableViewport(this.game);
     const { width, height } = this.scale;
     getSharedGameFlowController();
     initializeSharedGameFlowPersistence();
@@ -28,6 +30,7 @@ export class BootScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.time.delayedCall(300, () => {
+      synchronizePhaserToUsableViewport(this.game);
       if (getBrowserTestOptions().e2eEnabled) {
         const query = new window.URLSearchParams(window.location.search);
         const levelId = query.get('level');

@@ -1,7 +1,13 @@
 import Phaser from 'phaser';
-import { gameConfig } from './game/config';
+import { createGameConfig } from './game/config';
 import { getBrowserTestOptions } from './game/presentation/testing/browserTestOptions';
+import {
+  attachViewportAuthority,
+  type ViewportAuthorityHandle,
+} from './game/presentation/viewportAuthority';
 import './styles/global.css';
+
+let viewportAuthority: ViewportAuthorityHandle | null = null;
 
 function showStartupFallback(message: string): void {
   const fallback = document.getElementById('startup-fallback');
@@ -17,11 +23,14 @@ function initializeGame(): Phaser.Game {
   );
   const existingGame = window.__storyCrushGame;
   if (existingGame) {
+    viewportAuthority?.dispose();
+    viewportAuthority = null;
     existingGame.destroy(true);
   }
 
-  const game = new Phaser.Game(gameConfig);
+  const game = new Phaser.Game(createGameConfig());
   window.__storyCrushGame = game;
+  viewportAuthority = attachViewportAuthority(game);
 
   return game;
 }
@@ -37,6 +46,8 @@ try {
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
+    viewportAuthority?.dispose();
+    viewportAuthority = null;
     window.__storyCrushGame?.destroy(true);
     window.__storyCrushGame = undefined;
   });

@@ -51,15 +51,18 @@ function calculatePhonePortraitLayout(
   const regionGap = 6;
   const topPad = sideGutter;
 
-  const minHudHeight = 84 + threatHudHeight;
+  const shortPhone = height <= 640;
+  // Short phones: shrink chrome floors before sacrificing board width fill.
+  const minHudHeight = (shortPhone ? 70 : 84) + threatHudHeight;
   const preferredHudHeight = Math.min(
-    128 + threatHudHeight,
-    Math.max(minHudHeight, Math.floor(height * 0.145) + threatHudHeight),
+    (shortPhone ? 110 : 128) + threatHudHeight,
+    Math.max(minHudHeight, Math.floor(height * (shortPhone ? 0.13 : 0.145)) + threatHudHeight),
   );
-  const minFooterHeight = 96;
+  // Two-column control grid; keep the floor low enough that 320×568 can still width-fill.
+  const minFooterHeight = shortPhone ? 100 : 118;
   const preferredFooterHeight = Math.min(
-    118,
-    Math.max(minFooterHeight, Math.floor(height * 0.135)),
+    shortPhone ? 128 : 148,
+    Math.max(minFooterHeight, Math.floor(height * (shortPhone ? 0.145 : 0.16))),
   );
 
   const widthCell = Math.max(24, Math.floor((width - sideGutter * 2) / columns));

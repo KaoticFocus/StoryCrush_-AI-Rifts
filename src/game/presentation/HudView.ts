@@ -217,21 +217,26 @@ export class HudView {
     let cursorY = layout.hudRect.y + verticalPadding;
     const textX = layout.hudRect.x + horizontalPadding;
 
+    const textWrapWidth = Math.max(120, layout.hudRect.width - horizontalPadding * 2);
     this.titleText.setFontSize(phonePortrait ? 20 : 28);
+    this.titleText.setWordWrapWidth(textWrapWidth, true);
     this.titleText.setPosition(textX, cursorY);
     this.titleText.setText(viewModel.titleText ?? 'Prototype Level');
     cursorY += this.titleText.height + lineGap;
 
     this.scoreText.setFontSize(phonePortrait ? 18 : 24);
+    this.scoreText.setWordWrapWidth(Math.max(80, textWrapWidth * 0.48), true);
     this.scoreText.setPosition(textX, cursorY);
     this.scoreText.setText(viewModel.scoreText);
 
     this.movesText.setFontSize(phonePortrait ? 18 : 24);
+    this.movesText.setWordWrapWidth(Math.max(80, textWrapWidth * 0.48), true);
     this.movesText.setPosition(layout.hudRect.x + layout.hudRect.width * 0.5, cursorY);
     this.movesText.setText(viewModel.movesText);
     cursorY += Math.max(this.scoreText.height, this.movesText.height) + lineGap;
 
     this.statusText.setFontSize(phonePortrait ? 16 : 22);
+    this.statusText.setWordWrapWidth(textWrapWidth, true);
     this.statusText.setPosition(textX, cursorY);
     this.statusText.setText(`Status ${viewModel.statusText}`);
     this.statusText.setColor(viewModel.isTerminal ? '#fda4af' : '#fcd34d');
@@ -257,6 +262,7 @@ export class HudView {
 
       text.setVisible(true);
       text.setFontSize(phonePortrait ? 15 : 18);
+      text.setWordWrapWidth(textWrapWidth, true);
       text.setPosition(textX, cursorY);
       text.setColor(objective.complete ? '#86efac' : '#e2e8f0');
       text.setText(objective.label);
@@ -318,10 +324,11 @@ export class HudView {
     }
 
     const buttonGap = phonePortrait ? 6 : 8;
-    const buttonHeight = phonePortrait ? 32 : 36;
-    const columns = 3;
+    const buttonHeight = phonePortrait ? (layout.viewportHeight <= 640 ? 28 : 34) : 36;
+    // Phone portrait: two columns so labels stay inside the safe footer width.
+    const columns = phonePortrait ? 2 : 3;
     const buttonWidth = Math.max(
-      phonePortrait ? 84 : 92,
+      phonePortrait ? 120 : 92,
       Math.floor(
         (layout.footerRect.width - horizontalPadding * 2 - buttonGap * (columns - 1)) / columns,
       ),
@@ -614,11 +621,11 @@ export class HudView {
   ): string {
     switch (key) {
       case 'restart':
-        return 'Restart Same Board';
+        return this.layout && this.layout.viewportWidth <= 500 ? 'Restart' : 'Restart Same Board';
       case 'new-board':
         return 'New Board';
       case 'menu':
-        return 'Back to Menu';
+        return this.layout && this.layout.viewportWidth <= 500 ? 'Menu' : 'Back to Menu';
       case 'mode':
         return `Mode: ${playbackMode}`;
       case 'motion':

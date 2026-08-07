@@ -30,23 +30,6 @@ export interface SceneShellLayout {
   buttonPadY: number;
 }
 
-function readAppShellInsets(): { top: number; right: number; bottom: number; left: number } {
-  if (typeof document === 'undefined' || typeof window === 'undefined') {
-    return { top: 0, right: 0, bottom: 0, left: 0 };
-  }
-  const shell = document.getElementById('app-shell');
-  if (!shell) {
-    return { top: 0, right: 0, bottom: 0, left: 0 };
-  }
-  const style = window.getComputedStyle(shell);
-  return {
-    top: Number.parseFloat(style.paddingTop) || 0,
-    right: Number.parseFloat(style.paddingRight) || 0,
-    bottom: Number.parseFloat(style.paddingBottom) || 0,
-    left: Number.parseFloat(style.paddingLeft) || 0,
-  };
-}
-
 export function resolveSceneLayoutClass(width: number, height: number): SceneLayoutClass {
   const w = Math.max(1, Math.floor(width));
   const h = Math.max(1, Math.floor(height));
@@ -56,6 +39,10 @@ export function resolveSceneLayoutClass(width: number, height: number): SceneLay
   return 'desktop';
 }
 
+/**
+ * Lay out against Phaser/game-root logical size.
+ * App-shell safe-area padding is already outside #game-root — do not subtract it again.
+ */
 export function calculateSceneShellLayout(input: {
   width: number;
   height: number;
@@ -63,7 +50,6 @@ export function calculateSceneShellLayout(input: {
   const viewportWidth = Math.max(1, Math.floor(input.width));
   const viewportHeight = Math.max(1, Math.floor(input.height));
   const layoutClass = resolveSceneLayoutClass(viewportWidth, viewportHeight);
-  const insets = readAppShellInsets();
 
   const phone = layoutClass === 'phone-portrait' || layoutClass === 'phone-landscape';
   const compact = layoutClass === 'phone-portrait' || viewportHeight <= 600;
@@ -71,10 +57,10 @@ export function calculateSceneShellLayout(input: {
     ? Math.max(10, Math.min(16, Math.round(Math.min(viewportWidth, viewportHeight) * 0.03)))
     : Math.max(20, Math.round(Math.min(viewportWidth, viewportHeight) * 0.035));
 
-  const safeX = Math.round(insets.left + padding);
-  const safeY = Math.round(insets.top + padding);
-  const safeWidth = Math.max(160, viewportWidth - insets.left - insets.right - padding * 2);
-  const safeHeight = Math.max(200, viewportHeight - insets.top - insets.bottom - padding * 2);
+  const safeX = padding;
+  const safeY = padding;
+  const safeWidth = Math.max(160, viewportWidth - padding * 2);
+  const safeHeight = Math.max(200, viewportHeight - padding * 2);
   const contentCenterX = safeX + safeWidth / 2;
 
   const titleFontSize = compact ? Math.max(20, Math.min(28, Math.floor(safeWidth * 0.07))) : 34;

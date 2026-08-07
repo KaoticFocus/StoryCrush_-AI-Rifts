@@ -24,6 +24,13 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 720 } },
     },
     { name: 'chromium-mobile', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
+    {
+      name: 'webkit-mobile',
+      use: {
+        ...devices['iPhone 13'],
+        browserName: 'webkit',
+      },
+    },
   ],
   webServer: externalBaseURL
     ? undefined

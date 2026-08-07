@@ -139,9 +139,9 @@ test('plays the fantasy chapter shell flow through results and consequence scene
   await submitExpectedFixtureMove(page);
 
   await waitForSceneReady(page, 'results');
-  await clickSceneButton(page, 0.5, 0.72);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.72 });
   await expect(getTestStatus(page)).toHaveAttribute('data-scene', 'consequence');
-  await clickSceneButton(page, 0.5, 0.68);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.68 });
   await waitForSceneReady(page, 'multiverse-map');
 });
 
@@ -182,9 +182,9 @@ test('second fantasy chapter pass accepts a new story choice after the first ter
   await waitForSceneReady(page, 'puzzle');
   await submitExpectedFixtureMove(page);
   await waitForSceneReady(page, 'results');
-  await clickSceneButton(page, 0.5, 0.72);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.72 });
   await waitForSceneReady(page, 'consequence');
-  await clickSceneButton(page, 0.5, 0.68);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.68 });
   await waitForSceneReady(page, 'multiverse-map');
 
   // Second pass: re-enter Fantasy and prove the choice advances into a new puzzle run.
@@ -372,7 +372,9 @@ test('keeps Puzzle Lab isolated from campaign persistence', async ({ page }) => 
   await clickSceneButton(page, 0.5, 0.5);
   await waitForSceneReady(page, 'puzzle');
   await submitExpectedFixtureMove(page);
-  await clickSceneButton(page, 0.86, 0.12);
+  // Prefer keyboard return — the floating Back chip is desktop-only now so phone
+  // portrait does not overflow, while Puzzle Lab isolation still must hold.
+  await page.keyboard.press('m');
   await waitForSceneReady(page, 'main-menu');
 
   expect(await page.evaluate(() => window.localStorage.getItem('storycrush.game-flow'))).toBe(

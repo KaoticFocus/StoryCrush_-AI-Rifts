@@ -63,6 +63,7 @@ import {
   boardCoordinateToScreenPosition,
   calculatePuzzleLayout,
 } from '../presentation/puzzleLayout';
+import { publishViewportDiagnostics } from '../presentation/viewportAuthority';
 import { type AcceptedLevelMoveResult, type LevelSessionState } from '../level';
 import { type RejectedLevelMoveResult } from '../level/levelTypes';
 import { PrototypeSettingsController } from '../presentation/settings/PrototypeSettingsController';
@@ -255,6 +256,11 @@ export class PuzzleScene extends Phaser.Scene {
           this.generateNewBoard();
         },
         onBackToMenu: () => {
+          if (this.campaignMode) {
+            this.flowController.advanceTo('multiverse-map');
+            this.scene.start(MultiverseMapScene.key);
+            return;
+          }
           this.returnToMenu();
         },
         onCyclePlaybackMode: () => {
@@ -343,29 +349,31 @@ export class PuzzleScene extends Phaser.Scene {
           }),
         );
       }
-      this.add
-        .text(
-          this.scale.width * 0.86,
-          this.scale.height * 0.12,
-          this.campaignMode ? 'Back to Map' : 'Back to Menu',
-          {
+      // Phone portrait already has a footer Menu control — skip the desktop floating chip
+      // so it cannot overflow the right edge of a narrow logical viewport.
+      const phonePortrait = this.scale.width <= 500 && this.scale.height >= this.scale.width;
+      if (!phonePortrait) {
+        const backLabel = this.campaignMode ? 'Back to Map' : 'Back to Menu';
+        const backX = Math.min(this.scale.width * 0.86, this.scale.width - 72);
+        this.add
+          .text(backX, Math.min(this.scale.height * 0.12, 56), backLabel, {
             fontFamily: 'monospace',
             fontSize: '16px',
             color: '#f8fafc',
             backgroundColor: '#0f766e',
             padding: { x: 10, y: 6 },
-          },
-        )
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerup', () => {
-          if (this.campaignMode) {
-            this.flowController.advanceTo('multiverse-map');
-            this.scene.start(MultiverseMapScene.key);
-            return;
-          }
-          this.returnToMenu();
-        });
+          })
+          .setOrigin(0.5)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerup', () => {
+            if (this.campaignMode) {
+              this.flowController.advanceTo('multiverse-map');
+              this.scene.start(MultiverseMapScene.key);
+              return;
+            }
+            this.returnToMenu();
+          });
+      }
       this.diagnosticsState = this.isPerformanceDiagnosticsEnabled() ? 'ready' : 'disabled';
       this.publishBrowserStatus('idle');
       const statusElement = document.getElementById('storycrush-test-status');
@@ -1575,6 +1583,7 @@ export class PuzzleScene extends Phaser.Scene {
     }
 
     this.statusBridge.update(this.buildBrowserStatusPayload(playbackState));
+    publishViewportDiagnostics(this.game);
   }
 
   private isPerformanceDiagnosticsEnabled(): boolean {

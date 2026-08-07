@@ -115,8 +115,15 @@ export class MultiverseMapScene extends Phaser.Scene {
       locked: true,
     });
 
+    // Keep Enter clearly under the Fantasy card and above the locked card / back control.
     const enterY = shell.stackCards
-      ? fantasyCenterY + cardHeight / 2 + 28
+      ? Math.min(
+          fantasyCenterY + cardHeight / 2 + Math.max(26, shell.minTouch / 2 + 4),
+          Math.max(
+            fantasyCenterY + cardHeight / 2 + 24,
+            (fantasyCenterY + cardHeight / 2 + (cyberCenterY - cardHeight / 2)) / 2,
+          ),
+        )
       : shell.viewportHeight * 0.56;
     const fantasyButton = this.add
       .text(fantasyCenterX, enterY, 'Enter Fantasy Chapter', {
