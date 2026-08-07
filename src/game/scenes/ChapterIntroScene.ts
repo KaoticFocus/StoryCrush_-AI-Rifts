@@ -82,17 +82,8 @@ export class ChapterIntroScene extends Phaser.Scene {
         backgroundColor: '#2563eb',
         padding: { x: shell.buttonPadX, y: Math.max(shell.buttonPadY, 12) },
       })
-      .setOrigin(0.5);
-    const bounds = continueButton.getBounds();
-    continueButton.setInteractive(
-      new Phaser.Geom.Rectangle(
-        -Math.max(shell.minTouch * 2.2, bounds.width + 12) / 2,
-        -Math.max(shell.minTouch, bounds.height + 8) / 2,
-        Math.max(shell.minTouch * 2.2, bounds.width + 12),
-        Math.max(shell.minTouch, bounds.height + 8),
-      ),
-      Phaser.Geom.Rectangle.Contains,
-    );
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
     continueButton.on('pointerdown', () => {
       continueButton.setAlpha(0.82);
       this.advance();
