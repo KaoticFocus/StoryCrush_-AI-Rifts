@@ -129,6 +129,8 @@ export class PuzzleScene extends Phaser.Scene {
   private escapeKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
   private hintKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
   private menuKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
+  private activeHintFrom: string = '';
+  private activeHintTo: string = '';
   private statusBridge: BrowserTestStatusBridge | null = null;
   private sceneGeneration = 0;
   private playbackSequence = 0;
@@ -1390,6 +1392,8 @@ export class PuzzleScene extends Phaser.Scene {
         hudAssetVariant: '',
         paused: this.presentationState.paused,
         hasActiveHint: this.presentationState.hasActiveHint,
+        hintFrom: this.activeHintFrom,
+        hintTo: this.activeHintTo,
         selectedCoordinate: this.selectedCoordinate
           ? `${this.selectedCoordinate.row}:${this.selectedCoordinate.column}`
           : '',
@@ -1511,6 +1515,8 @@ export class PuzzleScene extends Phaser.Scene {
       hudAssetVariant: presentation?.hudAssetVariant ?? 'procedural',
       paused: this.presentationState.paused,
       hasActiveHint: this.presentationState.hasActiveHint,
+      hintFrom: this.activeHintFrom,
+      hintTo: this.activeHintTo,
       selectedCoordinate: this.selectedCoordinate
         ? `${this.selectedCoordinate.row}:${this.selectedCoordinate.column}`
         : '',
@@ -1698,6 +1704,8 @@ export class PuzzleScene extends Phaser.Scene {
     });
     if (result.kind === 'hint') {
       this.presentationState.hasActiveHint = true;
+      this.activeHintFrom = `${result.move.from.row}:${result.move.from.column}`;
+      this.activeHintTo = `${result.move.to.row}:${result.move.to.column}`;
       this.boardView?.showHint({
         from: result.move.from,
         to: result.move.to,
@@ -1722,6 +1730,8 @@ export class PuzzleScene extends Phaser.Scene {
 
   private clearHint(): void {
     this.presentationState.hasActiveHint = false;
+    this.activeHintFrom = '';
+    this.activeHintTo = '';
     this.boardView?.clearHint();
   }
 

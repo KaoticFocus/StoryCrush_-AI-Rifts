@@ -28,6 +28,35 @@ export function buildE2EUrl(options: E2EPageOptions = {}): string {
   return `/?${query.toString()}`;
 }
 
+/** Ordinary app root with e2e diagnostics only — not a direct puzzle deep-link. */
+export function buildNormalFlowUrl(): string {
+  return '/?e2e=1';
+}
+
+export async function clickSceneRatio(page: Page, xRatio: number, yRatio: number): Promise<void> {
+  const canvas = page.locator('canvas');
+  const bounds = await canvas.boundingBox();
+  if (!bounds) throw new Error('Expected Phaser canvas bounds');
+  await canvas.click({ position: { x: bounds.width * xRatio, y: bounds.height * yRatio } });
+}
+
+/** Click a shell primary action using published presentation ratios when available. */
+export async function clickPublishedAction(
+  page: Page,
+  attribute: 'map-enter-ratio' | 'primary-action-ratio' | 'continue-action-ratio',
+  fallback: { x: number; y: number },
+): Promise<void> {
+  const raw = await getTestStatus(page).getAttribute(`data-${attribute}`);
+  if (raw) {
+    const [x, y] = raw.split(',').map(Number);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      await clickSceneRatio(page, x, y);
+      return;
+    }
+  }
+  await clickSceneRatio(page, fallback.x, fallback.y);
+}
+
 export interface PlaytestUrlOptions {
   level: string;
   seed: number;

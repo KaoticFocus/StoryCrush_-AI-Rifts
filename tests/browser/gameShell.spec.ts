@@ -3,6 +3,8 @@ import { type BoardCoordinate } from '../../src/game/board';
 import { type BrowserBoardGeometry } from '../../src/game/presentation/testing/browserCanvasGeometry';
 import {
   buildE2EUrl,
+  clickPublishedAction,
+  clickSceneRatio,
   getTestStatus,
   statusSelector,
   waitForSceneReady,
@@ -16,10 +18,7 @@ async function clickCanvasPoint(page: Page, point: { x: number; y: number }) {
 }
 
 async function clickSceneButton(page: Page, xRatio: number, yRatio: number) {
-  const canvas = page.locator('canvas');
-  const bounds = await canvas.boundingBox();
-  if (!bounds) throw new Error('Expected Phaser canvas bounds');
-  await clickCanvasPoint(page, { x: bounds.width * xRatio, y: bounds.height * yRatio });
+  await clickSceneRatio(page, xRatio, yRatio);
 }
 
 async function getBoardGeometry(page: Page): Promise<BrowserBoardGeometry> {
@@ -103,7 +102,7 @@ test('restores a saved fantasy chapter state from browser storage', async ({ pag
   await page.goto(buildE2EUrl());
 
   await waitForSceneReady(page, 'main-menu');
-  await clickSceneButton(page, 0.5, 0.7);
+  await clickPublishedAction(page, 'continue-action-ratio', { x: 0.5, y: 0.68 });
   await waitForSceneReady(page, 'results');
 });
 
@@ -126,15 +125,15 @@ test('plays the fantasy chapter shell flow through results and consequence scene
   await page.goto(buildE2EUrl({ fixture: 'terminal-failure' }));
 
   await waitForSceneReady(page, 'main-menu');
-  await clickSceneButton(page, 0.5, 0.6);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.6 });
   await waitForSceneReady(page, 'multiverse-map');
-  await clickSceneButton(page, 0.28, 0.56);
+  await clickPublishedAction(page, 'map-enter-ratio', { x: 0.28, y: 0.56 });
   await waitForSceneReady(page, 'chapter-intro');
-  await clickSceneButton(page, 0.5, 0.68);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.68 });
   await waitForSceneReady(page, 'dialogue');
-  await clickSceneButton(page, 0.5, 0.72);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.72 });
   await waitForSceneReady(page, 'story-choice');
-  await clickSceneButton(page, 0.5, 0.34);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.34 });
   await waitForSceneReady(page, 'puzzle');
   await expect(getTestStatus(page)).toHaveAttribute('data-playback-mode', 'instant');
   await submitExpectedFixtureMove(page);
@@ -171,15 +170,15 @@ test('second fantasy chapter pass accepts a new story choice after the first ter
   await page.goto(buildE2EUrl({ fixture: 'terminal-failure' }));
 
   await waitForSceneReady(page, 'main-menu');
-  await clickSceneButton(page, 0.5, 0.6);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.6 });
   await waitForSceneReady(page, 'multiverse-map');
-  await clickSceneButton(page, 0.28, 0.56);
+  await clickPublishedAction(page, 'map-enter-ratio', { x: 0.28, y: 0.56 });
   await waitForSceneReady(page, 'chapter-intro');
-  await clickSceneButton(page, 0.5, 0.68);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.68 });
   await waitForSceneReady(page, 'dialogue');
-  await clickSceneButton(page, 0.5, 0.72);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.72 });
   await waitForSceneReady(page, 'story-choice');
-  await clickSceneButton(page, 0.5, 0.34);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.34 });
   await waitForSceneReady(page, 'puzzle');
   await submitExpectedFixtureMove(page);
   await waitForSceneReady(page, 'results');
@@ -189,13 +188,13 @@ test('second fantasy chapter pass accepts a new story choice after the first ter
   await waitForSceneReady(page, 'multiverse-map');
 
   // Second pass: re-enter Fantasy and prove the choice advances into a new puzzle run.
-  await clickSceneButton(page, 0.28, 0.56);
+  await clickPublishedAction(page, 'map-enter-ratio', { x: 0.28, y: 0.56 });
   await waitForSceneReady(page, 'chapter-intro');
-  await clickSceneButton(page, 0.5, 0.68);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.68 });
   await waitForSceneReady(page, 'dialogue');
-  await clickSceneButton(page, 0.5, 0.72);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.72 });
   await waitForSceneReady(page, 'story-choice');
-  await clickSceneButton(page, 0.5, 0.34);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.34 });
   await waitForSceneReady(page, 'puzzle');
 
   const movesBefore = Number(await getTestStatus(page).getAttribute('data-moves-remaining'));
@@ -224,7 +223,7 @@ test('cancels and confirms future-save replacement without losing the old payloa
   await page.goto(buildE2EUrl());
   await waitForSceneReady(page, 'main-menu');
 
-  await clickSceneButton(page, 0.5, 0.6);
+  await clickPublishedAction(page, 'primary-action-ratio', { x: 0.5, y: 0.6 });
   await expect(getTestStatus(page)).toHaveAttribute('data-confirmation-visible', 'true');
   await page.keyboard.press('Escape');
   await expect(getTestStatus(page)).toHaveAttribute('data-confirmation-visible', 'false');

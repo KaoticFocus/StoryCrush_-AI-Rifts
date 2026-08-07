@@ -46,6 +46,9 @@ export interface BrowserTestStatus {
   hudAssetVariant: string;
   paused: boolean;
   hasActiveHint: boolean;
+  /** Presentation-only hint endpoints when a hint is active. */
+  hintFrom: string;
+  hintTo: string;
   selectedCoordinate: string;
   inputLocked: boolean;
   lastMoveAccepted: boolean;
