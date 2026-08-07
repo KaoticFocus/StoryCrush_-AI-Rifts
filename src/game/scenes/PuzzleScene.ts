@@ -35,6 +35,15 @@ import {
 import { createPrototypeLevelSession, prototypeLevelDefinition } from '../content/prototypeLevel';
 import { BoardView } from '../presentation/BoardView';
 import { createBoardViewModel } from '../presentation/boardViewModel';
+import {
+  ensureFantasyTextures,
+  getFantasyTextureLoadResult,
+} from '../presentation/fantasy/ensureFantasyTextures';
+import { prefersMobileFantasyAssets } from '../presentation/fantasy/fantasyAssetResolver';
+import {
+  FANTASY_BOARD_THEME_ID,
+  resolveFantasyEffectProfile,
+} from '../presentation/fantasy/fantasyPresentationProfile';
 import { selectHint } from '../presentation/hints/selectHint';
 import { HudView } from '../presentation/HudView';
 import { createLevelViewModel, formatMoveSummary } from '../presentation/levelViewModel';
@@ -54,6 +63,7 @@ import {
   boardCoordinateToScreenPosition,
   calculatePuzzleLayout,
 } from '../presentation/puzzleLayout';
+import { publishViewportDiagnostics } from '../presentation/viewportAuthority';
 import { type AcceptedLevelMoveResult, type LevelSessionState } from '../level';
 import { type RejectedLevelMoveResult } from '../level/levelTypes';
 import { PrototypeSettingsController } from '../presentation/settings/PrototypeSettingsController';
@@ -120,6 +130,8 @@ export class PuzzleScene extends Phaser.Scene {
   private escapeKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
   private hintKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
   private menuKeyHandler: ((event: ShortcutKeyEvent) => void) | null = null;
+  private activeHintFrom: string = '';
+  private activeHintTo: string = '';
   private statusBridge: BrowserTestStatusBridge | null = null;
   private sceneGeneration = 0;
   private playbackSequence = 0;
@@ -180,7 +192,7 @@ export class PuzzleScene extends Phaser.Scene {
     this.rejectedCoordinates = [];
     this.displayBoardOverride = null;
     this.hudStateOverride = null;
-    this.cameras.main.setBackgroundColor('#020617');
+    this.cameras.main.setBackgroundColor('#0b1020');
     this.initializePresentationSettings();
     this.sceneGeneration += 1;
     this.statusBridge = new BrowserTestStatusBridge();
@@ -217,6 +229,8 @@ export class PuzzleScene extends Phaser.Scene {
       );
       this.boardView = new BoardView(this);
       this.hudView = new HudView(this);
+      // FP-1: load Fantasy textures asynchronously; board stays playable via procedural fallback.
+      void this.refreshFantasyTextures();
       this.playbackController = new ResolutionPlaybackController(this.createPlaybackAdapter());
       this.playbackController.setMode(this.playbackMode);
       this.playbackController.setReducedMotion(this.reducedMotion);
@@ -242,6 +256,11 @@ export class PuzzleScene extends Phaser.Scene {
           this.generateNewBoard();
         },
         onBackToMenu: () => {
+          if (this.campaignMode) {
+            this.flowController.advanceTo('multiverse-map');
+            this.scene.start(MultiverseMapScene.key);
+            return;
+          }
           this.returnToMenu();
         },
         onCyclePlaybackMode: () => {
@@ -271,7 +290,12 @@ export class PuzzleScene extends Phaser.Scene {
           return;
         }
 
+        // Publish geometry immediately, then rebind Fantasy variants if the device class changed.
         this.renderScene();
+        this.publishBrowserStatus(
+          this.controller?.getState().status === 'active' ? 'idle' : 'completed',
+        );
+        void this.refreshFantasyTextures();
       };
       this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler);
       this.registerLifecycleHandlers();
@@ -325,29 +349,31 @@ export class PuzzleScene extends Phaser.Scene {
           }),
         );
       }
-      this.add
-        .text(
-          this.scale.width * 0.86,
-          this.scale.height * 0.12,
-          this.campaignMode ? 'Back to Map' : 'Back to Menu',
-          {
+      // Phone portrait already has a footer Menu control — skip the desktop floating chip
+      // so it cannot overflow the right edge of a narrow logical viewport.
+      const phonePortrait = this.scale.width <= 500 && this.scale.height >= this.scale.width;
+      if (!phonePortrait) {
+        const backLabel = this.campaignMode ? 'Back to Map' : 'Back to Menu';
+        const backX = Math.min(this.scale.width * 0.86, this.scale.width - 72);
+        this.add
+          .text(backX, Math.min(this.scale.height * 0.12, 56), backLabel, {
             fontFamily: 'monospace',
             fontSize: '16px',
             color: '#f8fafc',
             backgroundColor: '#0f766e',
             padding: { x: 10, y: 6 },
-          },
-        )
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerup', () => {
-          if (this.campaignMode) {
-            this.flowController.advanceTo('multiverse-map');
-            this.scene.start(MultiverseMapScene.key);
-            return;
-          }
-          this.returnToMenu();
-        });
+          })
+          .setOrigin(0.5)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerup', () => {
+            if (this.campaignMode) {
+              this.flowController.advanceTo('multiverse-map');
+              this.scene.start(MultiverseMapScene.key);
+              return;
+            }
+            this.returnToMenu();
+          });
+      }
       this.diagnosticsState = this.isPerformanceDiagnosticsEnabled() ? 'ready' : 'disabled';
       this.publishBrowserStatus('idle');
       const statusElement = document.getElementById('storycrush-test-status');
@@ -447,6 +473,45 @@ export class PuzzleScene extends Phaser.Scene {
       return this.launchContext.run.seed;
     }
     return levelContent.definition.seed;
+  }
+
+  private async refreshFantasyTextures(): Promise<void> {
+    if (!this.boardView || !this.hudView) {
+      return;
+    }
+    const preferMobile = prefersMobileFantasyAssets(this.scale.width, this.scale.height);
+    const current = getFantasyTextureLoadResult(this);
+    if (current.ready && current.preferMobile === preferMobile) {
+      this.boardView.setFantasyAssetVariant(current.assetVariant);
+      this.boardView.setFantasyAssetsReady(true);
+      this.hudView.setFantasyAssetVariant(current.assetVariant);
+      this.renderScene();
+      this.publishBrowserStatus(
+        this.controller?.getState().status === 'active' ? 'idle' : 'completed',
+      );
+      return;
+    }
+
+    // Drop live Image refs to procedural before Phaser rebinds texture keys on variant switch.
+    this.boardView.setFantasyAssetsReady(false);
+    this.hudView.setFantasyAssetVariant('procedural');
+    this.renderScene();
+
+    const result = await ensureFantasyTextures(this, {
+      preferMobile,
+      width: this.scale.width,
+      height: this.scale.height,
+    });
+    if (!this.sys?.isActive?.() || !this.boardView || !this.hudView) {
+      return;
+    }
+    this.boardView.setFantasyAssetVariant(result.assetVariant);
+    this.boardView.setFantasyAssetsReady(result.ready);
+    this.hudView.setFantasyAssetVariant(result.assetVariant);
+    this.renderScene();
+    this.publishBrowserStatus(
+      this.controller?.getState().status === 'active' ? 'idle' : 'completed',
+    );
   }
 
   private renderScene(): void {
@@ -1323,8 +1388,20 @@ export class PuzzleScene extends Phaser.Scene {
         playbackSequence: this.playbackSequence,
         playbackMode: this.playbackMode,
         reducedMotion: this.reducedMotion,
+        boardTheme: '',
+        pieceVisualId: '',
+        specialVisualId: '',
+        riftVisualState: '',
+        reducedMotionPresentation: '',
+        fantasyAssetsReady: false,
+        assetVariant: '',
+        boardAssetVariant: '',
+        pieceAssetVariant: '',
+        hudAssetVariant: '',
         paused: this.presentationState.paused,
         hasActiveHint: this.presentationState.hasActiveHint,
+        hintFrom: this.activeHintFrom,
+        hintTo: this.activeHintTo,
         selectedCoordinate: this.selectedCoordinate
           ? `${this.selectedCoordinate.row}:${this.selectedCoordinate.column}`
           : '',
@@ -1397,6 +1474,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.campaignRun ??
       (this.launchContext?.mode === 'puzzle-lab' ? this.launchContext.run : null);
     const definition = this.controller.getDefinition();
+    const presentation = this.boardView?.getPresentationDiagnostics();
     return {
       diagnosticsState: this.diagnosticsState,
       diagnosticsError: this.diagnosticsError,
@@ -1433,8 +1511,20 @@ export class PuzzleScene extends Phaser.Scene {
       playbackSequence: this.playbackSequence,
       playbackMode: this.playbackMode,
       reducedMotion: this.reducedMotion,
+      boardTheme: presentation?.boardTheme ?? FANTASY_BOARD_THEME_ID,
+      pieceVisualId: presentation?.pieceVisualSample ?? '',
+      specialVisualId: presentation?.specialVisualSample ?? '',
+      riftVisualState: presentation?.riftVisualState ?? '',
+      reducedMotionPresentation: resolveFantasyEffectProfile('hint', this.reducedMotion),
+      fantasyAssetsReady: presentation?.fantasyAssetsReady ?? false,
+      assetVariant: presentation?.assetVariant ?? 'procedural',
+      boardAssetVariant: presentation?.boardAssetVariant ?? 'procedural',
+      pieceAssetVariant: presentation?.pieceAssetVariant ?? 'procedural',
+      hudAssetVariant: presentation?.hudAssetVariant ?? 'procedural',
       paused: this.presentationState.paused,
       hasActiveHint: this.presentationState.hasActiveHint,
+      hintFrom: this.activeHintFrom,
+      hintTo: this.activeHintTo,
       selectedCoordinate: this.selectedCoordinate
         ? `${this.selectedCoordinate.row}:${this.selectedCoordinate.column}`
         : '',
@@ -1493,6 +1583,7 @@ export class PuzzleScene extends Phaser.Scene {
     }
 
     this.statusBridge.update(this.buildBrowserStatusPayload(playbackState));
+    publishViewportDiagnostics(this.game);
   }
 
   private isPerformanceDiagnosticsEnabled(): boolean {
@@ -1622,6 +1713,8 @@ export class PuzzleScene extends Phaser.Scene {
     });
     if (result.kind === 'hint') {
       this.presentationState.hasActiveHint = true;
+      this.activeHintFrom = `${result.move.from.row}:${result.move.from.column}`;
+      this.activeHintTo = `${result.move.to.row}:${result.move.to.column}`;
       this.boardView?.showHint({
         from: result.move.from,
         to: result.move.to,
@@ -1646,6 +1739,8 @@ export class PuzzleScene extends Phaser.Scene {
 
   private clearHint(): void {
     this.presentationState.hasActiveHint = false;
+    this.activeHintFrom = '';
+    this.activeHintTo = '';
     this.boardView?.clearHint();
   }
 

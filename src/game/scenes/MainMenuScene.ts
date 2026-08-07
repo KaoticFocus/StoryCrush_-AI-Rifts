@@ -22,6 +22,11 @@ import { markBrowserTestScene } from '../presentation/testing/BrowserTestStatusB
 import { createBrowserSeedProvider } from '../presentation/browserSeedProvider';
 import { parsePlaytestLaunch } from '../content/playtestLaunch';
 import { type PuzzleLaunchContext } from '../content/levelRun';
+import {
+  calculateSceneShellLayout,
+  publishSceneShellDiagnostics,
+  type SceneShellLayout,
+} from '../presentation/sceneShellLayout';
 
 export class MainMenuScene extends Phaser.Scene {
   public static readonly key = 'MainMenuScene';
@@ -34,6 +39,8 @@ export class MainMenuScene extends Phaser.Scene {
   private hasExistingSave = false;
   private canContinue = false;
   private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
+  private uiRoot: Phaser.GameObjects.Container | null = null;
+  private resizeHandler: ((gameSize: Phaser.Structs.Size) => void) | null = null;
 
   public constructor() {
     super(MainMenuScene.key);
@@ -44,37 +51,84 @@ export class MainMenuScene extends Phaser.Scene {
       markBrowserTestScene('main-menu');
     });
     markBrowserTestScene('main-menu');
-    const { width, height } = this.scale;
-
     this.cameras.main.setBackgroundColor('#020617');
 
-    this.add
-      .text(width / 2, height * 0.2, 'StoryCrush: AI Rifts', {
+    const persistedStatus = getSharedPersistenceStatus();
+    const sessionStatus = getSharedGameFlowPersistenceCoordinator().getSessionStatus();
+    this.hasExistingSave = Boolean(sessionStatus.savePresent);
+    this.canContinue = sessionStatus.canContinue;
+
+    this.buildUi(persistedStatus);
+    this.resizeHandler = () => {
+      if (this.confirmationVisible) {
+        this.closeNewGameConfirmation(false);
+      }
+      this.buildUi(getSharedPersistenceStatus());
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler);
+
+    this.registerKeyboardControls();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.keydownHandler) {
+        document.removeEventListener('keydown', this.keydownHandler);
+        this.keydownHandler = null;
+      }
+      if (this.resizeHandler) {
+        this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler);
+        this.resizeHandler = null;
+      }
+      this.setConfirmationStatus(false);
+    });
+  }
+
+  private buildUi(persistedStatus: ReturnType<typeof getSharedPersistenceStatus>): void {
+    this.uiRoot?.destroy(true);
+    this.uiRoot = this.add.container(0, 0);
+    const shell = calculateSceneShellLayout({
+      width: this.scale.width,
+      height: this.scale.height,
+    });
+    publishSceneShellDiagnostics(shell);
+
+    const title = this.add
+      .text(shell.contentCenterX, shell.safeY + shell.titleFontSize, 'StoryCrush: AI Rifts', {
         fontFamily: 'monospace',
-        fontSize: '42px',
+        fontSize: `${shell.titleFontSize}px`,
         color: '#f8fafc',
+        align: 'center',
+        wordWrap: { width: shell.titleWrapWidth },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
 
-    this.add
-      .text(width / 2, height * 0.28, 'Phase 2A Game Shell', {
+    const subtitle = this.add
+      .text(shell.contentCenterX, title.y + title.height + shell.gutter, 'Phase 2A Game Shell', {
         fontFamily: 'monospace',
-        fontSize: '24px',
+        fontSize: `${shell.subtitleFontSize}px`,
         color: '#7dd3fc',
+        align: 'center',
+        wordWrap: { width: shell.bodyWrapWidth },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
 
-    const playPuzzleButton = this.add
-      .text(width / 2, height * 0.5, 'Puzzle Lab', {
-        fontFamily: 'monospace',
-        fontSize: '22px',
-        color: '#eff6ff',
-        backgroundColor: '#0f766e',
-        padding: { x: 18, y: 10 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
+    const buttonStep = Math.max(shell.minTouch + 10, 56);
+    const preferredNewGameY = shell.viewportHeight * 0.6;
+    const minNewGameY = subtitle.y + subtitle.height + buttonStep + shell.gutter;
+    const maxNewGameY = shell.safeY + shell.safeHeight - buttonStep * 2 - shell.minTouch;
+    const newGameY = Math.min(maxNewGameY, Math.max(minNewGameY, preferredNewGameY));
+    const continueY = newGameY + buttonStep;
+    const puzzleLabY = newGameY - buttonStep;
+    const statusY = Math.min(
+      shell.safeY + shell.safeHeight - shell.bodyFontSize,
+      continueY + buttonStep + 8,
+    );
 
+    const playPuzzleButton = this.createShellButton(
+      shell,
+      shell.contentCenterX,
+      puzzleLabY,
+      'Puzzle Lab',
+      '#0f766e',
+    );
     playPuzzleButton.on('pointerup', () => {
       const query = new window.URLSearchParams(window.location.search);
       if (query.get('e2e') === '1' && (query.get('fixture') || query.get('scenario'))) {
@@ -98,64 +152,97 @@ export class MainMenuScene extends Phaser.Scene {
       this.scene.start(PuzzleLabScene.key);
     });
 
-    const newGameButton = this.add
-      .text(width / 2, height * 0.6, 'New Game', {
-        fontFamily: 'monospace',
-        fontSize: '26px',
-        color: '#eff6ff',
-        backgroundColor: '#1d4ed8',
-        padding: { x: 20, y: 12 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    const persistedStatus = getSharedPersistenceStatus();
-    const sessionStatus = getSharedGameFlowPersistenceCoordinator().getSessionStatus();
-    this.hasExistingSave = Boolean(sessionStatus.savePresent);
-
+    const newGameButton = this.createShellButton(
+      shell,
+      shell.contentCenterX,
+      newGameY,
+      'New Game',
+      '#1d4ed8',
+    );
     newGameButton.on('pointerdown', () => {
       this.requestNewGame();
     });
 
-    this.canContinue = sessionStatus.canContinue;
-    const continueButton = this.add
-      .text(width / 2, height * 0.7, 'Continue', {
-        fontFamily: 'monospace',
-        fontSize: '24px',
-        color: '#e2e8f0',
-        backgroundColor: '#334155',
-        padding: { x: 20, y: 12 },
-      })
-      .setOrigin(0.5)
-      .setAlpha(this.canContinue ? 1 : 0.6);
-
+    const continueButton = this.createShellButton(
+      shell,
+      shell.contentCenterX,
+      continueY,
+      'Continue',
+      '#334155',
+    );
+    continueButton.setAlpha(this.canContinue ? 1 : 0.55);
     if (this.canContinue) {
-      continueButton.setInteractive({ useHandCursor: true });
       continueButton.on('pointerdown', () => {
         this.resumeFlowFromState();
       });
+    } else {
+      continueButton.disableInteractive();
     }
 
     this.persistenceStatusText = this.add
-      .text(width / 2, height * 0.84, this.getPersistenceMessage(persistedStatus), {
+      .text(shell.contentCenterX, statusY, this.getPersistenceMessage(persistedStatus), {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: `${Math.max(12, shell.bodyFontSize - 2)}px`,
         color: '#fef3c7',
         align: 'center',
-        wordWrap: { width: width * 0.8 },
+        wordWrap: { width: shell.bodyWrapWidth },
+      })
+      .setOrigin(0.5, 1);
+
+    this.uiRoot.add([
+      title,
+      subtitle,
+      playPuzzleButton,
+      newGameButton,
+      continueButton,
+      this.persistenceStatusText,
+    ]);
+
+    // Presentation diagnostics for focused journey tests — not authoritative.
+    const statusEl = document.getElementById('storycrush-test-status');
+    statusEl?.setAttribute(
+      'data-primary-action-ratio',
+      `${(shell.contentCenterX / shell.viewportWidth).toFixed(3)},${(
+        newGameY / shell.viewportHeight
+      ).toFixed(3)}`,
+    );
+    statusEl?.setAttribute(
+      'data-continue-action-ratio',
+      `${(shell.contentCenterX / shell.viewportWidth).toFixed(3)},${(
+        continueY / shell.viewportHeight
+      ).toFixed(3)}`,
+    );
+  }
+
+  private createShellButton(
+    shell: SceneShellLayout,
+    x: number,
+    y: number,
+    label: string,
+    backgroundColor: string,
+  ): Phaser.GameObjects.Text {
+    const button = this.add
+      .text(x, y, label, {
+        fontFamily: 'monospace',
+        fontSize: `${shell.buttonFontSize}px`,
+        color: '#eff6ff',
+        backgroundColor,
+        padding: { x: shell.buttonPadX, y: Math.max(shell.buttonPadY, 12) },
+        align: 'center',
+        wordWrap: { width: shell.bodyWrapWidth },
       })
       .setOrigin(0.5);
-
-    this.add.circle(width / 2, height * 0.78, 12, 0x22c55e);
-
-    this.registerKeyboardControls();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      if (this.keydownHandler) {
-        document.removeEventListener('keydown', this.keydownHandler);
-        this.keydownHandler = null;
-      }
-      this.setConfirmationStatus(false);
-    });
+    const bounds = button.getBounds();
+    const hitW = Math.max(shell.minTouch * 2.2, bounds.width + 12);
+    const hitH = Math.max(shell.minTouch, bounds.height + 8);
+    button.setInteractive(
+      new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
+      Phaser.Geom.Rectangle.Contains,
+    );
+    button.on('pointerdown', () => button.setAlpha(0.82));
+    button.on('pointerup', () => button.setAlpha(1));
+    button.on('pointerout', () => button.setAlpha(1));
+    return button;
   }
 
   private requestNewGame(): void {
@@ -174,44 +261,55 @@ export class MainMenuScene extends Phaser.Scene {
     this.confirmationVisible = true;
     this.setConfirmationStatus(true);
     this.announce('Replace saved progress? Press Enter to start a new game or Escape to cancel.');
-    const { width, height } = this.scale;
-    const panel = this.add.container(width / 2, height * 0.5);
-    const background = this.add.rectangle(0, 0, width * 0.8, height * 0.3, 0x020617, 0.96);
+    const shell = calculateSceneShellLayout({
+      width: this.scale.width,
+      height: this.scale.height,
+    });
+    const panel = this.add.container(shell.contentCenterX, shell.safeY + shell.safeHeight * 0.5);
+    const background = this.add.rectangle(
+      0,
+      0,
+      Math.min(shell.safeWidth, shell.viewportWidth * 0.92),
+      Math.max(180, shell.safeHeight * 0.34),
+      0x020617,
+      0.96,
+    );
     background.setStrokeStyle(2, 0x38bdf8);
     const title = this.add
-      .text(0, -32, 'Replace saved progress?', {
+      .text(0, -48, 'Replace saved progress?', {
         fontFamily: 'monospace',
-        fontSize: '20px',
+        fontSize: `${shell.subtitleFontSize + 2}px`,
         color: '#f8fafc',
         align: 'center',
+        wordWrap: { width: shell.bodyWrapWidth * 0.9 },
       })
       .setOrigin(0.5);
     const message = this.add
-      .text(0, 8, 'Starting a new game will replace your current save.', {
+      .text(0, 0, 'Starting a new game will replace your current save.', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: `${shell.bodyFontSize}px`,
         color: '#cbd5e1',
         align: 'center',
-        wordWrap: { width: width * 0.7 },
+        wordWrap: { width: shell.bodyWrapWidth * 0.85 },
       })
       .setOrigin(0.5);
     const cancelButton = this.add
-      .text(-70, 56, 'Cancel', {
+      .text(-72, 56, 'Cancel', {
         fontFamily: 'monospace',
-        fontSize: '18px',
+        fontSize: `${shell.buttonFontSize}px`,
         color: '#f8fafc',
         backgroundColor: '#334155',
-        padding: { x: 16, y: 8 },
+        padding: { x: 16, y: 10 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     const confirmButton = this.add
-      .text(70, 56, 'Start New Game', {
+      .text(78, 56, 'Start New Game', {
         fontFamily: 'monospace',
-        fontSize: '18px',
+        fontSize: `${shell.buttonFontSize}px`,
         color: '#f8fafc',
         backgroundColor: '#dc2626',
-        padding: { x: 16, y: 8 },
+        padding: { x: 16, y: 10 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });

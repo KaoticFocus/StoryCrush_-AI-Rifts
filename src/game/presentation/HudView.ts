@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fantasyPresentationProfile } from './fantasy/fantasyPresentationProfile';
 import { type LevelViewModel } from './levelViewModel';
 import { getPlaybackDurations } from './playback/playbackTimings';
 import { type PlaybackSettings } from './playback/ResolutionPlaybackController';
@@ -41,6 +42,8 @@ export class HudView {
   private readonly activeTweens = new Set<Phaser.Tweens.Tween>();
   private readonly activeTimers = new Set<Phaser.Time.TimerEvent>();
   private readonly pendingResolvers = new Set<() => void>();
+  private fantasyAssetVariant: 'mobile' | 'general' | 'procedural' = 'procedural';
+  private hudChromeImage: Phaser.GameObjects.Image | null = null;
   private layout: PuzzleLayout | null = null;
   private onRestart: (() => void) | null = null;
   private onNewBoard: (() => void) | null = null;
@@ -100,6 +103,10 @@ export class HudView {
     );
   }
 
+  public setFantasyAssetVariant(variant: 'mobile' | 'general' | 'procedural'): void {
+    this.fantasyAssetVariant = variant;
+  }
+
   public setCallbacks(callbacks: {
     onRestart: () => void;
     onNewBoard: () => void;
@@ -139,64 +146,109 @@ export class HudView {
     this.hudBackground.clear();
     this.footerBackground.clear();
 
-    this.hudBackground.fillStyle(0x0f172a, 0.88);
+    const phonePortrait = layout.orientation === 'portrait' && layout.viewportWidth <= 500;
+    const panelRadius = phonePortrait ? 10 : 18;
+    const trimWidth = phonePortrait ? 1.5 : 2;
+    const hudPanelKey = fantasyPresentationProfile.textureKeys.hudTopPanel;
+    const useMobileHudChrome =
+      this.fantasyAssetVariant === 'mobile' && this.scene.textures.exists(hudPanelKey);
+
+    if (this.hudChromeImage) {
+      this.hudChromeImage.destroy();
+      this.hudChromeImage = null;
+    }
+
+    // FP-1 board-adjacent Fantasy HUD: obsidian panels with antique-gold trim.
+    this.hudBackground.fillStyle(0x141018, useMobileHudChrome ? 0.55 : 0.92);
     this.hudBackground.fillRoundedRect(
       layout.hudRect.x,
       layout.hudRect.y,
       layout.hudRect.width,
       layout.hudRect.height,
-      18,
+      panelRadius,
     );
-    this.hudBackground.lineStyle(2, 0x334155, 1);
+    if (useMobileHudChrome) {
+      this.hudChromeImage = this.scene.add.image(
+        layout.hudRect.x + layout.hudRect.width / 2,
+        layout.hudRect.y + layout.hudRect.height / 2,
+        hudPanelKey,
+      );
+      this.hudChromeImage.setDisplaySize(layout.hudRect.width, layout.hudRect.height);
+      this.hudChromeImage.setAlpha(0.88);
+      this.root.addAt(this.hudChromeImage, 1);
+    }
+    this.hudBackground.lineStyle(trimWidth, 0xc9a227, 0.9);
     this.hudBackground.strokeRoundedRect(
       layout.hudRect.x,
       layout.hudRect.y,
       layout.hudRect.width,
       layout.hudRect.height,
-      18,
+      panelRadius,
+    );
+    this.hudBackground.lineStyle(1, 0x7c3aed, 0.35);
+    this.hudBackground.strokeRoundedRect(
+      layout.hudRect.x + 2,
+      layout.hudRect.y + 2,
+      layout.hudRect.width - 4,
+      layout.hudRect.height - 4,
+      Math.max(6, panelRadius - 3),
     );
 
-    this.footerBackground.fillStyle(0x0f172a, 0.84);
+    this.footerBackground.fillStyle(0x141018, 0.9);
     this.footerBackground.fillRoundedRect(
       layout.footerRect.x,
       layout.footerRect.y,
       layout.footerRect.width,
       layout.footerRect.height,
-      16,
+      phonePortrait ? 10 : 16,
     );
-    this.footerBackground.lineStyle(2, 0x334155, 1);
+    this.footerBackground.lineStyle(trimWidth, 0xc9a227, 0.85);
     this.footerBackground.strokeRoundedRect(
       layout.footerRect.x,
       layout.footerRect.y,
       layout.footerRect.width,
       layout.footerRect.height,
-      16,
+      phonePortrait ? 10 : 16,
     );
 
-    const horizontalPadding = 18;
-    const verticalPadding = 16;
-    const lineGap = 12;
+    const horizontalPadding = phonePortrait ? 10 : 18;
+    const verticalPadding = phonePortrait ? 8 : 16;
+    const lineGap = phonePortrait ? 6 : 12;
     let cursorY = layout.hudRect.y + verticalPadding;
     const textX = layout.hudRect.x + horizontalPadding;
 
+    const textWrapWidth = Math.max(120, layout.hudRect.width - horizontalPadding * 2);
+    this.titleText.setFontSize(phonePortrait ? 20 : 28);
+    this.titleText.setWordWrapWidth(textWrapWidth, true);
     this.titleText.setPosition(textX, cursorY);
     this.titleText.setText(viewModel.titleText ?? 'Prototype Level');
     cursorY += this.titleText.height + lineGap;
 
+    this.scoreText.setFontSize(phonePortrait ? 18 : 24);
+    this.scoreText.setWordWrapWidth(Math.max(80, textWrapWidth * 0.48), true);
     this.scoreText.setPosition(textX, cursorY);
     this.scoreText.setText(viewModel.scoreText);
 
+    this.movesText.setFontSize(phonePortrait ? 18 : 24);
+    this.movesText.setWordWrapWidth(Math.max(80, textWrapWidth * 0.48), true);
     this.movesText.setPosition(layout.hudRect.x + layout.hudRect.width * 0.5, cursorY);
     this.movesText.setText(viewModel.movesText);
     cursorY += Math.max(this.scoreText.height, this.movesText.height) + lineGap;
 
+    this.statusText.setFontSize(phonePortrait ? 16 : 22);
+    this.statusText.setWordWrapWidth(textWrapWidth, true);
     this.statusText.setPosition(textX, cursorY);
     this.statusText.setText(`Status ${viewModel.statusText}`);
     this.statusText.setColor(viewModel.isTerminal ? '#fda4af' : '#fcd34d');
     cursorY += this.statusText.height + lineGap;
 
     while (this.objectiveTexts.length < viewModel.objectives.length) {
-      const text = this.scene.add.text(0, 0, '', this.bodyStyle('#e2e8f0', 18));
+      const text = this.scene.add.text(
+        0,
+        0,
+        '',
+        this.bodyStyle('#e2e8f0', phonePortrait ? 15 : 18),
+      );
       this.objectiveTexts.push(text);
       this.root.add(text);
     }
@@ -209,11 +261,13 @@ export class HudView {
       }
 
       text.setVisible(true);
+      text.setFontSize(phonePortrait ? 15 : 18);
+      text.setWordWrapWidth(textWrapWidth, true);
       text.setPosition(textX, cursorY);
       text.setColor(objective.complete ? '#86efac' : '#e2e8f0');
       text.setText(objective.label);
       this.objectiveTextById.set(objective.id, text);
-      cursorY += text.height + 8;
+      cursorY += text.height + (phonePortrait ? 4 : 8);
     });
 
     for (const [objectiveId, text] of [...this.objectiveTextById.entries()]) {
@@ -269,11 +323,12 @@ export class HudView {
       this.summaryText.setWordWrapWidth(layout.footerRect.width - horizontalPadding * 2);
     }
 
-    const buttonGap = 8;
-    const buttonHeight = 36;
-    const columns = 3;
+    const buttonGap = phonePortrait ? 6 : 8;
+    const buttonHeight = phonePortrait ? (layout.viewportHeight <= 640 ? 28 : 34) : 36;
+    // Phone portrait: two columns so labels stay inside the safe footer width.
+    const columns = phonePortrait ? 2 : 3;
     const buttonWidth = Math.max(
-      92,
+      phonePortrait ? 120 : 92,
       Math.floor(
         (layout.footerRect.width - horizontalPadding * 2 - buttonGap * (columns - 1)) / columns,
       ),
@@ -301,7 +356,10 @@ export class HudView {
       const column = index % columns;
       const row = Math.floor(index / columns);
       const x = layout.footerRect.x + horizontalPadding + column * (buttonWidth + buttonGap);
-      const y = layout.footerRect.y + 42 + row * (buttonHeight + 8);
+      const y =
+        layout.footerRect.y +
+        (phonePortrait ? 28 : 42) +
+        row * (buttonHeight + (phonePortrait ? 6 : 8));
       button.background.setPosition(x + buttonWidth / 2, y + buttonHeight / 2);
       button.background.setSize(buttonWidth, buttonHeight);
       button.text.setPosition(x + buttonWidth / 2, y + buttonHeight / 2);
@@ -323,6 +381,10 @@ export class HudView {
 
   public destroy(): void {
     this.cancelTransientEffects();
+    if (this.hudChromeImage) {
+      this.hudChromeImage.destroy();
+      this.hudChromeImage = null;
+    }
     for (const button of this.buttons) {
       button.background.removeAllListeners();
     }
@@ -559,11 +621,11 @@ export class HudView {
   ): string {
     switch (key) {
       case 'restart':
-        return 'Restart Same Board';
+        return this.layout && this.layout.viewportWidth <= 500 ? 'Restart' : 'Restart Same Board';
       case 'new-board':
         return 'New Board';
       case 'menu':
-        return 'Back to Menu';
+        return this.layout && this.layout.viewportWidth <= 500 ? 'Menu' : 'Back to Menu';
       case 'mode':
         return `Mode: ${playbackMode}`;
       case 'motion':
