@@ -65,12 +65,17 @@ test('phone portrait loads Fantasy board theme with full board and HUD', async (
   await expect
     .poll(async () => status.getAttribute('data-board-theme'))
     .toMatch(/fantasy-board-v1|procedural-vector/);
+  await expect
+    .poll(async () => status.getAttribute('data-asset-variant'))
+    .toMatch(/mobile|general|procedural/);
   await expect(status).toHaveAttribute('data-piece-visual-id', /fantasy-/);
   await expect(status).toHaveAttribute('data-cell-size', /^\d+(\.\d+)?$/);
   await expect(status).toHaveAttribute('data-board-rows', /^\d+$/);
   await expect(status).toHaveAttribute('data-move-limit', /^\d+$/);
   await expect(status).toHaveAttribute('data-objective-summary', /.+/);
   await assertPhoneBoardWidthFill(page, 390);
+  await expect.poll(async () => status.getAttribute('data-piece-asset-variant')).toBe('mobile');
+  await expect(status).toHaveAttribute('data-board-asset-variant', 'mobile');
 
   const interception = await page.evaluate(() => {
     const canvas = document.querySelector('canvas');
@@ -101,6 +106,7 @@ test('small phone portrait keeps near-full board width with mapped fixture move'
   const status = await waitForSceneReady(page, 'puzzle');
   await assertPhoneBoardWidthFill(page, 320);
   await expect(status).toHaveAttribute('data-board-theme', /fantasy-board-v1|procedural-vector/);
+  await expect.poll(async () => status.getAttribute('data-asset-variant')).toBe('mobile');
 
   const from = (await status.getAttribute('data-expected-move-from'))?.split(':').map(Number);
   const to = (await status.getAttribute('data-expected-move-to'))?.split(':').map(Number);
@@ -237,11 +243,24 @@ test('resize preserves board authority and Fantasy theme diagnostics', async ({
   await expect(getTestStatus(page)).toHaveAttribute('data-authoritative-board-hash', before ?? '');
   await expect(getTestStatus(page)).toHaveAttribute('data-board-theme', themeBefore ?? '');
 
-  // One desktop size
+  // One desktop size — general Fantasy assets, not mobile overrides.
   await page.setViewportSize({ width: 1280, height: 720 });
   expect(page.viewportSize()).toEqual({ width: 1280, height: 720 });
   if (expectPhaserResize) {
     await expect.poll(async () => status.getAttribute('data-logical-canvas-width')).toBe('1280');
+    await expect
+      .poll(async () => status.getAttribute('data-asset-variant'))
+      .toMatch(/general|procedural/);
+    await expect(status).not.toHaveAttribute('data-asset-variant', 'mobile');
+  }
+  await assertAuthorityAndTheme();
+
+  // Tablet portrait also stays on general assets.
+  await page.setViewportSize({ width: 820, height: 1180 });
+  if (expectPhaserResize) {
+    await expect
+      .poll(async () => status.getAttribute('data-asset-variant'))
+      .toMatch(/general|procedural/);
   }
   await assertAuthorityAndTheme();
   errors.assertNone();

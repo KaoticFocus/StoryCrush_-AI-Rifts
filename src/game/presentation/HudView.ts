@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fantasyPresentationProfile } from './fantasy/fantasyPresentationProfile';
 import { type LevelViewModel } from './levelViewModel';
 import { getPlaybackDurations } from './playback/playbackTimings';
 import { type PlaybackSettings } from './playback/ResolutionPlaybackController';
@@ -41,6 +42,8 @@ export class HudView {
   private readonly activeTweens = new Set<Phaser.Tweens.Tween>();
   private readonly activeTimers = new Set<Phaser.Time.TimerEvent>();
   private readonly pendingResolvers = new Set<() => void>();
+  private fantasyAssetVariant: 'mobile' | 'general' | 'procedural' = 'procedural';
+  private hudChromeImage: Phaser.GameObjects.Image | null = null;
   private layout: PuzzleLayout | null = null;
   private onRestart: (() => void) | null = null;
   private onNewBoard: (() => void) | null = null;
@@ -100,6 +103,10 @@ export class HudView {
     );
   }
 
+  public setFantasyAssetVariant(variant: 'mobile' | 'general' | 'procedural'): void {
+    this.fantasyAssetVariant = variant;
+  }
+
   public setCallbacks(callbacks: {
     onRestart: () => void;
     onNewBoard: () => void;
@@ -142,9 +149,17 @@ export class HudView {
     const phonePortrait = layout.orientation === 'portrait' && layout.viewportWidth <= 500;
     const panelRadius = phonePortrait ? 10 : 18;
     const trimWidth = phonePortrait ? 1.5 : 2;
+    const hudPanelKey = fantasyPresentationProfile.textureKeys.hudTopPanel;
+    const useMobileHudChrome =
+      this.fantasyAssetVariant === 'mobile' && this.scene.textures.exists(hudPanelKey);
+
+    if (this.hudChromeImage) {
+      this.hudChromeImage.destroy();
+      this.hudChromeImage = null;
+    }
 
     // FP-1 board-adjacent Fantasy HUD: obsidian panels with antique-gold trim.
-    this.hudBackground.fillStyle(0x141018, 0.92);
+    this.hudBackground.fillStyle(0x141018, useMobileHudChrome ? 0.55 : 0.92);
     this.hudBackground.fillRoundedRect(
       layout.hudRect.x,
       layout.hudRect.y,
@@ -152,6 +167,16 @@ export class HudView {
       layout.hudRect.height,
       panelRadius,
     );
+    if (useMobileHudChrome) {
+      this.hudChromeImage = this.scene.add.image(
+        layout.hudRect.x + layout.hudRect.width / 2,
+        layout.hudRect.y + layout.hudRect.height / 2,
+        hudPanelKey,
+      );
+      this.hudChromeImage.setDisplaySize(layout.hudRect.width, layout.hudRect.height);
+      this.hudChromeImage.setAlpha(0.88);
+      this.root.addAt(this.hudChromeImage, 1);
+    }
     this.hudBackground.lineStyle(trimWidth, 0xc9a227, 0.9);
     this.hudBackground.strokeRoundedRect(
       layout.hudRect.x,
@@ -349,6 +374,10 @@ export class HudView {
 
   public destroy(): void {
     this.cancelTransientEffects();
+    if (this.hudChromeImage) {
+      this.hudChromeImage.destroy();
+      this.hudChromeImage = null;
+    }
     for (const button of this.buttons) {
       button.background.removeAllListeners();
     }

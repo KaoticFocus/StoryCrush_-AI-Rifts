@@ -52,6 +52,16 @@ export interface FantasyTextureKeySet {
   boardEdgeSide: string;
   boardOrnamentGem: string;
   boardOrnamentCrest: string;
+  /** Optional HUD/chrome — mobile pack first; missing → procedural panels. */
+  hudTopPanel: string;
+  hudScoreContainer: string;
+  hudMovesContainer: string;
+  panelObjectives: string;
+  buttonRestart: string;
+  buttonMenu: string;
+  buttonHint: string;
+  buttonMode: string;
+  buttonPause: string;
 }
 
 export interface FantasyPresentationProfile {
@@ -98,6 +108,15 @@ export const fantasyTextureKeys: FantasyTextureKeySet = {
   boardEdgeSide: 'fantasy:board:edge-side',
   boardOrnamentGem: 'fantasy:board:ornament-gem',
   boardOrnamentCrest: 'fantasy:board:ornament-crest',
+  hudTopPanel: 'fantasy:hud:top-panel',
+  hudScoreContainer: 'fantasy:hud:score',
+  hudMovesContainer: 'fantasy:hud:moves',
+  panelObjectives: 'fantasy:panel:objectives',
+  buttonRestart: 'fantasy:button:restart',
+  buttonMenu: 'fantasy:button:menu',
+  buttonHint: 'fantasy:button:hint',
+  buttonMode: 'fantasy:button:mode',
+  buttonPause: 'fantasy:button:pause',
 };
 
 function url(path: string): string {

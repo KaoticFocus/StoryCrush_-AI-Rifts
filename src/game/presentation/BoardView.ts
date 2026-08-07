@@ -111,6 +111,7 @@ export class BoardView {
   private readonly overlayGraphics: Phaser.GameObjects.Graphics;
   private readonly hitZone: Phaser.GameObjects.Zone;
   private fantasyAssetsReady = false;
+  private fantasyAssetVariant: 'mobile' | 'general' | 'procedural' = 'procedural';
   private readonly pieceDisplays = new Map<string, PieceDisplayObject>();
   private readonly transientObjects = new Set<Phaser.GameObjects.GameObject>();
   private readonly activeTweens = new Set<Phaser.Tweens.Tween>();
@@ -232,9 +233,17 @@ export class BoardView {
     }
   }
 
+  public setFantasyAssetVariant(variant: 'mobile' | 'general' | 'procedural'): void {
+    this.fantasyAssetVariant = variant;
+  }
+
   public getPresentationDiagnostics(): {
     boardTheme: string;
     fantasyAssetsReady: boolean;
+    assetVariant: 'mobile' | 'general' | 'procedural';
+    boardAssetVariant: 'mobile' | 'general' | 'procedural';
+    pieceAssetVariant: 'mobile' | 'general' | 'procedural';
+    hudAssetVariant: 'mobile' | 'general' | 'procedural';
     pieceVisualSample: string;
     specialVisualSample: string;
     riftVisualState: string;
@@ -248,11 +257,19 @@ export class BoardView {
     const corrupted = threat?.corruptedCoordinates.find(
       (coordinate) => !isCoordinateInList(coordinate, threat.sourceCoordinates),
     );
+    const variant = this.fantasyAssetsReady ? this.fantasyAssetVariant : ('procedural' as const);
+    const hudKey = fantasyPresentationProfile.textureKeys.hudTopPanel;
+    const hudVariant =
+      variant === 'procedural' ? variant : this.scene.textures.exists(hudKey) ? variant : 'general';
     return {
       boardTheme: this.fantasyAssetsReady
         ? FANTASY_BOARD_THEME_ID
         : fantasyPresentationProfile.fallbackThemeId,
       fantasyAssetsReady: this.fantasyAssetsReady,
+      assetVariant: variant,
+      boardAssetVariant: variant,
+      pieceAssetVariant: variant,
+      hudAssetVariant: hudVariant,
       pieceVisualSample: samplePiece ? getFantasyPieceVisualId(samplePiece.pieceType) : '',
       specialVisualSample: specialPiece ? getFantasySpecialVisualId(specialPiece) : '',
       riftVisualState: getFantasyRiftVisualState({

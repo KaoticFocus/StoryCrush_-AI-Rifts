@@ -35,7 +35,11 @@ import {
 import { createPrototypeLevelSession, prototypeLevelDefinition } from '../content/prototypeLevel';
 import { BoardView } from '../presentation/BoardView';
 import { createBoardViewModel } from '../presentation/boardViewModel';
-import { ensureFantasyTextures } from '../presentation/fantasy/ensureFantasyTextures';
+import {
+  ensureFantasyTextures,
+  getFantasyTextureLoadResult,
+} from '../presentation/fantasy/ensureFantasyTextures';
+import { prefersMobileFantasyAssets } from '../presentation/fantasy/fantasyAssetResolver';
 import {
   FANTASY_BOARD_THEME_ID,
   resolveFantasyEffectProfile,
@@ -223,14 +227,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.boardView = new BoardView(this);
       this.hudView = new HudView(this);
       // FP-1: load Fantasy textures asynchronously; board stays playable via procedural fallback.
-      void ensureFantasyTextures(this).then((result) => {
-        if (!this.sys?.isActive?.() || !this.boardView) {
-          return;
-        }
-        this.boardView.setFantasyAssetsReady(result.ready);
-        this.renderScene();
-        this.publishBrowserStatus('idle');
-      });
+      void this.refreshFantasyTextures();
       this.playbackController = new ResolutionPlaybackController(this.createPlaybackAdapter());
       this.playbackController.setMode(this.playbackMode);
       this.playbackController.setReducedMotion(this.reducedMotion);
@@ -285,11 +282,12 @@ export class PuzzleScene extends Phaser.Scene {
           return;
         }
 
+        // Publish geometry immediately, then rebind Fantasy variants if the device class changed.
         this.renderScene();
-        // Keep presentation diagnostics in sync after layout rebuild (FP-1 resize coverage).
         this.publishBrowserStatus(
           this.controller?.getState().status === 'active' ? 'idle' : 'completed',
         );
+        void this.refreshFantasyTextures();
       };
       this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler);
       this.registerLifecycleHandlers();
@@ -465,6 +463,45 @@ export class PuzzleScene extends Phaser.Scene {
       return this.launchContext.run.seed;
     }
     return levelContent.definition.seed;
+  }
+
+  private async refreshFantasyTextures(): Promise<void> {
+    if (!this.boardView || !this.hudView) {
+      return;
+    }
+    const preferMobile = prefersMobileFantasyAssets(this.scale.width, this.scale.height);
+    const current = getFantasyTextureLoadResult(this);
+    if (current.ready && current.preferMobile === preferMobile) {
+      this.boardView.setFantasyAssetVariant(current.assetVariant);
+      this.boardView.setFantasyAssetsReady(true);
+      this.hudView.setFantasyAssetVariant(current.assetVariant);
+      this.renderScene();
+      this.publishBrowserStatus(
+        this.controller?.getState().status === 'active' ? 'idle' : 'completed',
+      );
+      return;
+    }
+
+    // Drop live Image refs to procedural before Phaser rebinds texture keys on variant switch.
+    this.boardView.setFantasyAssetsReady(false);
+    this.hudView.setFantasyAssetVariant('procedural');
+    this.renderScene();
+
+    const result = await ensureFantasyTextures(this, {
+      preferMobile,
+      width: this.scale.width,
+      height: this.scale.height,
+    });
+    if (!this.sys?.isActive?.() || !this.boardView || !this.hudView) {
+      return;
+    }
+    this.boardView.setFantasyAssetVariant(result.assetVariant);
+    this.boardView.setFantasyAssetsReady(result.ready);
+    this.hudView.setFantasyAssetVariant(result.assetVariant);
+    this.renderScene();
+    this.publishBrowserStatus(
+      this.controller?.getState().status === 'active' ? 'idle' : 'completed',
+    );
   }
 
   private renderScene(): void {
@@ -1347,6 +1384,10 @@ export class PuzzleScene extends Phaser.Scene {
         riftVisualState: '',
         reducedMotionPresentation: '',
         fantasyAssetsReady: false,
+        assetVariant: '',
+        boardAssetVariant: '',
+        pieceAssetVariant: '',
+        hudAssetVariant: '',
         paused: this.presentationState.paused,
         hasActiveHint: this.presentationState.hasActiveHint,
         selectedCoordinate: this.selectedCoordinate
@@ -1464,6 +1505,10 @@ export class PuzzleScene extends Phaser.Scene {
       riftVisualState: presentation?.riftVisualState ?? '',
       reducedMotionPresentation: resolveFantasyEffectProfile('hint', this.reducedMotion),
       fantasyAssetsReady: presentation?.fantasyAssetsReady ?? false,
+      assetVariant: presentation?.assetVariant ?? 'procedural',
+      boardAssetVariant: presentation?.boardAssetVariant ?? 'procedural',
+      pieceAssetVariant: presentation?.pieceAssetVariant ?? 'procedural',
+      hudAssetVariant: presentation?.hudAssetVariant ?? 'procedural',
       paused: this.presentationState.paused,
       hasActiveHint: this.presentationState.hasActiveHint,
       selectedCoordinate: this.selectedCoordinate

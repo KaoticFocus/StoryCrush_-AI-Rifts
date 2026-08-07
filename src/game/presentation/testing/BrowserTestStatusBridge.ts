@@ -40,6 +40,10 @@ export interface BrowserTestStatus {
   riftVisualState: string;
   reducedMotionPresentation: string;
   fantasyAssetsReady: boolean;
+  assetVariant: string;
+  boardAssetVariant: string;
+  pieceAssetVariant: string;
+  hudAssetVariant: string;
   paused: boolean;
   hasActiveHint: boolean;
   selectedCoordinate: string;

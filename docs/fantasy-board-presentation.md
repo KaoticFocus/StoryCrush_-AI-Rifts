@@ -18,12 +18,31 @@ Runtime derivatives live under Vite `public/`:
 
 ```text
 public/assets/fantasy/pieces/
+public/assets/fantasy/pieces/mobile/
 public/assets/fantasy/specials/
 public/assets/fantasy/board/
 ```
 
 Phaser texture keys use the `fantasy:` prefix (example: `fantasy:piece:ruby`).  
-Source art remains untouched in `assets/source/fantasy/`.
+Source art remains under `assets/source/fantasy/` with phone overrides in `<category>/mobile/`.
+
+Mobile package metadata (do not overwrite general Fantasy root files):
+
+```text
+assets/source/fantasy/asset-manifest.mobile.json
+assets/source/fantasy/text-style.mobile.json
+assets/source/fantasy/README.mobile.md
+```
+
+## Mobile vs general selection
+
+| Layout                                                          | Asset preference                   |
+| --------------------------------------------------------------- | ---------------------------------- |
+| Phone portrait / phone landscape (`prefersMobileFantasyAssets`) | `/assets/fantasy/<cat>/mobile/...` |
+| Tablet / desktop                                                | `/assets/fantasy/<cat>/...`        |
+
+Fallback chain (phone): **mobile → general → procedural/vector**.  
+Resolver: `fantasyAssetResolver.ts`. Loader: `ensureFantasyTextures.ts` (stable keys; variant switch on resize).
 
 ## Standard piece mapping
 
@@ -67,9 +86,10 @@ If a texture is missing or load fails, BoardView draws the existing procedural v
 
 ## Production-art replacement path
 
-1. Replace files under `public/assets/fantasy/...` with approved exports (keep filenames or update `textureUrls` only).
-2. Do not change `BoardView` gameplay hooks, board geometry, or domain code.
-3. Keep `assets/source/fantasy/` as the archival/source pack.
+1. Drop approved phone art into `assets/source/fantasy/<category>/mobile/`, then copy derivatives to `public/assets/fantasy/<category>/mobile/`.
+2. Update `fantasyMobileTextureUrls` / general `textureUrls` only when filenames change.
+3. Do not change `BoardView` gameplay hooks, board geometry, or domain code.
+4. Keep general Fantasy root metadata separate from `*.mobile.*` metadata.
 
 ## Diagnostics
 
@@ -81,3 +101,5 @@ Status bridge may expose:
 - `data-rift-visual-state`
 - `data-reduced-motion-presentation`
 - `data-fantasy-assets-ready`
+- `data-asset-variant` (`mobile` \| `general` \| `procedural`)
+- `data-board-asset-variant` / `data-piece-asset-variant` / `data-hud-asset-variant`
