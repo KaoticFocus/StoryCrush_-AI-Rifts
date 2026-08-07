@@ -1,10 +1,7 @@
 {
   "fontRecommendation": {
     "family": "Cinzel",
-    "fallback": [
-      "Georgia",
-      "serif"
-    ],
+    "fallback": ["Georgia", "serif"],
     "licenseNote": "Cinzel is available under the SIL Open Font License."
   },
   "title": {
