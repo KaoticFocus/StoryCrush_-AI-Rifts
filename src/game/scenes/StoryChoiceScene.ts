@@ -107,14 +107,8 @@ export class StoryChoiceScene extends Phaser.Scene {
           align: 'center',
           wordWrap: { width: shell.bodyWrapWidth - 24 },
         })
-        .setOrigin(0.5);
-      const bounds = button.getBounds();
-      const hitW = Math.max(shell.minTouch * 2.4, Math.min(shell.bodyWrapWidth, bounds.width + 16));
-      const hitH = Math.max(shell.minTouch, bounds.height + 8);
-      button.setInteractive(
-        new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
-        Phaser.Geom.Rectangle.Contains,
-      );
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
       button.on('pointerdown', () => {
         button.setAlpha(0.82);
         button.setStyle({ backgroundColor: '#1e40af' });
