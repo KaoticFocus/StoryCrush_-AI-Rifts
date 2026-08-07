@@ -135,14 +135,8 @@ export class MultiverseMapScene extends Phaser.Scene {
         align: 'center',
         wordWrap: { width: shell.bodyWrapWidth },
       })
-      .setOrigin(0.5);
-    const enterBounds = fantasyButton.getBounds();
-    const hitW = Math.max(shell.minTouch * 2.4, enterBounds.width + 12);
-    const hitH = Math.max(shell.minTouch, enterBounds.height + 8);
-    fantasyButton.setInteractive(
-      new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
-      Phaser.Geom.Rectangle.Contains,
-    );
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
     let entering = false;
     fantasyButton.on('pointerdown', () => {
       fantasyButton.setAlpha(0.82);
@@ -165,17 +159,8 @@ export class MultiverseMapScene extends Phaser.Scene {
         align: 'center',
         wordWrap: { width: shell.bodyWrapWidth },
       })
-      .setOrigin(0.5);
-    const backBounds = backButton.getBounds();
-    backButton.setInteractive(
-      new Phaser.Geom.Rectangle(
-        -Math.max(shell.minTouch * 2.2, backBounds.width + 12) / 2,
-        -Math.max(shell.minTouch, backBounds.height + 8) / 2,
-        Math.max(shell.minTouch * 2.2, backBounds.width + 12),
-        Math.max(shell.minTouch, backBounds.height + 8),
-      ),
-      Phaser.Geom.Rectangle.Contains,
-    );
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
     backButton.on('pointerdown', () => {
       this.flowController.resetProgress();
       this.scene.start(MainMenuScene.key);
