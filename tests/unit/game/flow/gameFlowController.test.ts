@@ -63,6 +63,35 @@ describe('game flow controller', () => {
     expect(secondChoice.reason).toBe('choice-already-committed');
   });
 
+  it('clears prior choice locks when re-entering a chapter attempt', () => {
+    const controller = createGameFlowController(createPrototypeCampaignDefinition());
+    controller.advanceTo('multiverse-map');
+    controller.advanceTo('fantasy-chapter-intro');
+    controller.advanceTo('fantasy-dialogue');
+    controller.chooseStoryOption('fantasy-stabilize');
+    controller.advanceTo('fantasy-choice');
+    controller.advanceTo('puzzle');
+    controller.recordPuzzleResult({ outcome: 'failed', score: 30, movesRemaining: 0 });
+    controller.advanceTo('results');
+    controller.advanceTo('fantasy-consequence');
+    controller.advanceTo('multiverse-map');
+
+    expect(controller.getState().storyFlags).toEqual(['FANTASY_ARCHIVE_STABILIZED']);
+
+    const reentered = controller.advanceTo('fantasy-chapter-intro');
+    expect(reentered.ok).toBe(true);
+    if (!reentered.ok) throw new Error('Expected chapter re-entry to succeed');
+    expect(reentered.state.storyFlags).toEqual([]);
+    expect(reentered.state.latestPuzzleResult).toBeNull();
+    expect(reentered.state.chapterStatus['fantasy-chapter']?.status).toBe('in-progress');
+
+    controller.advanceTo('fantasy-dialogue');
+    const nextChoice = controller.chooseStoryOption('fantasy-exploit');
+    expect(nextChoice.ok).toBe(true);
+    if (!nextChoice.ok) throw new Error('Expected second-pass choice to succeed');
+    expect(nextChoice.state.storyFlags).toEqual(['FANTASY_FRACTURE_EXPLOITED']);
+  });
+
   it('records puzzle results and consequence selection', () => {
     const controller = createGameFlowController(createPrototypeCampaignDefinition());
     controller.advanceTo('multiverse-map');

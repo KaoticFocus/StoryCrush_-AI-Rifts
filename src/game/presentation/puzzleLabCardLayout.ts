@@ -11,6 +11,41 @@ export interface PuzzleLabCardLayout {
   cards: PuzzleLabCardBounds[];
 }
 
+function chooseColumns(input: {
+  width: number;
+  height: number;
+  cardCount: number;
+  phone: boolean;
+  portrait: boolean;
+}): number {
+  const { width, cardCount, phone, portrait } = input;
+  if (cardCount <= 0) {
+    return 1;
+  }
+  if (phone) {
+    if (portrait) {
+      return 1;
+    }
+    // Landscape phones: prefer 2–3 columns from available width.
+    if (width >= 820 && cardCount >= 5) {
+      return Math.min(3, cardCount);
+    }
+    return Math.min(2, cardCount);
+  }
+  // Desktop / tablet: prefer a single balanced row of five when width allows.
+  const minReadableCardWidth = 200;
+  if (width / cardCount >= minReadableCardWidth && cardCount <= 5) {
+    return cardCount;
+  }
+  if (width >= 1120 && width / Math.max(1, Math.min(5, cardCount)) >= 220) {
+    return Math.min(5, cardCount);
+  }
+  if (width >= 900) {
+    return Math.min(3, cardCount);
+  }
+  return Math.min(2, cardCount);
+}
+
 export function calculatePuzzleLabCardLayout(input: {
   width: number;
   height: number;
@@ -21,21 +56,16 @@ export function calculatePuzzleLabCardLayout(input: {
   const cardCount = Math.max(0, Math.floor(input.cardCount));
   const portrait = width < height;
   const phone = Math.min(width, height) < 600;
-  const columns = phone
-    ? portrait
-      ? 1
-      : Math.min(2, cardCount)
-    : width >= 1120 && width / Math.max(1, cardCount) >= 250
-      ? Math.min(4, cardCount)
-      : Math.min(2, cardCount);
+  const dense = phone && portrait && cardCount >= 5;
+  const columns = chooseColumns({ width, height, cardCount, phone, portrait });
   const rows = Math.max(1, Math.ceil(cardCount / Math.max(1, columns)));
-  const margin = phone ? 16 : 24;
-  const gap = phone ? 10 : 16;
-  const top = phone ? 58 : 64;
-  const bottom = 48;
+  const margin = phone ? (dense ? 12 : 16) : 24;
+  const gap = phone ? (dense ? 6 : 10) : 16;
+  const top = phone ? (dense ? 46 : 58) : 64;
+  const bottom = phone ? (dense ? 36 : 48) : 48;
   const cardWidth = (width - margin * 2 - gap * Math.max(0, columns - 1)) / Math.max(1, columns);
   const cardHeight = (height - top - bottom - gap * Math.max(0, rows - 1)) / rows;
-  const compact = cardHeight < 200 || cardWidth < 250;
+  const compact = cardHeight < 200 || cardWidth < 250 || dense;
 
   return {
     columns,

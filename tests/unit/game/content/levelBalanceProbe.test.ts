@@ -19,6 +19,7 @@ describe('phase 3A.1 longer-level balance catalog', () => {
     expect(getPlayableLevelIds()).toEqual([
       'archive-stabilization',
       'moonwell-recovery',
+      'thornwake-containment',
       'rootbound-seal',
       'rift-erosion-lab',
     ]);
@@ -69,7 +70,7 @@ describe('phase 3A.1 longer-level balance catalog', () => {
     expect(rootbound.allowedPieceTypes).toEqual(['ruby', 'emerald', 'topaz', 'amethyst', 'pearl']);
 
     expect(archive.definition.scoring).toEqual(DEFAULT_SCORING_RULES);
-    expect(validatePlayableLevelCatalog(playableLevelCatalog)).toHaveLength(4);
+    expect(validatePlayableLevelCatalog(playableLevelCatalog)).toHaveLength(5);
 
     const scoreTargets = [archive, moonwell, rootbound].map(
       (level) =>

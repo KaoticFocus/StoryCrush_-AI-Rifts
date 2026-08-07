@@ -93,3 +93,79 @@ html[data-safe-area-test='true'] #app-shell {
   background: rgba(127, 29, 29, 0.9);
   color: #fee2e2;
 }
+
+.rh3-playtest-summary {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 20;
+  max-height: min(42vh, 16rem);
+  overflow: auto;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+  background: rgba(2, 6, 23, 0.94);
+  color: #e2e8f0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.45);
+  pointer-events: auto;
+}
+
+.rh3-playtest-summary__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.rh3-playtest-summary__body {
+  margin: 0 0 0.5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rh3-playtest-summary__copy {
+  display: inline-block;
+  margin: 0 0 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #475569;
+  border-radius: 0.35rem;
+  background: #0f766e;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.rh3-playtest-summary__copy:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+.rh3-playtest-summary__status {
+  margin: 0;
+  min-height: 1rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+@media (max-width: 360px) {
+  .rh3-playtest-summary {
+    left: 0.35rem;
+    right: 0.35rem;
+    bottom: 0.35rem;
+    padding: 0.55rem 0.6rem;
+  }
+
+  .rh3-playtest-summary__title {
+    font-size: 0.875rem;
+  }
+
+  .rh3-playtest-summary__body {
+    font-size: 0.68rem;
+  }
+}

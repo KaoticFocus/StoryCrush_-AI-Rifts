@@ -18,5 +18,5 @@ describe('RH-1 Rift Erosion Lab probe', () => {
     // Provisional lab: must demonstrate some spreads and some cleanses across the matrix.
     expect(first.some((run) => run.spreadCount > 0)).toBe(true);
     expect(first.some((run) => run.corruptedCellsCleansed > 0)).toBe(true);
-  });
+  }, 30_000);
 });

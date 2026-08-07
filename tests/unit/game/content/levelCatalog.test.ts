@@ -3,8 +3,11 @@ import { getBoardHash } from '../../../../src/game/presentation/testing/BrowserT
 import {
   createGeneratedLevelSession,
   createPlayableLevelContent,
+  getExperienceLabel,
   getPlayableLevelContent,
   getPlayableLevelIds,
+  getThreatSummary,
+  isThreatLevel,
   validatePlayableLevelCatalog,
 } from '../../../../src/game/content/levelCatalog';
 import { DEFAULT_SCORING_RULES } from '../../../../src/game/level';
@@ -15,6 +18,7 @@ describe('level catalog', () => {
     expect(getPlayableLevelIds()).toEqual([
       'archive-stabilization',
       'moonwell-recovery',
+      'thornwake-containment',
       'rootbound-seal',
       'rift-erosion-lab',
     ]);
@@ -26,6 +30,40 @@ describe('level catalog', () => {
       { id: 'score-target', kind: 'score', targetScore: 2500 },
       { id: 'collect-ruby', kind: 'collect-piece', pieceType: 'ruby', targetCount: 10 },
     ]);
+    expect(archive?.experienceKind).toBe('calm');
+    expect(isThreatLevel(archive!)).toBe(false);
+    expect(getThreatSummary(archive!)).toBeNull();
+    expect(getExperienceLabel(archive!)).toBeNull();
+
+    const thornwake = getPlayableLevelContent('thornwake-containment');
+    expect(thornwake?.title).toBe('Thornwake Containment');
+    expect(thornwake?.experienceKind).toBe('rift-pressure');
+    expect(thornwake?.boardRows).toBe(8);
+    expect(thornwake?.boardColumns).toBe(8);
+    expect(thornwake?.allowedPieceTypes).toEqual([
+      'ruby',
+      'sapphire',
+      'emerald',
+      'topaz',
+      'amethyst',
+      'pearl',
+    ]);
+    expect(thornwake?.definition.seed).toBe(1831);
+    expect(thornwake?.definition.threat).toEqual({
+      kind: 'rift-hunger',
+      sourceCells: [{ row: 7, column: 3 }],
+      spreadInterval: 3,
+      hungerMaximum: 5,
+      spreadPriority: 'orthogonal-stable-coordinate',
+    });
+    expect(getExperienceLabel(thornwake!)).toBe('Fantasy Pressure');
+    expect(getThreatSummary(thornwake!)).toBe('Rift every 3 moves · Hunger 5');
+
+    const lab = getPlayableLevelContent('rift-erosion-lab');
+    expect(lab?.definition.moveLimit).toBe(15);
+    expect(lab?.definition.threat?.hungerMaximum).toBe(5);
+    expect(lab?.definition.threat?.spreadInterval).toBe(3);
+    expect(getExperienceLabel(lab!)).toBe('Experimental Rift Hunger');
 
     expect(getPlayableLevelContent('missing-level')).toBeNull();
   });

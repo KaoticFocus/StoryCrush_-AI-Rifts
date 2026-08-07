@@ -657,7 +657,11 @@ Contract highlights:
 - Playback threat order: `rift-spread` → `rift-cleanse` → `rift-threat-sync` → optional reshuffle → board sync. Special-created protection wiring remains deferred.
 - Countdown/spread reuse RH-0 `advanceRiftHungerForAcceptedMove` inside `resolveRiftHungerForAcceptedMove`, which also applies cleanses and recomputes the future telegraph.
 - Completing all objectives wins **before** all threat processing (no countdown/spread/cleanse on the winning move).
-- Puzzle Lab includes experimental `rift-erosion-lab` (provisional: score 2200 / 8 amethyst / 15 moves / spread every 3 / hunger max 5). Calm Archive/Moonwell/Rootbound levels remain threat-free.
+- Puzzle Lab includes calm Archive/Moonwell/Rootbound levels, curated **Thornwake Containment**
+  (`rift-pressure`, provisional: score 3000 / 9 topaz / 18 moves / spread every 3 / hunger max 5 /
+  source 7:3), and experimental `rift-erosion-lab` (provisional: score 2200 / 8 amethyst / 15 moves /
+  spread every 3 / hunger max 5). Calm levels remain threat-free. RH-3 playtest URLs launch lab runs
+  with fixed seeds and an optional summary panel; full mid-level threat resume is deferred.
 - Persistence: schema v3 still stores only `LevelRunDescriptor`; full mid-level threat resume is deferred.
 
 Product direction: [rift-hunger-board-threat-direction.md](rift-hunger-board-threat-direction.md).

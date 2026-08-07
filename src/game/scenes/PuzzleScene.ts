@@ -23,6 +23,15 @@ import {
   type PuzzleLaunchContext,
 } from '../content/levelRun';
 import { createBrowserSeedProvider } from '../presentation/browserSeedProvider';
+import { formatPlaytestSeedLabel } from '../content/playtestLaunch';
+import {
+  createPlaytestMetricsAccumulator,
+  type PlaytestMetricsAccumulator,
+} from '../presentation/playtestMetrics';
+import {
+  createPlaytestSummaryPanel,
+  type PlaytestSummaryPanel,
+} from '../presentation/playtestSummaryPanel';
 import { createPrototypeLevelSession, prototypeLevelDefinition } from '../content/prototypeLevel';
 import { BoardView } from '../presentation/BoardView';
 import { createBoardViewModel } from '../presentation/boardViewModel';
@@ -141,6 +150,9 @@ export class PuzzleScene extends Phaser.Scene {
   private performanceFinalizeHandle: number | null = null;
   private diagnosticsState: 'disabled' | 'initializing' | 'ready' | 'error' = 'disabled';
   private diagnosticsError = '';
+  private playtestMetrics: PlaytestMetricsAccumulator | null = null;
+  private playtestSummaryPanel: PlaytestSummaryPanel | null = null;
+  private playtestSeedLabel: Phaser.GameObjects.Text | null = null;
   private static readonly hintDuration = 2500;
 
   public constructor() {
@@ -209,6 +221,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.playbackController.setMode(this.playbackMode);
       this.playbackController.setReducedMotion(this.reducedMotion);
       this.initialBoardHash = getBoardHash(this.controller.getState().board);
+      this.initializePlaytestSession();
 
       this.boardView.setCellSelectedHandler((coordinate) => {
         this.handleCellSelection(coordinate);
@@ -284,6 +297,10 @@ export class PuzzleScene extends Phaser.Scene {
         this.hudView = null;
         this.statusBridge?.destroy();
         this.statusBridge = null;
+        this.playtestSummaryPanel?.destroy();
+        this.playtestSummaryPanel = null;
+        this.playtestMetrics = null;
+        this.destroyPlaytestSeedLabel();
         this.ariaAnnouncer.clear();
       });
 
@@ -297,6 +314,14 @@ export class PuzzleScene extends Phaser.Scene {
             hunger: initialThreat.hungerCurrent,
             maximum: threatDefinition.hungerMaximum,
             countdown: initialThreat.acceptedMovesUntilSpread,
+          }),
+        );
+      }
+      if (this.isPlaytestMode() && this.launchContext?.mode === 'puzzle-lab') {
+        this.ariaAnnouncer.announce(
+          createAriaStatusMessage({
+            kind: 'playtest-seed',
+            seed: this.launchContext.run.seed,
           }),
         );
       }
@@ -338,6 +363,67 @@ export class PuzzleScene extends Phaser.Scene {
       this.hasError = true;
       this.renderErrorState('Puzzle scene failed to initialize. Return to the menu and try again.');
     }
+  }
+
+  private isPlaytestMode(): boolean {
+    return this.launchContext?.mode === 'puzzle-lab' && this.launchContext.playtest === true;
+  }
+
+  private initializePlaytestSession(): void {
+    if (!this.isPlaytestMode() || !this.controller || this.launchContext?.mode !== 'puzzle-lab') {
+      return;
+    }
+
+    const run = this.launchContext.run;
+    const definition = this.controller.getDefinition();
+    this.playtestMetrics = createPlaytestMetricsAccumulator();
+    this.playtestMetrics.reset({
+      levelId: run.levelId,
+      seed: run.seed,
+      moveLimit: definition.moveLimit,
+      hungerMaximum: definition.threat?.hungerMaximum ?? 0,
+    });
+    this.playtestSummaryPanel = createPlaytestSummaryPanel(document.getElementById('game-root'));
+    this.playtestSummaryPanel.hide();
+    this.showPlaytestSeedLabel(run.seed);
+  }
+
+  private showPlaytestSeedLabel(seed: number): void {
+    this.destroyPlaytestSeedLabel();
+    this.playtestSeedLabel = this.add
+      .text(this.scale.width / 2, this.scale.height * 0.045, formatPlaytestSeedLabel(seed), {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        color: '#cbd5e1',
+        backgroundColor: '#0f172a',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(10_000);
+  }
+
+  private destroyPlaytestSeedLabel(): void {
+    this.playtestSeedLabel?.destroy();
+    this.playtestSeedLabel = null;
+  }
+
+  private resetPlaytestMetricsForSameSeed(): void {
+    if (!this.isPlaytestMode() || !this.controller || !this.playtestMetrics) {
+      return;
+    }
+    if (this.launchContext?.mode !== 'puzzle-lab') {
+      return;
+    }
+
+    const run = this.launchContext.run;
+    const definition = this.controller.getDefinition();
+    this.playtestMetrics.reset({
+      levelId: run.levelId,
+      seed: run.seed,
+      moveLimit: definition.moveLimit,
+      hungerMaximum: definition.threat?.hungerMaximum ?? 0,
+    });
+    this.playtestSummaryPanel?.hide();
   }
 
   private resolveLaunchContext(launchContext: unknown): PuzzleLaunchContext | null {
@@ -533,6 +619,9 @@ export class PuzzleScene extends Phaser.Scene {
       this.cancelHudPlaybackEffects();
       this.controller.restart();
       this.restartCount += 1;
+      if (this.isPlaytestMode()) {
+        this.resetPlaytestMetricsForSameSeed();
+      }
       this.displayBoardOverride = null;
       this.hudStateOverride = null;
       this.selectedCoordinate = null;
@@ -558,6 +647,7 @@ export class PuzzleScene extends Phaser.Scene {
 
   private generateNewBoard(): void {
     if (this.launchContext?.mode !== 'puzzle-lab' || !this.currentLevelContent) return;
+    const exitingPlaytest = this.isPlaytestMode();
     try {
       const seed = getBrowserTestOptions().e2eEnabled
         ? this.launchContext.run.seed + 1
@@ -566,6 +656,11 @@ export class PuzzleScene extends Phaser.Scene {
         mode: 'puzzle-lab',
         run: { levelId: this.currentLevelContent.id, seed },
       };
+      if (exitingPlaytest) {
+        this.playtestMetrics = null;
+        this.playtestSummaryPanel?.hide();
+        this.destroyPlaytestSeedLabel();
+      }
       this.controller = new PuzzleSessionController(
         this.getLaunchDefinition(),
         () => createGeneratedLevelSession({ content: this.currentLevelContent!, seed }).state,
@@ -579,8 +674,14 @@ export class PuzzleScene extends Phaser.Scene {
       this.presentationState.playbackActive = false;
       this.setInputLocked(false);
       this.hasError = false;
-      this.summaryMessage = 'A new board was generated for this level.';
-      this.ariaAnnouncer.announce(createAriaStatusMessage({ kind: 'new-board-generated' }));
+      this.summaryMessage = exitingPlaytest
+        ? 'New Board started with a new seed.'
+        : 'A new board was generated for this level.';
+      this.ariaAnnouncer.announce(
+        exitingPlaytest
+          ? this.summaryMessage
+          : createAriaStatusMessage({ kind: 'new-board-generated' }),
+      );
       this.renderScene();
       this.publishBrowserStatus('idle');
     } catch (error) {
@@ -707,6 +808,9 @@ export class PuzzleScene extends Phaser.Scene {
         this.selectedCoordinate = null;
         this.rejectedCoordinates = [];
         this.summaryMessage = formatMoveSummary(result);
+        if (this.isPlaytestMode() && this.playtestMetrics) {
+          this.playtestMetrics.recordAccepted(result);
+        }
         this.ariaAnnouncer.announce(
           result.nextState.status === 'won'
             ? createAriaStatusMessage({ kind: 'level-complete' })
@@ -733,6 +837,10 @@ export class PuzzleScene extends Phaser.Scene {
         this.stopPerformanceMeasurement();
         this.publishBrowserStatus('completed');
         if (result.nextState.status !== 'active') {
+          if (this.isPlaytestMode() && this.playtestMetrics && this.controller) {
+            this.playtestMetrics.finalize(this.controller.getState());
+            this.playtestSummaryPanel?.show(this.playtestMetrics.formatPlainTextSummary());
+          }
           if (this.campaignMode) {
             this.flowController.recordPuzzleResult({
               outcome: result.nextState.status === 'won' ? 'won' : 'failed',
