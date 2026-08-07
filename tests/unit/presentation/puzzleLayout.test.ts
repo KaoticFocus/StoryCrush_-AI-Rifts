@@ -40,6 +40,38 @@ describe('puzzleLayout', () => {
     expect(layout.boardRect.y + layout.boardRect.height).toBeLessThanOrEqual(layout.viewportHeight);
   });
 
+  it.each([
+    [320, 568],
+    [390, 844],
+    [412, 915],
+  ])('fills phone portrait width at %ix%i with small gutters', (width, height) => {
+    const layout = calculatePuzzleLayout({
+      width,
+      height,
+      rows: 8,
+      columns: 8,
+      threatHudHeight: 54,
+    });
+    const sideGutter = layout.boardRect.x;
+    const utilization = layout.boardRect.width / width;
+
+    expect(layout.orientation).toBe('portrait');
+    expect(utilization).toBeGreaterThanOrEqual(0.94);
+    expect(sideGutter).toBeLessThanOrEqual(12);
+    expect(
+      layout.viewportWidth - (layout.boardRect.x + layout.boardRect.width),
+    ).toBeLessThanOrEqual(12);
+    expect(layout.boardRect.width).toBe(layout.cellSize * 8);
+    expect(layout.boardRect.height).toBe(layout.cellSize * 8);
+    expect(layout.hudRect.height).toBeGreaterThan(0);
+    expect(layout.footerRect.height).toBeGreaterThan(0);
+  });
+
+  it('keeps tablet portrait board intentionally below full width', () => {
+    const layout = calculatePuzzleLayout({ width: 820, height: 1180, rows: 8, columns: 8 });
+    expect(layout.boardRect.width / layout.viewportWidth).toBeLessThanOrEqual(0.78);
+  });
+
   it('fits inside the reduced content area used by safe-area simulation', () => {
     const layout = calculatePuzzleLayout({ width: 296, height: 514, rows: 8, columns: 8 });
 

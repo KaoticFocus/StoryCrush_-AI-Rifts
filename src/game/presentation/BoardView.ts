@@ -661,12 +661,17 @@ export class BoardView {
     this.cellBackgroundGraphics.clear();
     this.chromeImageLayer.removeAll(true);
 
-    const framePad = 14;
+    // Frame stays inside layout gutters so chrome never forces the playable grid smaller.
+    const phonePortrait =
+      this.layout.orientation === 'portrait' && this.layout.viewportWidth <= 500;
+    const framePad = phonePortrait
+      ? Math.max(4, Math.min(8, this.layout.padding - 1))
+      : Math.min(14, Math.max(8, this.layout.padding - 4));
     const boardX = this.layout.boardRect.x;
     const boardY = this.layout.boardRect.y;
     const boardW = this.layout.boardRect.width;
     const boardH = this.layout.boardRect.height;
-    const compact = this.layout.cellSize < 48;
+    const compact = phonePortrait || this.layout.cellSize < 48;
 
     // Restrained cavern wash behind the board frame only (non-interactive; does not cover HUD).
     this.backgroundGraphics.fillStyle(0x1a1030, 0.5);
@@ -681,7 +686,7 @@ export class BoardView {
       boardY - framePad,
       boardW + framePad * 2,
       boardH + framePad * 2,
-      18,
+      phonePortrait ? 10 : 18,
     );
 
     const keys = fantasyPresentationProfile.textureKeys;
@@ -729,21 +734,23 @@ export class BoardView {
     }
 
     // Antique-gold frame — decorative only; hitZone remains the sole interactive board surface.
-    this.backgroundGraphics.lineStyle(3, 0xc9a227, 0.95);
+    const outerStroke = phonePortrait ? 2 : 3;
+    const innerInset = phonePortrait ? 2 : 4;
+    this.backgroundGraphics.lineStyle(outerStroke, 0xc9a227, 0.95);
     this.backgroundGraphics.strokeRoundedRect(
       boardX - framePad,
       boardY - framePad,
       boardW + framePad * 2,
       boardH + framePad * 2,
-      16,
+      phonePortrait ? 8 : 16,
     );
-    this.backgroundGraphics.lineStyle(1, 0x7c3aed, 0.55);
+    this.backgroundGraphics.lineStyle(1, 0x7c3aed, phonePortrait ? 0.45 : 0.55);
     this.backgroundGraphics.strokeRoundedRect(
-      boardX - framePad + 4,
-      boardY - framePad + 4,
-      boardW + framePad * 2 - 8,
-      boardH + framePad * 2 - 8,
-      14,
+      boardX - framePad + innerInset,
+      boardY - framePad + innerInset,
+      boardW + framePad * 2 - innerInset * 2,
+      boardH + framePad * 2 - innerInset * 2,
+      phonePortrait ? 6 : 14,
     );
 
     if (!compact && canUseTextures && this.scene.textures.exists(keys.boardCorner)) {

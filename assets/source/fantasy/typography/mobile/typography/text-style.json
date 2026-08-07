@@ -1,0 +1,55 @@
+{
+  "fontRecommendation": {
+    "family": "Cinzel",
+    "fallback": [
+      "Georgia",
+      "serif"
+    ],
+    "licenseNote": "Cinzel is available under the SIL Open Font License."
+  },
+  "title": {
+    "sizeRatio": 0.05,
+    "weight": 600,
+    "color": "#F5C96A",
+    "stroke": "#29170A",
+    "strokeWidthRatio": 0.0025,
+    "shadow": "0 3px 8px rgba(0,0,0,.75)",
+    "letterSpacingEm": 0.035,
+    "align": "center"
+  },
+  "label": {
+    "sizeRatio": 0.025,
+    "weight": 600,
+    "color": "#EACB84",
+    "stroke": "#1A1008",
+    "strokeWidthRatio": 0.0018,
+    "shadow": "0 2px 5px rgba(0,0,0,.70)",
+    "letterSpacingEm": 0.02,
+    "align": "center"
+  },
+  "objectiveTitle": {
+    "sizeRatio": 0.03,
+    "weight": 600,
+    "color": "#9CFF36",
+    "stroke": "#142008",
+    "strokeWidthRatio": 0.002,
+    "shadow": "0 2px 8px rgba(90,255,25,.35)",
+    "letterSpacingEm": 0.025,
+    "align": "center"
+  },
+  "body": {
+    "sizeRatio": 0.027,
+    "weight": 500,
+    "color": "#F1DDA8",
+    "stroke": "#20160A",
+    "strokeWidthRatio": 0.0015,
+    "shadow": "0 2px 5px rgba(0,0,0,.70)",
+    "letterSpacingEm": 0.01,
+    "align": "left"
+  },
+  "boundsGuidance": {
+    "safeHorizontalPaddingRatio": 0.06,
+    "safeVerticalPaddingRatio": 0.08,
+    "singleLineMaxWidthRatio": 0.88
+  }
+}

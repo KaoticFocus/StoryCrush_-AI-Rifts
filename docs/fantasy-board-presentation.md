@@ -57,6 +57,10 @@ Source art remains untouched in `assets/source/fantasy/`.
 
 Animated effect profile ids resolve to `*-reduced` variants via `resolveFantasyEffectProfile`. Threat pulse tweens are skipped; static reticle/symbols remain.
 
+## Phone width fill
+
+Phone portrait layout (`viewportWidth <= 500`) sizes square cells from nearly the full safe width first (≈6–10px side gutters), then compresses HUD/footer before shrinking the grid. Fantasy frame thickness shrinks to stay inside those gutters. Tablet/desktop keep intentional board ceilings so wider layouts do not stretch edge-to-edge.
+
 ## Fallback
 
 If a texture is missing or load fails, BoardView draws the existing procedural vector pieces/cells. Theme diagnostic becomes `procedural-vector`.

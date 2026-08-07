@@ -1,0 +1,1201 @@
+{
+  "sourceReference": "FantasyMobile.png",
+  "assetCount": 80,
+  "assets": [
+    {
+      "id": "piece_fire_red",
+      "file": "pieces/piece_fire_red.png",
+      "category": "match_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Standard match-3 piece reconstructed from the approved mobile style reference."
+    },
+    {
+      "id": "piece_water_blue",
+      "file": "pieces/piece_water_blue.png",
+      "category": "match_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Standard match-3 piece reconstructed from the approved mobile style reference."
+    },
+    {
+      "id": "piece_sun_gold",
+      "file": "pieces/piece_sun_gold.png",
+      "category": "match_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Standard match-3 piece reconstructed from the approved mobile style reference."
+    },
+    {
+      "id": "piece_moon_triangle_purple",
+      "file": "pieces/piece_moon_triangle_purple.png",
+      "category": "match_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Standard match-3 piece reconstructed from the approved mobile style reference."
+    },
+    {
+      "id": "piece_moon_silver",
+      "file": "pieces/piece_moon_silver.png",
+      "category": "match_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Standard match-3 piece reconstructed from the approved mobile style reference."
+    },
+    {
+      "id": "piece_leaf_green",
+      "file": "pieces/piece_leaf_green.png",
+      "category": "match_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Standard match-3 piece reconstructed from the approved mobile style reference."
+    },
+    {
+      "id": "special_starburst_green",
+      "file": "specials/special_starburst_green.png",
+      "category": "special_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Special piece or reusable gameplay overlay/effect."
+    },
+    {
+      "id": "special_fire_horizontal",
+      "file": "specials/special_fire_horizontal.png",
+      "category": "special_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Special piece or reusable gameplay overlay/effect."
+    },
+    {
+      "id": "special_vortex_blue",
+      "file": "specials/special_vortex_blue.png",
+      "category": "special_piece",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Special piece or reusable gameplay overlay/effect."
+    },
+    {
+      "id": "overlay_piece_selected",
+      "file": "specials/overlay_piece_selected.png",
+      "category": "effect",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Special piece or reusable gameplay overlay/effect."
+    },
+    {
+      "id": "overlay_valid_move",
+      "file": "specials/overlay_valid_move.png",
+      "category": "effect",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Special piece or reusable gameplay overlay/effect."
+    },
+    {
+      "id": "fx_activation_ring",
+      "file": "effects/fx_activation_ring.png",
+      "category": "effect",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Special piece or reusable gameplay overlay/effect."
+    },
+    {
+      "id": "fx_collection_sparkle",
+      "file": "effects/fx_collection_sparkle.png",
+      "category": "effect",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Special piece or reusable gameplay overlay/effect."
+    },
+    {
+      "id": "board_cell_empty",
+      "file": "board/board_cell_empty.png",
+      "category": "board",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_grid_background",
+      "file": "board/board_grid_background.png",
+      "category": "board",
+      "width": 1024,
+      "height": 1024,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_edge_top",
+      "file": "board/board_edge_top.png",
+      "category": "board",
+      "width": 1024,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": {
+        "left": 80,
+        "right": 80,
+        "top": 50,
+        "bottom": 50
+      },
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_edge_bottom",
+      "file": "board/board_edge_bottom.png",
+      "category": "board",
+      "width": 1024,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": {
+        "left": 80,
+        "right": 80,
+        "top": 50,
+        "bottom": 50
+      },
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_edge_left",
+      "file": "board/board_edge_left.png",
+      "category": "board",
+      "width": 256,
+      "height": 1024,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": {
+        "left": 50,
+        "right": 50,
+        "top": 80,
+        "bottom": 80
+      },
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_edge_right",
+      "file": "board/board_edge_right.png",
+      "category": "board",
+      "width": 256,
+      "height": 1024,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": {
+        "left": 50,
+        "right": 50,
+        "top": 80,
+        "bottom": 80
+      },
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_corner_top_left",
+      "file": "board/board_corner_top_left.png",
+      "category": "board",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_corner_top_right",
+      "file": "board/board_corner_top_right.png",
+      "category": "board",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_corner_bottom_left",
+      "file": "board/board_corner_bottom_left.png",
+      "category": "board",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_corner_bottom_right",
+      "file": "board/board_corner_bottom_right.png",
+      "category": "board",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_ornament_side_gem",
+      "file": "board/board_ornament_side_gem.png",
+      "category": "board",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_ornament_top_crest",
+      "file": "board/board_ornament_top_crest.png",
+      "category": "board",
+      "width": 1024,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_trim_gold_iron",
+      "file": "board/board_trim_gold_iron.png",
+      "category": "board",
+      "width": 1536,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": {
+        "left": 90,
+        "right": 90,
+        "top": 40,
+        "bottom": 40
+      },
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "board_backplate",
+      "file": "board/board_backplate.png",
+      "category": "board",
+      "width": 1536,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": {
+        "left": 70,
+        "right": 70,
+        "top": 60,
+        "bottom": 60
+      },
+      "notes": "Modular board/frame asset."
+    },
+    {
+      "id": "hud_top_panel_background",
+      "file": "hud/hud_top_panel_background.png",
+      "category": "hud",
+      "width": 1536,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": {
+        "left": 90,
+        "right": 90,
+        "top": 70,
+        "bottom": 70
+      },
+      "notes": "Top HUD component."
+    },
+    {
+      "id": "hud_top_panel_frame",
+      "file": "hud/hud_top_panel_frame.png",
+      "category": "hud",
+      "width": 1536,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": {
+        "left": 90,
+        "right": 90,
+        "top": 70,
+        "bottom": 70
+      },
+      "notes": "Top HUD component."
+    },
+    {
+      "id": "hud_top_ornament_gem",
+      "file": "hud/hud_top_ornament_gem.png",
+      "category": "hud",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Top HUD component."
+    },
+    {
+      "id": "button_pause_round",
+      "file": "buttons/button_pause_round.png",
+      "category": "hud",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Top HUD component."
+    },
+    {
+      "id": "hud_top_inner_panel",
+      "file": "hud/hud_top_inner_panel.png",
+      "category": "hud",
+      "width": 1536,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": {
+        "left": 70,
+        "right": 70,
+        "top": 60,
+        "bottom": 60
+      },
+      "notes": "Top HUD component."
+    },
+    {
+      "id": "hud_score_container",
+      "file": "hud/hud_score_container.png",
+      "category": "hud",
+      "width": 512,
+      "height": 384,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": {
+        "left": 45,
+        "right": 45,
+        "top": 45,
+        "bottom": 45
+      },
+      "notes": "Top HUD component."
+    },
+    {
+      "id": "hud_moves_container",
+      "file": "hud/hud_moves_container.png",
+      "category": "hud",
+      "width": 512,
+      "height": 384,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": {
+        "left": 45,
+        "right": 45,
+        "top": 45,
+        "bottom": 45
+      },
+      "notes": "Top HUD component."
+    },
+    {
+      "id": "hud_top_divider",
+      "file": "hud/hud_top_divider.png",
+      "category": "hud",
+      "width": 512,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Top HUD component."
+    },
+    {
+      "id": "icon_pause",
+      "file": "icons/icon_pause.png",
+      "category": "icon",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Pause icon separated from round pause button."
+    },
+    {
+      "id": "panel_objectives_background",
+      "file": "panels/panel_objectives_background.png",
+      "category": "panel",
+      "width": 1536,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": {
+        "left": 90,
+        "right": 90,
+        "top": 70,
+        "bottom": 70
+      },
+      "notes": "Objectives-panel component."
+    },
+    {
+      "id": "panel_objectives_frame",
+      "file": "panels/panel_objectives_frame.png",
+      "category": "panel",
+      "width": 1024,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": {
+        "left": 80,
+        "right": 80,
+        "top": 60,
+        "bottom": 60
+      },
+      "notes": "Objectives-panel component."
+    },
+    {
+      "id": "panel_objectives_green_glow",
+      "file": "panels/panel_objectives_green_glow.png",
+      "category": "panel",
+      "width": 1536,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": {
+        "left": 90,
+        "right": 90,
+        "top": 70,
+        "bottom": 70
+      },
+      "notes": "Objectives-panel component."
+    },
+    {
+      "id": "panel_objectives_title_ornament",
+      "file": "panels/panel_objectives_title_ornament.png",
+      "category": "panel",
+      "width": 1024,
+      "height": 384,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Objectives-panel component."
+    },
+    {
+      "id": "panel_objective_socket_left",
+      "file": "panels/panel_objective_socket_left.png",
+      "category": "panel",
+      "width": 384,
+      "height": 384,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Objectives-panel component."
+    },
+    {
+      "id": "panel_objective_socket_right",
+      "file": "panels/panel_objective_socket_right.png",
+      "category": "panel",
+      "width": 384,
+      "height": 384,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Objectives-panel component."
+    },
+    {
+      "id": "panel_objectives_divider",
+      "file": "panels/panel_objectives_divider.png",
+      "category": "panel",
+      "width": 512,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Objectives-panel component."
+    },
+    {
+      "id": "panel_objectives_sparkle",
+      "file": "effects/panel_objectives_sparkle.png",
+      "category": "effect",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Objectives-panel component."
+    },
+    {
+      "id": "objective_ruby",
+      "file": "objectives/objective_ruby.png",
+      "category": "objective_icon",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Small ruby objective icon."
+    },
+    {
+      "id": "objective_purple_crystal",
+      "file": "objectives/objective_purple_crystal.png",
+      "category": "objective_icon",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Small purple crystal objective icon."
+    },
+    {
+      "id": "instruction_plaque",
+      "file": "panels/instruction_plaque.png",
+      "category": "panel",
+      "width": 1536,
+      "height": 384,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": {
+        "left": 90,
+        "right": 90,
+        "top": 60,
+        "bottom": 60
+      },
+      "notes": "Text-free instruction plaque."
+    },
+    {
+      "id": "instruction_plaque_endcap_left",
+      "file": "ornaments/instruction_plaque_endcap_left.png",
+      "category": "ornament",
+      "width": 256,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Left instruction plaque end ornament."
+    },
+    {
+      "id": "instruction_plaque_endcap_right",
+      "file": "ornaments/instruction_plaque_endcap_right.png",
+      "category": "ornament",
+      "width": 256,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Right instruction plaque end ornament."
+    },
+    {
+      "id": "instruction_plaque_side_glow",
+      "file": "effects/instruction_plaque_side_glow.png",
+      "category": "effect",
+      "width": 256,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Green instruction plaque side glow."
+    },
+    {
+      "id": "instruction_plaque_highlight",
+      "file": "panels/instruction_plaque_highlight.png",
+      "category": "panel",
+      "width": 1536,
+      "height": 384,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Derived highlighted plaque state."
+    },
+    {
+      "id": "button_restart_bg",
+      "file": "buttons/button_restart_bg.png",
+      "category": "button",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "button_menu_bg",
+      "file": "buttons/button_menu_bg.png",
+      "category": "button",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "button_mode_bg",
+      "file": "buttons/button_mode_bg.png",
+      "category": "button",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "button_hint_bg",
+      "file": "buttons/button_hint_bg.png",
+      "category": "button",
+      "width": 512,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "icon_restart",
+      "file": "icons/icon_restart.png",
+      "category": "icon",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "icon_menu_castle",
+      "file": "icons/icon_menu_castle.png",
+      "category": "icon",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "icon_crossed_swords",
+      "file": "icons/icon_crossed_swords.png",
+      "category": "icon",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "icon_hint_magnifier",
+      "file": "icons/icon_hint_magnifier.png",
+      "category": "icon",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "badge_hint_counter",
+      "file": "icons/badge_hint_counter.png",
+      "category": "icon",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Bottom-control component."
+    },
+    {
+      "id": "button_round_purple",
+      "file": "buttons/button_round_purple.png",
+      "category": "button",
+      "width": 528,
+      "height": 528,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Reusable round button shell derived from matching control style."
+    },
+    {
+      "id": "button_round_blue",
+      "file": "buttons/button_round_blue.png",
+      "category": "button",
+      "width": 528,
+      "height": 528,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Reusable round button shell derived from matching control style."
+    },
+    {
+      "id": "button_round_green",
+      "file": "buttons/button_round_green.png",
+      "category": "button",
+      "width": 528,
+      "height": 528,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Reusable round button shell derived from matching control style."
+    },
+    {
+      "id": "button_round_purple_hint",
+      "file": "buttons/button_round_purple_hint.png",
+      "category": "button",
+      "width": 528,
+      "height": 528,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Reusable round button shell derived from matching control style."
+    },
+    {
+      "id": "badge_hint_counter_text",
+      "file": "icons/badge_hint_counter_text.png",
+      "category": "icon",
+      "width": 272,
+      "height": 272,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Reference badge showing the styled numeral; use editable text in production."
+    },
+    {
+      "id": "ornament_gem_purple",
+      "file": "ornaments/ornament_gem_purple.png",
+      "category": "ornament",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Reusable ornament/effect."
+    },
+    {
+      "id": "ornament_frame_flourish_gold",
+      "file": "ornaments/ornament_frame_flourish_gold.png",
+      "category": "ornament",
+      "width": 512,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Reusable ornament/effect."
+    },
+    {
+      "id": "ornament_divider_gold",
+      "file": "ornaments/ornament_divider_gold.png",
+      "category": "ornament",
+      "width": 512,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Reusable ornament/effect."
+    },
+    {
+      "id": "ornament_trim_blackmetal",
+      "file": "ornaments/ornament_trim_blackmetal.png",
+      "category": "ornament",
+      "width": 512,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Reusable ornament/effect."
+    },
+    {
+      "id": "fx_sparkle_green",
+      "file": "effects/fx_sparkle_green.png",
+      "category": "effect",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Reusable ornament/effect."
+    },
+    {
+      "id": "fx_glow_line_green",
+      "file": "effects/fx_glow_line_green.png",
+      "category": "effect",
+      "width": 512,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Reusable ornament/effect."
+    },
+    {
+      "id": "fx_glow_purple",
+      "file": "effects/fx_glow_purple.png",
+      "category": "effect",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Reusable ornament/effect."
+    },
+    {
+      "id": "fx_glow_gold",
+      "file": "effects/fx_glow_gold.png",
+      "category": "effect",
+      "width": 256,
+      "height": 256,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Reusable ornament/effect."
+    },
+    {
+      "id": "background_cavern_full",
+      "file": "environment/background_cavern_full.png",
+      "category": "environment",
+      "width": 1536,
+      "height": 768,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Wide cavern background layer reconstructed from the mobile fantasy style."
+    },
+    {
+      "id": "background_crystal_cluster_left",
+      "file": "environment/background_crystal_cluster_left.png",
+      "category": "environment",
+      "width": 768,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Left purple crystal cluster."
+    },
+    {
+      "id": "background_crystal_cluster_right",
+      "file": "environment/background_crystal_cluster_right.png",
+      "category": "environment",
+      "width": 768,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Right purple crystal cluster."
+    },
+    {
+      "id": "background_cave_columns",
+      "file": "environment/background_cave_columns.png",
+      "category": "environment",
+      "width": 1024,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Distant cave-column layer."
+    },
+    {
+      "id": "background_particles_purple",
+      "file": "environment/background_particles_purple.png",
+      "category": "environment",
+      "width": 1024,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Purple ambient particle layer."
+    },
+    {
+      "id": "foreground_rock_floor",
+      "file": "environment/foreground_rock_floor.png",
+      "category": "environment",
+      "width": 1024,
+      "height": 512,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": true,
+      "nineSlice": null,
+      "notes": "Rocky foreground floor layer."
+    },
+    {
+      "id": "background_cavern_portrait_prototype",
+      "file": "environment/background_cavern_portrait_prototype.png",
+      "category": "environment",
+      "width": 1536,
+      "height": 2732,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "mirrorable": false,
+      "nineSlice": null,
+      "notes": "Prototype full portrait backdrop derived from and darkened against the supplied board reference."
+    }
+  ]
+}
