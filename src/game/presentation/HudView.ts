@@ -139,7 +139,8 @@ export class HudView {
     this.hudBackground.clear();
     this.footerBackground.clear();
 
-    this.hudBackground.fillStyle(0x0f172a, 0.88);
+    // FP-1 board-adjacent Fantasy HUD: obsidian panels with antique-gold trim.
+    this.hudBackground.fillStyle(0x141018, 0.92);
     this.hudBackground.fillRoundedRect(
       layout.hudRect.x,
       layout.hudRect.y,
@@ -147,7 +148,7 @@ export class HudView {
       layout.hudRect.height,
       18,
     );
-    this.hudBackground.lineStyle(2, 0x334155, 1);
+    this.hudBackground.lineStyle(2, 0xc9a227, 0.9);
     this.hudBackground.strokeRoundedRect(
       layout.hudRect.x,
       layout.hudRect.y,
@@ -155,8 +156,16 @@ export class HudView {
       layout.hudRect.height,
       18,
     );
+    this.hudBackground.lineStyle(1, 0x7c3aed, 0.35);
+    this.hudBackground.strokeRoundedRect(
+      layout.hudRect.x + 3,
+      layout.hudRect.y + 3,
+      layout.hudRect.width - 6,
+      layout.hudRect.height - 6,
+      15,
+    );
 
-    this.footerBackground.fillStyle(0x0f172a, 0.84);
+    this.footerBackground.fillStyle(0x141018, 0.9);
     this.footerBackground.fillRoundedRect(
       layout.footerRect.x,
       layout.footerRect.y,
@@ -164,7 +173,7 @@ export class HudView {
       layout.footerRect.height,
       16,
     );
-    this.footerBackground.lineStyle(2, 0x334155, 1);
+    this.footerBackground.lineStyle(2, 0xc9a227, 0.85);
     this.footerBackground.strokeRoundedRect(
       layout.footerRect.x,
       layout.footerRect.y,

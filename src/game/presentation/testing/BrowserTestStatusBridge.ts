@@ -33,6 +33,13 @@ export interface BrowserTestStatus {
   playbackSequence: number;
   playbackMode: string;
   reducedMotion: boolean;
+  /** FP-1 presentation diagnostics — visual only, not authoritative gameplay. */
+  boardTheme: string;
+  pieceVisualId: string;
+  specialVisualId: string;
+  riftVisualState: string;
+  reducedMotionPresentation: string;
+  fantasyAssetsReady: boolean;
   paused: boolean;
   hasActiveHint: boolean;
   selectedCoordinate: string;

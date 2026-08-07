@@ -35,6 +35,11 @@ import {
 import { createPrototypeLevelSession, prototypeLevelDefinition } from '../content/prototypeLevel';
 import { BoardView } from '../presentation/BoardView';
 import { createBoardViewModel } from '../presentation/boardViewModel';
+import { ensureFantasyTextures } from '../presentation/fantasy/ensureFantasyTextures';
+import {
+  FANTASY_BOARD_THEME_ID,
+  resolveFantasyEffectProfile,
+} from '../presentation/fantasy/fantasyPresentationProfile';
 import { selectHint } from '../presentation/hints/selectHint';
 import { HudView } from '../presentation/HudView';
 import { createLevelViewModel, formatMoveSummary } from '../presentation/levelViewModel';
@@ -180,7 +185,7 @@ export class PuzzleScene extends Phaser.Scene {
     this.rejectedCoordinates = [];
     this.displayBoardOverride = null;
     this.hudStateOverride = null;
-    this.cameras.main.setBackgroundColor('#020617');
+    this.cameras.main.setBackgroundColor('#0b1020');
     this.initializePresentationSettings();
     this.sceneGeneration += 1;
     this.statusBridge = new BrowserTestStatusBridge();
@@ -217,6 +222,15 @@ export class PuzzleScene extends Phaser.Scene {
       );
       this.boardView = new BoardView(this);
       this.hudView = new HudView(this);
+      // FP-1: load Fantasy textures asynchronously; board stays playable via procedural fallback.
+      void ensureFantasyTextures(this).then((result) => {
+        if (!this.sys?.isActive?.() || !this.boardView) {
+          return;
+        }
+        this.boardView.setFantasyAssetsReady(result.ready);
+        this.renderScene();
+        this.publishBrowserStatus('idle');
+      });
       this.playbackController = new ResolutionPlaybackController(this.createPlaybackAdapter());
       this.playbackController.setMode(this.playbackMode);
       this.playbackController.setReducedMotion(this.reducedMotion);
@@ -272,6 +286,10 @@ export class PuzzleScene extends Phaser.Scene {
         }
 
         this.renderScene();
+        // Keep presentation diagnostics in sync after layout rebuild (FP-1 resize coverage).
+        this.publishBrowserStatus(
+          this.controller?.getState().status === 'active' ? 'idle' : 'completed',
+        );
       };
       this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler);
       this.registerLifecycleHandlers();
@@ -1323,6 +1341,12 @@ export class PuzzleScene extends Phaser.Scene {
         playbackSequence: this.playbackSequence,
         playbackMode: this.playbackMode,
         reducedMotion: this.reducedMotion,
+        boardTheme: '',
+        pieceVisualId: '',
+        specialVisualId: '',
+        riftVisualState: '',
+        reducedMotionPresentation: '',
+        fantasyAssetsReady: false,
         paused: this.presentationState.paused,
         hasActiveHint: this.presentationState.hasActiveHint,
         selectedCoordinate: this.selectedCoordinate
@@ -1397,6 +1421,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.campaignRun ??
       (this.launchContext?.mode === 'puzzle-lab' ? this.launchContext.run : null);
     const definition = this.controller.getDefinition();
+    const presentation = this.boardView?.getPresentationDiagnostics();
     return {
       diagnosticsState: this.diagnosticsState,
       diagnosticsError: this.diagnosticsError,
@@ -1433,6 +1458,12 @@ export class PuzzleScene extends Phaser.Scene {
       playbackSequence: this.playbackSequence,
       playbackMode: this.playbackMode,
       reducedMotion: this.reducedMotion,
+      boardTheme: presentation?.boardTheme ?? FANTASY_BOARD_THEME_ID,
+      pieceVisualId: presentation?.pieceVisualSample ?? '',
+      specialVisualId: presentation?.specialVisualSample ?? '',
+      riftVisualState: presentation?.riftVisualState ?? '',
+      reducedMotionPresentation: resolveFantasyEffectProfile('hint', this.reducedMotion),
+      fantasyAssetsReady: presentation?.fantasyAssetsReady ?? false,
       paused: this.presentationState.paused,
       hasActiveHint: this.presentationState.hasActiveHint,
       selectedCoordinate: this.selectedCoordinate

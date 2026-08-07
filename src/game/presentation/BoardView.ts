@@ -7,6 +7,15 @@ import {
 } from './boardViewModel';
 import { getPieceAppearance, type PieceAppearance } from './pieceAppearance';
 import {
+  FANTASY_BOARD_THEME_ID,
+  fantasyPresentationProfile,
+  getFantasyPieceTextureKey,
+  getFantasyPieceVisualId,
+  getFantasyRiftVisualState,
+  getFantasySpecialTextureKey,
+  getFantasySpecialVisualId,
+} from './fantasy/fantasyPresentationProfile';
+import {
   getBoardCellBounds,
   screenPositionToBoardCoordinate,
   type PuzzleLayout,
@@ -93,6 +102,7 @@ function clonePiece(piece: BoardPiece): BoardPiece {
 export class BoardView {
   private readonly root: Phaser.GameObjects.Container;
   private readonly backgroundGraphics: Phaser.GameObjects.Graphics;
+  private readonly chromeImageLayer: Phaser.GameObjects.Container;
   private readonly cellBackgroundGraphics: Phaser.GameObjects.Graphics;
   private readonly pieceLayer: Phaser.GameObjects.Container;
   private readonly threatLayer: Phaser.GameObjects.Container;
@@ -100,6 +110,7 @@ export class BoardView {
   private readonly effectLayer: Phaser.GameObjects.Container;
   private readonly overlayGraphics: Phaser.GameObjects.Graphics;
   private readonly hitZone: Phaser.GameObjects.Zone;
+  private fantasyAssetsReady = false;
   private readonly pieceDisplays = new Map<string, PieceDisplayObject>();
   private readonly transientObjects = new Set<Phaser.GameObjects.GameObject>();
   private readonly activeTweens = new Set<Phaser.Tweens.Tween>();
@@ -126,6 +137,7 @@ export class BoardView {
   public constructor(private readonly scene: Phaser.Scene) {
     this.root = scene.add.container(0, 0);
     this.backgroundGraphics = scene.add.graphics();
+    this.chromeImageLayer = scene.add.container(0, 0);
     this.cellBackgroundGraphics = scene.add.graphics();
     this.pieceLayer = scene.add.container(0, 0);
     this.threatLayer = scene.add.container(0, 0);
@@ -196,6 +208,7 @@ export class BoardView {
 
     this.root.add([
       this.backgroundGraphics,
+      this.chromeImageLayer,
       this.cellBackgroundGraphics,
       this.pieceLayer,
       this.threatLayer,
@@ -203,6 +216,51 @@ export class BoardView {
       this.overlayGraphics,
       this.hitZone,
     ]);
+  }
+
+  /** Enables Fantasy textures when the scene loader has registered runtime keys. */
+  public setFantasyAssetsReady(ready: boolean): void {
+    if (this.fantasyAssetsReady === ready) {
+      return;
+    }
+    this.fantasyAssetsReady = ready;
+    if (this.layout && this.boardViewModel) {
+      this.drawBoardChrome();
+      this.rebuildPieces();
+      this.redrawOverlay();
+      this.redrawThreatLayer(false);
+    }
+  }
+
+  public getPresentationDiagnostics(): {
+    boardTheme: string;
+    fantasyAssetsReady: boolean;
+    pieceVisualSample: string;
+    specialVisualSample: string;
+    riftVisualState: string;
+  } {
+    const cells = this.boardViewModel?.cells ?? [];
+    const samplePiece = cells[0]?.piece;
+    const specialPiece = cells.find((cell) => cell.piece.kind !== 'standard')?.piece ?? samplePiece;
+    const threat = this.threatViewModel;
+    const source = threat?.sourceCoordinates[0];
+    const threatened = threat?.threatenedCoordinate;
+    const corrupted = threat?.corruptedCoordinates.find(
+      (coordinate) => !isCoordinateInList(coordinate, threat.sourceCoordinates),
+    );
+    return {
+      boardTheme: this.fantasyAssetsReady
+        ? FANTASY_BOARD_THEME_ID
+        : fantasyPresentationProfile.fallbackThemeId,
+      fantasyAssetsReady: this.fantasyAssetsReady,
+      pieceVisualSample: samplePiece ? getFantasyPieceVisualId(samplePiece.pieceType) : '',
+      specialVisualSample: specialPiece ? getFantasySpecialVisualId(specialPiece) : '',
+      riftVisualState: getFantasyRiftVisualState({
+        isSource: Boolean(source),
+        isThreatened: Boolean(threatened) && !source,
+        isCorrupted: Boolean(corrupted),
+      }),
+    };
   }
 
   public setCellSelectedHandler(handler: (coordinate: BoardCoordinate) => void): void {
@@ -511,17 +569,19 @@ export class BoardView {
     for (const coordinate of threat.corruptedCoordinates) {
       const bounds = getBoardCellBounds(this.layout, coordinate);
       const source = isCoordinateInList(coordinate, threat.sourceCoordinates);
-      this.threatGraphics.fillStyle(source ? 0x3f0712 : 0x111827, 0.76);
+      // Fantasy Rift: thorn/root border + reversed-rune mark; source uses unique root-heart.
+      this.threatGraphics.fillStyle(source ? 0x2a0614 : 0x120818, 0.72);
       this.threatGraphics.fillRect(bounds.x + 2, bounds.y + 2, bounds.width - 4, bounds.height - 4);
-      this.threatGraphics.lineStyle(source ? 4 : 2, source ? 0xf43f5e : 0xa78bfa, 0.95);
-      this.threatGraphics.strokeRect(
+      this.threatGraphics.lineStyle(source ? 4 : 3, source ? 0xf43f5e : 0x6d28d9, 0.98);
+      this.threatGraphics.strokeRoundedRect(
         bounds.x + 3,
         bounds.y + 3,
         bounds.width - 6,
         bounds.height - 6,
+        6,
       );
-      const hatchStep = Math.max(8, Math.floor(bounds.width / 5));
-      this.threatGraphics.lineStyle(1, 0xc4b5fd, 0.38);
+      const hatchStep = Math.max(7, Math.floor(bounds.width / 5));
+      this.threatGraphics.lineStyle(1, 0xa78bfa, 0.42);
       for (let offset = -bounds.height; offset < bounds.width; offset += hatchStep) {
         this.threatGraphics.beginPath();
         this.threatGraphics.moveTo(bounds.x + Math.max(2, offset), bounds.y + 2);
@@ -532,9 +592,9 @@ export class BoardView {
         this.threatGraphics.strokePath();
       }
       const symbol = this.scene.add
-        .text(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, source ? '◆' : '×', {
+        .text(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, source ? '❖' : 'Ψ', {
           fontFamily: 'monospace',
-          fontSize: `${Math.max(16, Math.floor(bounds.width * 0.42))}px`,
+          fontSize: `${Math.max(15, Math.floor(bounds.width * 0.4))}px`,
           color: source ? '#fb7185' : '#ddd6fe',
         })
         .setOrigin(0.5);
@@ -543,20 +603,33 @@ export class BoardView {
 
     if (threat.threatenedCoordinate) {
       const bounds = getBoardCellBounds(this.layout, threat.threatenedCoordinate);
+      // Static corner-bracket reticle (readable with reduced motion; pulse handled below).
+      const inset = 5;
+      const arm = Math.max(8, Math.floor(bounds.width * 0.22));
       this.threatGraphics.lineStyle(3, 0xfbbf24, 1);
-      this.threatGraphics.strokeRoundedRect(
-        bounds.x + 4,
-        bounds.y + 4,
-        bounds.width - 8,
-        bounds.height - 8,
-        8,
-      );
+      const x0 = bounds.x + inset;
+      const y0 = bounds.y + inset;
+      const x1 = bounds.x + bounds.width - inset;
+      const y1 = bounds.y + bounds.height - inset;
+      const corners: Array<[number, number, number, number, number, number]> = [
+        [x0, y0 + arm, x0, y0, x0 + arm, y0],
+        [x1 - arm, y0, x1, y0, x1, y0 + arm],
+        [x0, y1 - arm, x0, y1, x0 + arm, y1],
+        [x1 - arm, y1, x1, y1, x1, y1 - arm],
+      ];
+      for (const [ax, ay, bx, by, cx, cy] of corners) {
+        this.threatGraphics.beginPath();
+        this.threatGraphics.moveTo(ax, ay);
+        this.threatGraphics.lineTo(bx, by);
+        this.threatGraphics.lineTo(cx, cy);
+        this.threatGraphics.strokePath();
+      }
       const warning = this.scene.add
-        .text(bounds.x + bounds.width - 7, bounds.y + 4, '!', {
+        .text(bounds.x + bounds.width - 7, bounds.y + 4, '◉', {
           fontFamily: 'monospace',
-          fontSize: `${Math.max(14, Math.floor(bounds.width * 0.32))}px`,
+          fontSize: `${Math.max(13, Math.floor(bounds.width * 0.28))}px`,
           color: '#fef3c7',
-          backgroundColor: '#92400e',
+          backgroundColor: '#78350f',
           padding: { x: 3, y: 0 },
         })
         .setOrigin(1, 0);
@@ -586,42 +659,113 @@ export class BoardView {
 
     this.backgroundGraphics.clear();
     this.cellBackgroundGraphics.clear();
+    this.chromeImageLayer.removeAll(true);
 
-    this.backgroundGraphics.fillStyle(0x0f172a, 0.85);
+    const framePad = 14;
+    const boardX = this.layout.boardRect.x;
+    const boardY = this.layout.boardRect.y;
+    const boardW = this.layout.boardRect.width;
+    const boardH = this.layout.boardRect.height;
+    const compact = this.layout.cellSize < 48;
+
+    // Restrained cavern wash behind the board frame only (non-interactive; does not cover HUD).
+    this.backgroundGraphics.fillStyle(0x1a1030, 0.5);
+    this.backgroundGraphics.fillCircle(
+      boardX + boardW * 0.25,
+      boardY + boardH * 0.2,
+      boardW * 0.62,
+    );
+    this.backgroundGraphics.fillStyle(0x0f172a, 0.92);
     this.backgroundGraphics.fillRoundedRect(
-      this.layout.boardRect.x - 12,
-      this.layout.boardRect.y - 12,
-      this.layout.boardRect.width + 24,
-      this.layout.boardRect.height + 24,
-      20,
+      boardX - framePad,
+      boardY - framePad,
+      boardW + framePad * 2,
+      boardH + framePad * 2,
+      18,
     );
-    this.backgroundGraphics.lineStyle(2, 0x334155, 1);
-    this.backgroundGraphics.strokeRoundedRect(
-      this.layout.boardRect.x - 12,
-      this.layout.boardRect.y - 12,
-      this.layout.boardRect.width + 24,
-      this.layout.boardRect.height + 24,
-      20,
-    );
+
+    const keys = fantasyPresentationProfile.textureKeys;
+    const canUseTextures = this.fantasyAssetsReady && this.scene.textures.exists(keys.boardCell);
+
+    if (canUseTextures && this.scene.textures.exists(keys.boardBackplate)) {
+      const backplate = this.scene.add.image(
+        boardX + boardW / 2,
+        boardY + boardH / 2,
+        keys.boardBackplate,
+      );
+      backplate.setDisplaySize(boardW + framePad * 2.2, boardH + framePad * 2.2);
+      backplate.setAlpha(0.92);
+      this.chromeImageLayer.add(backplate);
+    }
 
     for (const cell of this.boardViewModel.cells) {
       const bounds = getBoardCellBounds(this.layout, cell.coordinate);
-      this.cellBackgroundGraphics.fillStyle(0x172033, 1);
-      this.cellBackgroundGraphics.fillRoundedRect(
-        bounds.x + 2,
-        bounds.y + 2,
-        bounds.width - 4,
-        bounds.height - 4,
-        12,
-      );
-      this.cellBackgroundGraphics.lineStyle(1, 0x314158, 0.95);
-      this.cellBackgroundGraphics.strokeRoundedRect(
-        bounds.x + 2,
-        bounds.y + 2,
-        bounds.width - 4,
-        bounds.height - 4,
-        12,
-      );
+      if (canUseTextures) {
+        const cellImage = this.scene.add.image(
+          bounds.x + bounds.width / 2,
+          bounds.y + bounds.height / 2,
+          keys.boardCell,
+        );
+        cellImage.setDisplaySize(bounds.width - 2, bounds.height - 2);
+        this.chromeImageLayer.add(cellImage);
+      } else {
+        this.cellBackgroundGraphics.fillStyle(0x171a26, 1);
+        this.cellBackgroundGraphics.fillRoundedRect(
+          bounds.x + 2,
+          bounds.y + 2,
+          bounds.width - 4,
+          bounds.height - 4,
+          10,
+        );
+        this.cellBackgroundGraphics.lineStyle(1, 0x3f3a2e, 0.95);
+        this.cellBackgroundGraphics.strokeRoundedRect(
+          bounds.x + 2,
+          bounds.y + 2,
+          bounds.width - 4,
+          bounds.height - 4,
+          10,
+        );
+      }
+    }
+
+    // Antique-gold frame — decorative only; hitZone remains the sole interactive board surface.
+    this.backgroundGraphics.lineStyle(3, 0xc9a227, 0.95);
+    this.backgroundGraphics.strokeRoundedRect(
+      boardX - framePad,
+      boardY - framePad,
+      boardW + framePad * 2,
+      boardH + framePad * 2,
+      16,
+    );
+    this.backgroundGraphics.lineStyle(1, 0x7c3aed, 0.55);
+    this.backgroundGraphics.strokeRoundedRect(
+      boardX - framePad + 4,
+      boardY - framePad + 4,
+      boardW + framePad * 2 - 8,
+      boardH + framePad * 2 - 8,
+      14,
+    );
+
+    if (!compact && canUseTextures && this.scene.textures.exists(keys.boardCorner)) {
+      const ornamentSize = Math.min(36, this.layout.cellSize * 0.7);
+      const corners = [
+        { x: boardX - framePad, y: boardY - framePad, flipX: false, flipY: false },
+        { x: boardX + boardW + framePad, y: boardY - framePad, flipX: true, flipY: false },
+        { x: boardX - framePad, y: boardY + boardH + framePad, flipX: false, flipY: true },
+        {
+          x: boardX + boardW + framePad,
+          y: boardY + boardH + framePad,
+          flipX: true,
+          flipY: true,
+        },
+      ];
+      for (const corner of corners) {
+        const image = this.scene.add.image(corner.x, corner.y, keys.boardCorner);
+        image.setDisplaySize(ornamentSize, ornamentSize);
+        image.setFlip(corner.flipX, corner.flipY);
+        image.setAlpha(0.9);
+        this.chromeImageLayer.add(image);
+      }
     }
 
     this.hitZone.setPosition(this.layout.boardRect.x, this.layout.boardRect.y);
@@ -711,6 +855,14 @@ export class BoardView {
           bounds.height - 6,
           12,
         );
+        // Non-color selection emphasis: diagonal corner ticks.
+        this.overlayGraphics.lineStyle(3, 0xc9a227, 1);
+        const tick = Math.max(6, Math.floor(bounds.width * 0.18));
+        this.overlayGraphics.beginPath();
+        this.overlayGraphics.moveTo(bounds.x + 4, bounds.y + 4 + tick);
+        this.overlayGraphics.lineTo(bounds.x + 4, bounds.y + 4);
+        this.overlayGraphics.lineTo(bounds.x + 4 + tick, bounds.y + 4);
+        this.overlayGraphics.strokePath();
       }
 
       if (isRejected) {
@@ -722,6 +874,14 @@ export class BoardView {
           bounds.height - 2,
           12,
         );
+        // Shape-based rejection mark (X), not color alone.
+        this.overlayGraphics.lineStyle(3, 0xfef2f2, 0.95);
+        this.overlayGraphics.beginPath();
+        this.overlayGraphics.moveTo(bounds.x + bounds.width * 0.3, bounds.y + bounds.height * 0.3);
+        this.overlayGraphics.lineTo(bounds.x + bounds.width * 0.7, bounds.y + bounds.height * 0.7);
+        this.overlayGraphics.moveTo(bounds.x + bounds.width * 0.7, bounds.y + bounds.height * 0.3);
+        this.overlayGraphics.lineTo(bounds.x + bounds.width * 0.3, bounds.y + bounds.height * 0.7);
+        this.overlayGraphics.strokePath();
       }
     }
 
@@ -1632,9 +1792,40 @@ export class BoardView {
   ): PieceDisplayObject {
     const center = this.getCellCenter(positionCoordinate);
     const container = this.scene.add.container(center.x, center.y);
-    const graphics = this.scene.add.graphics();
-    container.add(graphics);
-    this.drawPiece(graphics, cell.appearance, { x: 0, y: 0 });
+    const pieceKey = getFantasyPieceTextureKey(cell.piece.pieceType);
+    const useTexture =
+      this.fantasyAssetsReady && this.layout && this.scene.textures.exists(pieceKey);
+
+    if (useTexture && this.layout) {
+      const size = this.layout.cellSize * 0.78;
+      const pieceImage = this.scene.add.image(0, 0, pieceKey);
+      pieceImage.setDisplaySize(size, size);
+      container.add(pieceImage);
+
+      const specialKey = getFantasySpecialTextureKey(cell.piece);
+      if (specialKey && this.scene.textures.exists(specialKey)) {
+        const specialImage = this.scene.add.image(0, 0, specialKey);
+        specialImage.setDisplaySize(size * 0.9, size * 0.9);
+        if (cell.piece.kind === 'line-clear' && cell.piece.orientation === 'vertical') {
+          specialImage.setAngle(90);
+        }
+        specialImage.setAlpha(0.96);
+        container.add(specialImage);
+      } else if (cell.appearance.overlay.kind !== 'none') {
+        const overlayGraphics = this.scene.add.graphics();
+        container.add(overlayGraphics);
+        this.drawPieceOverlay(
+          overlayGraphics,
+          { x: 0, y: 0 },
+          this.layout.cellSize * 0.32,
+          cell.appearance,
+        );
+      }
+    } else {
+      const graphics = this.scene.add.graphics();
+      container.add(graphics);
+      this.drawPiece(graphics, cell.appearance, { x: 0, y: 0 });
+    }
 
     return {
       coordinate: cloneCoordinate(cell.coordinate),
